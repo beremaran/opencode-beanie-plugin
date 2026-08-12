@@ -14,13 +14,18 @@
   ],
   "scripts": {
     "build": "tsc",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src",
+    "format:check": "biome format src"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.0.0",
     "@opencode-ai/plugin": "latest"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.8",
     "typescript": "^5.0.0"
   }
 }

@@ -1,30 +1,250 @@
-import { tool, type Plugin, type PluginInput } from "@opencode-ai/plugin"
-import { createRegistry, type RegistryFactoryConfig } from "./registries/factory.js"
-import { HttpError } from "./http.js"
-import { RegistryAuthError, SkillNotFoundError, type SkillDetail, type SkillFile, type SkillRegistry, type SkillSummary } from "./types.js"
+import { type Plugin, type PluginInput, tool } from '@opencode-ai/plugin'
+import { HttpError } from './http.js'
+import { createRegistry, type RegistryFactoryConfig } from './registries/factory.js'
+import {
+  RegistryAuthError,
+  type SkillDetail,
+  type SkillFile,
+  SkillNotFoundError,
+  type SkillRegistry,
+  type SkillSummary,
+} from './types.js'
 
 const MAX_DESCRIPTION_CHARS = 300
 const MAX_PAYLOAD_CHARS = 200000
 const byteLength = (value: string): number => new TextEncoder().encode(value).byteLength
 type Options = RegistryFactoryConfig & { debug?: boolean }
 type Env = Record<string, string | undefined>
-const env = (): Env => { const value = (globalThis as { process?: { env?: Env } }).process?.env; return value ?? {} }
-export function resolve(raw: Record<string, unknown> | undefined): Options { const source = raw ?? {}, e = env(), value = (key: string, envKey: string) => source[key] !== undefined ? source[key] : e[envKey], registry = value("registry", "SKILL_REGISTRY"), sources = value("githubSources", "SKILL_GITHUB_SOURCES"), max = value("maxBytes", "SKILL_MAX_BYTES"), debug = value("debug", "SKILL_DEBUG"); const config: Options = {}; if (registry === "auto" || registry === "skills-sh" || registry === "github") config.registry = registry; if (typeof value("skillsShToken", "SKILLS_SH_TOKEN") === "string") config.skillsShToken = value("skillsShToken", "SKILLS_SH_TOKEN") as string; if (typeof sources === "string") config.githubSources = sources.split(",").map((s) => s.trim()).filter(Boolean); else if (Array.isArray(sources)) config.githubSources = sources.filter((s): s is string => typeof s === "string"); const n = typeof max === "number" ? max : Number(max); if (Number.isFinite(n) && n > 0) config.maxBytes = Math.floor(n); if (typeof value("githubToken", "GITHUB_TOKEN") === "string") config.githubToken = value("githubToken", "GITHUB_TOKEN") as string; config.debug = debug === true || debug === "1" || debug === "true"; return config }
-function truncate(s: string, max: number): string { return s.length <= max ? s : s.slice(0, max) }
-function isSkillMd(path: string): boolean { return path.split("/").at(-1)?.toLowerCase() === "skill.md" }
-function summary(item: SkillSummary, description: boolean): Record<string, unknown> { return { id: item.id, name: item.name, slug: item.slug, source: item.source, sourceType: item.sourceType, ...(item.installs !== undefined ? { installs: item.installs } : {}), ...(item.installUrl !== undefined ? { installUrl: item.installUrl } : {}), ...(item.url !== undefined ? { url: item.url } : {}), ...(description && item.description !== undefined ? { description: truncate(item.description, MAX_DESCRIPTION_CHARS) } : {}) } }
-function marker(bytes: number): string { return `\n[...truncated: ${bytes} bytes omitted]\n` }
-function truncateBytes(contents: string, budget: number): string { const original = byteLength(contents); if (original <= budget) return contents; let text = contents.slice(0, Math.max(0, budget)); while (byteLength(text + marker(original - byteLength(text))) > budget && text.length) text = text.slice(0, -1); return text + marker(original - byteLength(text)) }
-function errorText(error: unknown, id?: string): string { const message = error instanceof SkillNotFoundError ? `Skill not found: ${id ?? error.message}. Use list_skills or search_skills to find valid skill ids.` : error instanceof RegistryAuthError ? `Registry authentication error: ${error.message}. If you intended skills.sh, set SKILLS_SH_TOKEN, otherwise remove it to run in GitHub mode.` : error instanceof HttpError ? `Registry request failed (HTTP ${error.status}): ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}`; return JSON.stringify({ error: message }, null, 2) }
-function loadPayload(detail: SkillDetail, includeSupporting: boolean, maxBytes: number | undefined): string { let files: Array<SkillFile & { size_bytes: number }> = detail.files.map((file) => ({ ...file, size_bytes: byteLength(file.contents) })); let truncated = false; if (!includeSupporting) files = files.filter((file) => isSkillMd(file.path)); if (maxBytes !== undefined && files.reduce((n, f) => n + f.size_bytes, 0) > maxBytes) { const main = files.filter((f) => isSkillMd(f.path)); if (main.length < files.length) { files = main; truncated = true }; let remaining = maxBytes; const budgeted: typeof files = []; for (const file of files) { if (file.size_bytes <= remaining) { budgeted.push(file); remaining -= file.size_bytes } else { const contents = truncateBytes(file.contents, remaining); budgeted.push({ ...file, contents, size_bytes: byteLength(contents) }); remaining = 0; break } }; files = budgeted; truncated = true }
-  const base = { id: detail.id, name: detail.name, source: detail.source, ...(detail.installs !== undefined ? { installs: detail.installs } : {}) }; const payload = (list: typeof files, flag: boolean) => ({ ...base, files: list, ...(flag ? { truncated: true } : {}) }); let output = JSON.stringify(payload(files, truncated), null, 2); if (output.length > MAX_PAYLOAD_CHARS) { const main = files.find((f) => isSkillMd(f.path)); if (main) { const contents = truncateBytes(main.contents, Math.min(byteLength(main.contents), maxBytes ?? MAX_PAYLOAD_CHARS)); files = [{ ...main, contents, size_bytes: byteLength(contents) }]; output = JSON.stringify(payload(files, true), null, 2) } }; return output }
-function createLogger(input: PluginInput, enabled: boolean) { return async (level: "warn" | "error", message: string, extra?: Record<string, unknown>) => { if (!enabled) return; await input.client.app.log({ body: { service: "opencode-beanie-plugin", level, message, ...(extra !== undefined ? { extra } : {}) } }).catch(() => undefined) } }
+const env = (): Env => {
+  const value = (globalThis as { process?: { env?: Env } }).process?.env
+  return value ?? {}
+}
+export function resolve(raw: Record<string, unknown> | undefined): Options {
+  const source = raw ?? {},
+    e = env(),
+    value = (key: string, envKey: string) => (source[key] !== undefined ? source[key] : e[envKey]),
+    registry = value('registry', 'SKILL_REGISTRY'),
+    sources = value('githubSources', 'SKILL_GITHUB_SOURCES'),
+    max = value('maxBytes', 'SKILL_MAX_BYTES'),
+    debug = value('debug', 'SKILL_DEBUG')
+  const config: Options = {}
+  if (registry === 'auto' || registry === 'skills-sh' || registry === 'github') config.registry = registry
+  if (typeof value('skillsShToken', 'SKILLS_SH_TOKEN') === 'string')
+    config.skillsShToken = value('skillsShToken', 'SKILLS_SH_TOKEN') as string
+  if (typeof sources === 'string')
+    config.githubSources = sources
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  else if (Array.isArray(sources)) config.githubSources = sources.filter((s): s is string => typeof s === 'string')
+  const n = typeof max === 'number' ? max : Number(max)
+  if (Number.isFinite(n) && n > 0) config.maxBytes = Math.floor(n)
+  if (typeof value('githubToken', 'GITHUB_TOKEN') === 'string')
+    config.githubToken = value('githubToken', 'GITHUB_TOKEN') as string
+  config.debug = debug === true || debug === '1' || debug === 'true'
+  return config
+}
+function truncate(s: string, max: number): string {
+  return s.length <= max ? s : s.slice(0, max)
+}
+function isSkillMd(path: string): boolean {
+  return path.split('/').at(-1)?.toLowerCase() === 'skill.md'
+}
+function summary(item: SkillSummary, description: boolean): Record<string, unknown> {
+  return {
+    id: item.id,
+    name: item.name,
+    slug: item.slug,
+    source: item.source,
+    sourceType: item.sourceType,
+    ...(item.installs !== undefined ? { installs: item.installs } : {}),
+    ...(item.installUrl !== undefined ? { installUrl: item.installUrl } : {}),
+    ...(item.url !== undefined ? { url: item.url } : {}),
+    ...(description && item.description !== undefined
+      ? { description: truncate(item.description, MAX_DESCRIPTION_CHARS) }
+      : {}),
+  }
+}
+function marker(bytes: number): string {
+  return `\n[...truncated: ${bytes} bytes omitted]\n`
+}
+function truncateBytes(contents: string, budget: number): string {
+  const original = byteLength(contents)
+  if (original <= budget) return contents
+  let text = contents.slice(0, Math.max(0, budget))
+  while (byteLength(text + marker(original - byteLength(text))) > budget && text.length) text = text.slice(0, -1)
+  return text + marker(original - byteLength(text))
+}
+function errorText(error: unknown, id?: string): string {
+  const message =
+    error instanceof SkillNotFoundError
+      ? `Skill not found: ${id ?? error.message}. Use list_skills or search_skills to find valid skill ids.`
+      : error instanceof RegistryAuthError
+        ? `Registry authentication error: ${error.message}. If you intended skills.sh, set SKILLS_SH_TOKEN, otherwise remove it to run in GitHub mode.`
+        : error instanceof HttpError
+          ? `Registry request failed (HTTP ${error.status}): ${error.message}`
+          : `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
+  return JSON.stringify({ error: message }, null, 2)
+}
+function loadPayload(detail: SkillDetail, includeSupporting: boolean, maxBytes: number | undefined): string {
+  let files: Array<SkillFile & { size_bytes: number }> = detail.files.map((file) => ({
+    ...file,
+    size_bytes: byteLength(file.contents),
+  }))
+  let truncated = false
+  if (!includeSupporting) files = files.filter((file) => isSkillMd(file.path))
+  if (maxBytes !== undefined && files.reduce((n, f) => n + f.size_bytes, 0) > maxBytes) {
+    const main = files.filter((f) => isSkillMd(f.path))
+    if (main.length < files.length) {
+      files = main
+      truncated = true
+    }
+    let remaining = maxBytes
+    const budgeted: typeof files = []
+    for (const file of files) {
+      if (file.size_bytes <= remaining) {
+        budgeted.push(file)
+        remaining -= file.size_bytes
+      } else {
+        const contents = truncateBytes(file.contents, remaining)
+        budgeted.push({ ...file, contents, size_bytes: byteLength(contents) })
+        remaining = 0
+        break
+      }
+    }
+    files = budgeted
+    truncated = true
+  }
+  const base = {
+    id: detail.id,
+    name: detail.name,
+    source: detail.source,
+    ...(detail.installs !== undefined ? { installs: detail.installs } : {}),
+  }
+  const payload = (list: typeof files, flag: boolean) => ({
+    ...base,
+    files: list,
+    ...(flag ? { truncated: true } : {}),
+  })
+  let output = JSON.stringify(payload(files, truncated), null, 2)
+  if (output.length > MAX_PAYLOAD_CHARS) {
+    const main = files.find((f) => isSkillMd(f.path))
+    if (main) {
+      const contents = truncateBytes(main.contents, Math.min(byteLength(main.contents), maxBytes ?? MAX_PAYLOAD_CHARS))
+      files = [{ ...main, contents, size_bytes: byteLength(contents) }]
+      output = JSON.stringify(payload(files, true), null, 2)
+    }
+  }
+  return output
+}
+function createLogger(input: PluginInput, enabled: boolean) {
+  return async (level: 'warn' | 'error', message: string, extra?: Record<string, unknown>) => {
+    if (!enabled) return
+    await input.client.app
+      .log({ body: { service: 'opencode-beanie-plugin', level, message, ...(extra !== undefined ? { extra } : {}) } })
+      .catch(() => undefined)
+  }
+}
 
-const Skillbox: Plugin = async (input, rawOptions) => { const options = resolve(rawOptions); const log = createLogger(input, options.debug === true); let registry: SkillRegistry; try { registry = createRegistry(options); await log("warn", "Skillbox registry initialized", { registry: options.registry ?? "auto" }) } catch (error) { await log("error", "Skillbox registry initialization failed", { error: String(error) }); throw error }
-  return { tool: {
-    list_skills: tool({ description: "List available agent skills from the registry. Returns compact JSON metadata; descriptions are omitted by default.", args: { view: tool.schema.enum(["all-time", "trending", "hot"]).optional(), page: tool.schema.number().int().min(0).optional().default(0), per_page: tool.schema.number().int().min(1).max(100).optional().default(25), include_description: tool.schema.boolean().optional().default(false) }, execute: async (args) => { try { const result = await registry.listSkills({ view: args.view, page: args.page, perPage: args.per_page, includeDescription: args.include_description }); return JSON.stringify({ count: result.data.length, skills: result.data.map((item) => summary(item, args.include_description)), pagination: result.pagination ?? { page: args.page, perPage: args.per_page, hasMore: false } }, null, 2) } catch (error) { await log("error", "list_skills failed", { error: String(error) }); return errorText(error) } } }),
-    search_skills: tool({ description: "Search agent skills by keyword. Returns compact JSON results and optional descriptions truncated to 300 characters.", args: { query: tool.schema.string().min(2), limit: tool.schema.number().int().min(1).max(50).optional().default(10), owner: tool.schema.string().optional(), include_description: tool.schema.boolean().optional().default(false) }, execute: async (args) => { try { const query = args.query.trim(); if (query.length < 2) return JSON.stringify({ error: "Search query must be at least 2 characters" }, null, 2); const result = await registry.searchSkills({ query, limit: args.limit, owner: args.owner, includeDescription: args.include_description }); return JSON.stringify({ count: result.data.length, query, results: result.data.map((item) => summary(item, args.include_description)) }, null, 2) } catch (error) { await log("error", "search_skills failed", { error: String(error) }); return errorText(error) } } }),
-    load_skill: tool({ description: "Load the full content of one skill by id, with optional supporting files and byte limits.", args: { id: tool.schema.string().min(1), include_supporting_files: tool.schema.boolean().optional().default(false), max_bytes: tool.schema.number().int().min(500).max(100000).optional() }, execute: async (args) => { const id = args.id.trim(); if (!id) return JSON.stringify({ error: "Skill id is required" }, null, 2); try { return loadPayload(await registry.loadSkill(id), args.include_supporting_files, args.max_bytes) } catch (error) { await log("error", "load_skill failed", { id, error: String(error) }); return errorText(error, id) } } })
-  } }
+const Skillbox: Plugin = async (input, rawOptions) => {
+  const options = resolve(rawOptions)
+  const log = createLogger(input, options.debug === true)
+  let registry: SkillRegistry
+  try {
+    registry = createRegistry(options)
+    await log('warn', 'Skillbox registry initialized', { registry: options.registry ?? 'auto' })
+  } catch (error) {
+    await log('error', 'Skillbox registry initialization failed', { error: String(error) })
+    throw error
+  }
+  return {
+    tool: {
+      list_skills: tool({
+        description:
+          'List available agent skills from the registry. Returns compact JSON metadata; descriptions are omitted by default.',
+        args: {
+          view: tool.schema.enum(['all-time', 'trending', 'hot']).optional(),
+          page: tool.schema.number().int().min(0).optional().default(0),
+          per_page: tool.schema.number().int().min(1).max(100).optional().default(25),
+          include_description: tool.schema.boolean().optional().default(false),
+        },
+        execute: async (args) => {
+          try {
+            const result = await registry.listSkills({
+              view: args.view,
+              page: args.page,
+              perPage: args.per_page,
+              includeDescription: args.include_description,
+            })
+            return JSON.stringify(
+              {
+                count: result.data.length,
+                skills: result.data.map((item) => summary(item, args.include_description)),
+                pagination: result.pagination ?? { page: args.page, perPage: args.per_page, hasMore: false },
+              },
+              null,
+              2,
+            )
+          } catch (error) {
+            await log('error', 'list_skills failed', { error: String(error) })
+            return errorText(error)
+          }
+        },
+      }),
+      search_skills: tool({
+        description:
+          'Search agent skills by keyword. Returns compact JSON results and optional descriptions truncated to 300 characters.',
+        args: {
+          query: tool.schema.string().min(2),
+          limit: tool.schema.number().int().min(1).max(50).optional().default(10),
+          owner: tool.schema.string().optional(),
+          include_description: tool.schema.boolean().optional().default(false),
+        },
+        execute: async (args) => {
+          try {
+            const query = args.query.trim()
+            if (query.length < 2)
+              return JSON.stringify({ error: 'Search query must be at least 2 characters' }, null, 2)
+            const result = await registry.searchSkills({
+              query,
+              limit: args.limit,
+              owner: args.owner,
+              includeDescription: args.include_description,
+            })
+            return JSON.stringify(
+              {
+                count: result.data.length,
+                query,
+                results: result.data.map((item) => summary(item, args.include_description)),
+              },
+              null,
+              2,
+            )
+          } catch (error) {
+            await log('error', 'search_skills failed', { error: String(error) })
+            return errorText(error)
+          }
+        },
+      }),
+      load_skill: tool({
+        description: 'Load the full content of one skill by id, with optional supporting files and byte limits.',
+        args: {
+          id: tool.schema.string().min(1),
+          include_supporting_files: tool.schema.boolean().optional().default(false),
+          max_bytes: tool.schema.number().int().min(500).max(100000).optional(),
+        },
+        execute: async (args) => {
+          const id = args.id.trim()
+          if (!id) return JSON.stringify({ error: 'Skill id is required' }, null, 2)
+          try {
+            return loadPayload(await registry.loadSkill(id), args.include_supporting_files, args.max_bytes)
+          } catch (error) {
+            await log('error', 'load_skill failed', { id, error: String(error) })
+            return errorText(error, id)
+          }
+        },
+      }),
+    },
+  }
 }
 export default Skillbox

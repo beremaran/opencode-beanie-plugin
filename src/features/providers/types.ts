@@ -45,5 +45,8 @@ export interface DiscoveredModel {
   limit?: { context: number; output: number }
   vendor?: Record<string, unknown>
 }
-export interface StoreFile { version: 1; providers: ProviderSource[] }
-export type Logger = (level: "info" | "warn" | "error" | "debug", message: string, extra?: unknown) => void
+export interface StoreFile {
+  version: 1
+  providers: ProviderSource[]
+}
+export type Logger = (level: 'info' | 'warn' | 'error' | 'debug', message: string, extra?: unknown) => void

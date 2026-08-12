@@ -1,16 +1,16 @@
-import type { GoalCommand, GoalPluginOptions, ResolvedGoalPluginOptions } from "./types.js"
+import type { GoalCommand, GoalPluginOptions, ResolvedGoalPluginOptions } from './types.js'
 
 const DEFAULT_MAX_TRANSCRIPT_CHARS = 48_000
 function positiveInteger(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) return undefined
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) return undefined
   return value
 }
 function nonNegativeInteger(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return undefined
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) return undefined
   return value
 }
 function optionalString(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined
+  if (typeof value !== 'string') return undefined
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : undefined
 }
@@ -38,25 +38,26 @@ export function parseTokenCount(raw: string): number | undefined {
   if (!match) return undefined
   const value = Number(match[1])
   const suffix = match[2]?.toLowerCase()
-  const result = value * (suffix === "k" ? 1_000 : suffix === "m" ? 1_000_000 : 1)
+  const result = value * (suffix === 'k' ? 1_000 : suffix === 'm' ? 1_000_000 : 1)
   if (!Number.isSafeInteger(result) || result <= 0) return undefined
   return result
 }
-type SetDefaults = Pick<ResolvedGoalPluginOptions, "defaultTokenBudget" | "defaultMaxTurns">
+type SetDefaults = Pick<ResolvedGoalPluginOptions, 'defaultTokenBudget' | 'defaultMaxTurns'>
 export function parseGoalCommand(rawArguments: string, defaults: SetDefaults): GoalCommand {
   let rest = rawArguments.trim()
-  if (!rest) return { action: "status" }
-  if (rest === "help" || rest === "--help" || rest === "-h") return { action: "help" }
-  if (rest === "clear" || rest === "cancel") return { action: "clear" }
-  if (rest === "pause") return { action: "pause" }
-  if (rest === "resume") return { action: "resume" }
+  if (!rest) return { action: 'status' }
+  if (rest === 'help' || rest === '--help' || rest === '-h') return { action: 'help' }
+  if (rest === 'clear' || rest === 'cancel') return { action: 'clear' }
+  if (rest === 'pause') return { action: 'pause' }
+  if (rest === 'resume') return { action: 'resume' }
   let tokenBudget = defaults.defaultTokenBudget
   let maxTurns = defaults.defaultMaxTurns
-  while (rest.startsWith("--")) {
+  while (rest.startsWith('--')) {
     const tokenMatch = rest.match(/^--tokens(?:=|\s+)(\S+)(?:\s+|$)/)
     if (tokenMatch) {
-      const parsed = parseTokenCount(tokenMatch[1] ?? "")
-      if (!parsed) return { action: "invalid", message: "`--tokens` must be a positive integer, optionally ending in k or m." }
+      const parsed = parseTokenCount(tokenMatch[1] ?? '')
+      if (!parsed)
+        return { action: 'invalid', message: '`--tokens` must be a positive integer, optionally ending in k or m.' }
       tokenBudget = parsed
       rest = rest.slice(tokenMatch[0].length).trim()
       continue
@@ -64,15 +65,16 @@ export function parseGoalCommand(rawArguments: string, defaults: SetDefaults): G
     const turnsMatch = rest.match(/^--max-turns(?:=|\s+)(\S+)(?:\s+|$)/)
     if (turnsMatch) {
       const parsed = Number(turnsMatch[1])
-      if (!Number.isSafeInteger(parsed) || parsed <= 0) return { action: "invalid", message: "`--max-turns` must be a positive integer." }
+      if (!Number.isSafeInteger(parsed) || parsed <= 0)
+        return { action: 'invalid', message: '`--max-turns` must be a positive integer.' }
       maxTurns = parsed
       rest = rest.slice(turnsMatch[0].length).trim()
       continue
     }
-    return { action: "invalid", message: `Unknown goal option: ${rest.split(/\s+/, 1)[0] ?? rest}` }
+    return { action: 'invalid', message: `Unknown goal option: ${rest.split(/\s+/, 1)[0] ?? rest}` }
   }
-  if (!rest) return { action: "invalid", message: "A goal needs a concrete completion condition." }
-  const result: Extract<GoalCommand, { action: "set" }> = { action: "set", objective: rest }
+  if (!rest) return { action: 'invalid', message: 'A goal needs a concrete completion condition.' }
+  const result: Extract<GoalCommand, { action: 'set' }> = { action: 'set', objective: rest }
   if (tokenBudget) result.tokenBudget = tokenBudget
   if (maxTurns) result.maxTurns = maxTurns
   return result

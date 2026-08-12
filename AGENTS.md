@@ -6,7 +6,9 @@ OpenCode plugin (TypeScript, ESM) that combines 6 prior tools into one package: 
 
 - `npm run check` — the verification gate: `tsc --noEmit`. Run this after any change.
 - `npm run build` — `tsc` emitting to `dist/`. Required before the plugin is loadable in OpenCode (package `exports` point at `dist`).
-- No tests, linter, or formatter are configured. `check` is the only CI-equivalent.
+- `npm run lint` — `biome check src` (lint + format check + import sorting); `npm run lint:fix` applies safe fixes. Lint and format are provided by `@biomejs/biome` (invoke ad-hoc via `npx @biomejs/biome`, never bare `npx biome`, which resolves to a stale unrelated package).
+- `npm run format` / `npm run format:check` — format files / check formatting without writing.
+- No tests or CI are configured; `check` plus `lint` are the quality gates.
 
 ## Architecture
 

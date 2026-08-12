@@ -7,7 +7,7 @@ export class Semaphore {
 
   constructor(max: number) {
     if (!Number.isInteger(max) || max < 1) {
-      throw new Error("Semaphore max must be a positive integer")
+      throw new Error('Semaphore max must be a positive integer')
     }
 
     this.max = max

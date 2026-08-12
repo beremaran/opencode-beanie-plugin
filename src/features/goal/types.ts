@@ -1,11 +1,4 @@
-export const GOAL_STATUSES = [
-  "active",
-  "paused",
-  "complete",
-  "blocked",
-  "budget_limited",
-  "turn_limited",
-] as const
+export const GOAL_STATUSES = ['active', 'paused', 'complete', 'blocked', 'budget_limited', 'turn_limited'] as const
 
 export type GoalStatus = (typeof GOAL_STATUSES)[number]
 export type CompletionClaim = { reason: string; createdAt: number }
@@ -49,13 +42,13 @@ export type ResolvedGoalPluginOptions = {
   deleteEvaluatorSessions: boolean
 }
 export type GoalCommand =
-  | { action: "status" }
-  | { action: "help" }
-  | { action: "clear" }
-  | { action: "pause" }
-  | { action: "resume" }
-  | { action: "set"; objective: string; tokenBudget?: number; maxTurns?: number }
-  | { action: "invalid"; message: string }
+  | { action: 'status' }
+  | { action: 'help' }
+  | { action: 'clear' }
+  | { action: 'pause' }
+  | { action: 'resume' }
+  | { action: 'set'; objective: string; tokenBudget?: number; maxTurns?: number }
+  | { action: 'invalid'; message: string }
 export type ModelRef = { providerID: string; modelID: string }
 export type TranscriptPart = {
   type: string
@@ -67,7 +60,7 @@ export type TranscriptPart = {
 export type TranscriptMessage = {
   info: {
     id: string
-    role: "user" | "assistant"
+    role: 'user' | 'assistant'
     time: { created: number }
     agent?: string
     model?: ModelRef

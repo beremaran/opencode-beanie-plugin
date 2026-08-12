@@ -1,166 +1,224 @@
-const MODEL_PATTERN = "^[^\\s/]+/[^\\s/]+$"
-const TOOL_NAME_PATTERN = "^[a-z0-9_-]+$"
-const GLOB_PATTERN = "^[A-Za-z0-9._*-]+$"
-const ID_PATTERN = "^[A-Za-z0-9._-]+$"
+const MODEL_PATTERN = '^[^\\s/]+/[^\\s/]+$'
+const TOOL_NAME_PATTERN = '^[a-z0-9_-]+$'
+const GLOB_PATTERN = '^[A-Za-z0-9._*-]+$'
+const ID_PATTERN = '^[A-Za-z0-9._-]+$'
 
-const modelRef = { type: "string", pattern: MODEL_PATTERN, examples: ["anthropic/claude-sonnet-4-6"] }
-const nonEmptyString = { type: "string", minLength: 1 }
-const toolNameArray = { type: "array", items: { type: "string", pattern: TOOL_NAME_PATTERN } }
-const stringArray = { type: "array", items: nonEmptyString }
+const modelRef = { type: 'string', pattern: MODEL_PATTERN, examples: ['anthropic/claude-sonnet-4-6'] }
+const nonEmptyString = { type: 'string', minLength: 1 }
+const toolNameArray = { type: 'array', items: { type: 'string', pattern: TOOL_NAME_PATTERN } }
+const stringArray = { type: 'array', items: nonEmptyString }
 
 const providerSource = {
-  type: "object",
+  type: 'object',
   additionalProperties: false,
-  required: ["id", "baseURL"],
+  required: ['id', 'baseURL'],
   properties: {
-    id: { type: "string", pattern: ID_PATTERN },
+    id: { type: 'string', pattern: ID_PATTERN },
     name: nonEmptyString,
-    baseURL: { type: "string", pattern: "^https?://" },
+    baseURL: { type: 'string', pattern: '^https?://' },
     apiKey: nonEmptyString,
-    headers: { type: "object", additionalProperties: { type: "string" } },
+    headers: { type: 'object', additionalProperties: { type: 'string' } },
     npm: nonEmptyString,
     modelsURL: nonEmptyString,
-    fetchModels: { type: "boolean" },
-    staticModels: { type: "object", additionalProperties: { $ref: "#/$defs/modelOverride" } },
-    overrides: { type: "object", additionalProperties: { $ref: "#/$defs/modelOverride" } },
+    fetchModels: { type: 'boolean' },
+    staticModels: { type: 'object', additionalProperties: { $ref: '#/$defs/modelOverride' } },
+    overrides: { type: 'object', additionalProperties: { $ref: '#/$defs/modelOverride' } },
     include: stringArray,
     exclude: stringArray,
-    defaultLimit: { type: "object", additionalProperties: false, properties: { context: { type: "integer", minimum: 1 }, output: { type: "integer", minimum: 1 } } },
-    env: { type: "boolean" },
-    timeout: { type: "integer", exclusiveMinimum: 0 },
+    defaultLimit: {
+      type: 'object',
+      additionalProperties: false,
+      properties: { context: { type: 'integer', minimum: 1 }, output: { type: 'integer', minimum: 1 } },
+    },
+    env: { type: 'boolean' },
+    timeout: { type: 'integer', exclusiveMinimum: 0 },
   },
 }
 
 const modelOverride = {
-  type: "object",
+  type: 'object',
   additionalProperties: true,
   properties: {
     id: nonEmptyString,
     name: nonEmptyString,
-    limit: { type: "object", additionalProperties: false, properties: { context: { type: "integer", minimum: 1 }, input: { type: "integer", minimum: 1 }, output: { type: "integer", minimum: 1 } } },
-    temperature: { type: "boolean" },
-    reasoning: { type: "boolean" },
-    attachment: { type: "boolean" },
-    tool_call: { type: "boolean" },
-    options: { type: "object" },
-    headers: { type: "object", additionalProperties: { type: "string" } },
+    limit: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        context: { type: 'integer', minimum: 1 },
+        input: { type: 'integer', minimum: 1 },
+        output: { type: 'integer', minimum: 1 },
+      },
+    },
+    temperature: { type: 'boolean' },
+    reasoning: { type: 'boolean' },
+    attachment: { type: 'boolean' },
+    tool_call: { type: 'boolean' },
+    options: { type: 'object' },
+    headers: { type: 'object', additionalProperties: { type: 'string' } },
   },
 }
 
 const serverCommon = {
-  disabled: { type: "boolean" },
-  timeout: { type: "number", exclusiveMinimum: 0 },
-  toolFilter: { type: "array", items: { type: "string", pattern: GLOB_PATTERN } },
+  disabled: { type: 'boolean' },
+  timeout: { type: 'number', exclusiveMinimum: 0 },
+  toolFilter: { type: 'array', items: { type: 'string', pattern: GLOB_PATTERN } },
   tags: stringArray,
 }
 
 const stdioServer = {
-  type: "object",
+  type: 'object',
   additionalProperties: false,
-  required: ["command"],
-  properties: { ...serverCommon, command: { type: "string", minLength: 1 }, args: stringArray, env: { type: "object", additionalProperties: { type: "string" } }, cwd: nonEmptyString },
+  required: ['command'],
+  properties: {
+    ...serverCommon,
+    command: { type: 'string', minLength: 1 },
+    args: stringArray,
+    env: { type: 'object', additionalProperties: { type: 'string' } },
+    cwd: nonEmptyString,
+  },
 }
 
 const httpServer = {
-  type: "object",
+  type: 'object',
   additionalProperties: false,
-  required: ["url"],
-  properties: { ...serverCommon, url: { type: "string", pattern: "^https?://" }, headers: { type: "object", additionalProperties: { type: "string" } }, transportType: { type: "string", enum: ["streamable-http", "sse"] } },
+  required: ['url'],
+  properties: {
+    ...serverCommon,
+    url: { type: 'string', pattern: '^https?://' },
+    headers: { type: 'object', additionalProperties: { type: 'string' } },
+    transportType: { type: 'string', enum: ['streamable-http', 'sse'] },
+  },
 }
 
 const serverConfig = { oneOf: [stdioServer, httpServer] }
-const serversMap = { type: "object", additionalProperties: serverConfig }
+const serversMap = { type: 'object', additionalProperties: serverConfig }
 
 export const PLUGIN_OPTIONS_SCHEMA = {
-  $id: "https://opencode.ai/plugins/opencode-beanie-plugin.schema.json",
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  title: "opencode-beanie-plugin options",
-  description: "Options for the opencode-beanie-plugin. Set them on the plugin tuple in opencode.json: [\"opencode-beanie-plugin\", { ... }]. Feature names are camelCase.",
-  type: "object",
+  $id: 'https://opencode.ai/plugins/opencode-beanie-plugin.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'opencode-beanie-plugin options',
+  description:
+    'Options for the opencode-beanie-plugin. Set them on the plugin tuple in opencode.json: ["opencode-beanie-plugin", { ... }]. Feature names are camelCase.',
+  type: 'object',
   additionalProperties: false,
   properties: {
     orchestrator: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
-      required: ["subagentModel"],
+      required: ['subagentModel'],
       properties: {
-        subagentModel: { ...modelRef, description: "Required. Model id used for every routed subagent, e.g. \"anthropic/claude-sonnet-4-6\"." },
+        subagentModel: {
+          ...modelRef,
+          description: 'Required. Model id used for every routed subagent, e.g. "anthropic/claude-sonnet-4-6".',
+        },
         orchestratorModel: modelRef,
-        orchestratorAgent: { ...nonEmptyString, default: "Manager" },
-        orchestratorDepth: { type: "integer", minimum: 1, default: 1 },
-        orchestratorModels: { type: "array", items: modelRef, description: "Per-level orchestrator models; length must not exceed orchestratorDepth." },
+        orchestratorAgent: { ...nonEmptyString, default: 'Manager' },
+        orchestratorDepth: { type: 'integer', minimum: 1, default: 1 },
+        orchestratorModels: {
+          type: 'array',
+          items: modelRef,
+          description: 'Per-level orchestrator models; length must not exceed orchestratorDepth.',
+        },
         agents: stringArray,
-        agentModels: { type: "object", additionalProperties: modelRef },
+        agentModels: { type: 'object', additionalProperties: modelRef },
         instructions: nonEmptyString,
-        blockedTools: { ...toolNameArray, default: ["edit", "bash"] },
-        restrictTask: { type: "boolean", default: false },
+        blockedTools: { ...toolNameArray, default: ['edit', 'bash'] },
+        restrictTask: { type: 'boolean', default: false },
       },
     },
     throttle: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
-        maxParallel: { type: "integer", minimum: 1, default: 2 },
-        mode: { type: "string", enum: ["session", "global"], default: "session" },
-        maxWaitMs: { type: "number", exclusiveMinimum: 0, default: 3600000 },
-        notifyQueue: { type: "boolean", default: false },
+        maxParallel: { type: 'integer', minimum: 1, default: 2 },
+        mode: { type: 'string', enum: ['session', 'global'], default: 'session' },
+        maxWaitMs: { type: 'number', exclusiveMinimum: 0, default: 3600000 },
+        notifyQueue: { type: 'boolean', default: false },
       },
     },
     goal: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
         evaluatorModel: modelRef,
         evaluatorAgent: nonEmptyString,
         stateDirectory: nonEmptyString,
-        maxTranscriptChars: { type: "integer", minimum: 1024, default: 48000 },
-        defaultTokenBudget: { type: "integer", minimum: 1 },
-        defaultMaxTurns: { type: "integer", minimum: 1 },
-        continuationDelayMs: { type: "integer", minimum: 0, default: 0 },
-        deleteEvaluatorSessions: { type: "boolean", default: true },
+        maxTranscriptChars: { type: 'integer', minimum: 1024, default: 48000 },
+        defaultTokenBudget: { type: 'integer', minimum: 1 },
+        defaultMaxTurns: { type: 'integer', minimum: 1 },
+        continuationDelayMs: { type: 'integer', minimum: 0, default: 0 },
+        deleteEvaluatorSessions: { type: 'boolean', default: true },
       },
     },
     providers: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
-        providers: { type: "array", items: { $ref: "#/$defs/providerSource" } },
+        providers: { type: 'array', items: { $ref: '#/$defs/providerSource' } },
         configFile: nonEmptyString,
         model: modelRef,
         smallModel: modelRef,
-        timeout: { type: "integer", exclusiveMinimum: 0, default: 10000 },
+        timeout: { type: 'integer', exclusiveMinimum: 0, default: 10000 },
         npm: nonEmptyString,
-        env: { type: "boolean", default: true },
+        env: { type: 'boolean', default: true },
       },
     },
     skillbox: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
-        registry: { type: "string", enum: ["auto", "skills-sh", "github"] },
+        registry: { type: 'string', enum: ['auto', 'skills-sh', 'github'] },
         skillsShToken: nonEmptyString,
         githubSources: stringArray,
         githubToken: nonEmptyString,
-        maxBytes: { type: "integer", minimum: 1 },
-        debug: { type: "boolean" },
+        maxBytes: { type: 'integer', minimum: 1 },
+        debug: { type: 'boolean' },
       },
     },
     toolbox: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
-        config: { oneOf: [{ type: "string", minLength: 1 }, { type: "object", additionalProperties: false, required: ["mcpServers"], properties: { mcpServers: serversMap, searchTopK: { type: "integer", minimum: 1, maximum: 500, default: 20 }, cacheToolMetadata: { type: "boolean", default: true }, processPoolSize: { type: "integer", minimum: 1, maximum: 64, default: 8 }, timeoutSeconds: { type: "number", minimum: 1, maximum: 600, default: 30 }, idleTimeoutMs: { type: "integer", minimum: 0, maximum: 3600000, default: 300000 } } }] },
+        config: {
+          oneOf: [
+            { type: 'string', minLength: 1 },
+            {
+              type: 'object',
+              additionalProperties: false,
+              required: ['mcpServers'],
+              properties: {
+                mcpServers: serversMap,
+                searchTopK: { type: 'integer', minimum: 1, maximum: 500, default: 20 },
+                cacheToolMetadata: { type: 'boolean', default: true },
+                processPoolSize: { type: 'integer', minimum: 1, maximum: 64, default: 8 },
+                timeoutSeconds: { type: 'number', minimum: 1, maximum: 600, default: 30 },
+                idleTimeoutMs: { type: 'integer', minimum: 0, maximum: 3600000, default: 300000 },
+              },
+            },
+          ],
+        },
         servers: serversMap,
       },
     },
     directives: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
-        defaults: { type: "boolean", default: true },
+        defaults: { type: 'boolean', default: true },
         system: stringArray,
-        tools: { type: "object", additionalProperties: { type: "string", minLength: 1 }, propertyNames: { pattern: TOOL_NAME_PATTERN } },
-        mechanisms: { type: "array", items: { type: "string", enum: ["goal", "orchestrator", "throttle", "skillbox", "toolbox", "providers", "configurator"] } },
+        tools: {
+          type: 'object',
+          additionalProperties: { type: 'string', minLength: 1 },
+          propertyNames: { pattern: TOOL_NAME_PATTERN },
+        },
+        mechanisms: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['goal', 'orchestrator', 'throttle', 'skillbox', 'toolbox', 'providers', 'configurator'],
+          },
+        },
       },
     },
   },

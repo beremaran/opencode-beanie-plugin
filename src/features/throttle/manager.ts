@@ -1,9 +1,9 @@
-import type { Release } from "./queue.js"
-import { Semaphore } from "./queue.js"
+import type { Release } from './queue.js'
+import { Semaphore } from './queue.js'
 
 const RECENT_IDLE_TTL_MS = 10_000
 
-export type ThrottleMode = "session" | "global"
+export type ThrottleMode = 'session' | 'global'
 
 export interface QueueEventInfo {
   sessionID: string
@@ -26,7 +26,7 @@ export interface ThrottleManagerOptions {
   clearTimer?: (handle: unknown) => void
 }
 
-type SlotKind = "foreground" | "background"
+type SlotKind = 'foreground' | 'background'
 
 interface Slot {
   release: Release
@@ -84,11 +84,19 @@ export class ThrottleManager {
     }
 
     if (!immediate) {
-      this.onStarted({ sessionID, callID, description, position, running: semaphore.running, queued: semaphore.queued, background: isBackground })
+      this.onStarted({
+        sessionID,
+        callID,
+        description,
+        position,
+        running: semaphore.running,
+        queued: semaphore.queued,
+        background: isBackground,
+      })
     }
 
     const key = this.key(sessionID, callID)
-    const slot: Slot = { release, kind: isBackground ? "background" : "foreground", released: false, timer: undefined }
+    const slot: Slot = { release, kind: isBackground ? 'background' : 'foreground', released: false, timer: undefined }
 
     this.slots.set(key, slot)
     const timer = this.setTimer(() => {
@@ -108,7 +116,7 @@ export class ThrottleManager {
 
     if (slot === undefined || slot.released) return
 
-    if (slot.kind === "foreground" || childSessionID === undefined) {
+    if (slot.kind === 'foreground' || childSessionID === undefined) {
       this.releaseSlot(key)
       return
     }
@@ -164,7 +172,7 @@ export class ThrottleManager {
   }
 
   private getSemaphore(sessionID: string): Semaphore {
-    if (this.mode === "global") {
+    if (this.mode === 'global') {
       if (this.globalSemaphore === undefined) this.globalSemaphore = new Semaphore(this.maxParallel)
       return this.globalSemaphore
     }
