@@ -13,7 +13,6 @@
     "dist"
   ],
   "scripts": {
-    "prepare": "npm run build",
     "build": "tsc",
     "check": "tsc --noEmit",
     "lint": "biome check src",
