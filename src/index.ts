@@ -6,6 +6,7 @@ import GoalPlugin from "./features/goal/index.js"
 import Providers from "./features/providers/index.js"
 import Skillbox from "./features/skillbox/index.js"
 import Toolbox from "./features/toolbox/index.js"
+import Directives from "./features/directives/index.js"
 
 const features: Record<string, Plugin> = {
   orchestrator: OrchestratorPlugin,
@@ -14,6 +15,7 @@ const features: Record<string, Plugin> = {
   providers: Providers,
   skillbox: Skillbox,
   toolbox: Toolbox,
+  directives: Directives,
 }
 
 const BeaniePlugin: Plugin = async (input, options) =>
