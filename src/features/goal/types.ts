@@ -1,8 +1,11 @@
 export const GOAL_STATUSES = ['active', 'paused', 'complete', 'blocked', 'budget_limited', 'turn_limited'] as const
 
 export type GoalStatus = (typeof GOAL_STATUSES)[number]
-export type CompletionClaim = { reason: string; createdAt: number }
-export type GoalState = {
+export interface CompletionClaim {
+  reason: string
+  createdAt: number
+}
+export interface GoalState {
   version: 1
   goalId: string
   sessionID: string
@@ -20,8 +23,12 @@ export type GoalState = {
   lastReason?: string
   completionClaim?: CompletionClaim
 }
-export type EvaluationDecision = { complete: boolean; reason: string; error?: boolean }
-export type GoalPluginOptions = {
+export interface EvaluationDecision {
+  complete: boolean
+  reason: string
+  error?: boolean
+}
+export interface GoalPluginOptions {
   evaluatorModel?: string
   evaluatorAgent?: string
   stateDirectory?: string
@@ -31,7 +38,7 @@ export type GoalPluginOptions = {
   continuationDelayMs?: number
   deleteEvaluatorSessions?: boolean
 }
-export type ResolvedGoalPluginOptions = {
+export interface ResolvedGoalPluginOptions {
   evaluatorModel?: string
   evaluatorAgent?: string
   stateDirectory?: string
@@ -49,15 +56,18 @@ export type GoalCommand =
   | { action: 'resume' }
   | { action: 'set'; objective: string; tokenBudget?: number; maxTurns?: number }
   | { action: 'invalid'; message: string }
-export type ModelRef = { providerID: string; modelID: string }
-export type TranscriptPart = {
+export interface ModelRef {
+  providerID: string
+  modelID: string
+}
+export interface TranscriptPart {
   type: string
   text?: string
   tool?: string
   state?: { status?: string; title?: string; output?: string; error?: string }
   files?: string[]
 }
-export type TranscriptMessage = {
+export interface TranscriptMessage {
   info: {
     id: string
     role: 'user' | 'assistant'

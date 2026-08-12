@@ -39,7 +39,7 @@ const DEFAULT_MECHANISM_NOTES: Record<string, string> = {
     "- Configuration: run /beanie status, /beanie validate, or /beanie apply to inspect or write the plugin's options, or /beanie init for a guided setup; the configure_plugin tool does the same programmatically.",
 }
 
-type Resolved = {
+interface Resolved {
   defaults: boolean
   system: string[]
   tools: Record<string, string>
@@ -57,9 +57,14 @@ const stringList = (value: unknown): string[] =>
     : []
 const stringMap = (value: unknown): Record<string, string> => {
   const result: Record<string, string> = {}
-  if (!isRecord(value)) return result
-  for (const [key, entry] of Object.entries(value))
-    if (typeof entry === 'string' && entry.trim() !== '' && TOOL_PATTERN.test(key)) result[key] = entry.trim()
+  if (!isRecord(value)) {
+    return result
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry === 'string' && entry.trim() !== '' && TOOL_PATTERN.test(key)) {
+      result[key] = entry.trim()
+    }
+  }
   return result
 }
 export const resolveOptions = (raw: Record<string, unknown> | undefined): Resolved => {
@@ -89,16 +94,22 @@ ${mechanismNotes(options).join('\n')}
 - Track multi-turn objectives with the /goal command and consult get_goal/update_goal as you progress.
 - Delegate decomposition-ready work to a subagent with the \`task\` tool instead of doing it inline.
 - Before writing boilerplate, run search_skills then load_skill to reuse an existing agent skill.`
-const toolGuidance = (options: Resolved, toolID: string): string | undefined => {
+const toolGuidance = (options: Resolved, toolId: string): string | undefined => {
   const parts: string[] = []
-  if (options.defaults && DEFAULT_TOOL_GUIDANCE[toolID]) parts.push(DEFAULT_TOOL_GUIDANCE[toolID])
-  if (options.tools[toolID]) parts.push(options.tools[toolID])
+  if (options.defaults && DEFAULT_TOOL_GUIDANCE[toolId]) {
+    parts.push(DEFAULT_TOOL_GUIDANCE[toolId])
+  }
+  if (options.tools[toolId]) {
+    parts.push(options.tools[toolId])
+  }
   return parts.length > 0 ? parts.join(' ') : undefined
 }
 
 const Directives: Plugin = async ({ client }, rawOptions) => {
   const options = resolveOptions(rawOptions)
-  if (options.system.length === 0 && options.tools && Object.keys(options.tools).length === 0) return {}
+  if (options.system.length === 0 && options.tools && Object.keys(options.tools).length === 0) {
+    return {}
+  }
   await client.app
     .log({
       body: {
@@ -117,14 +128,19 @@ const Directives: Plugin = async ({ client }, rawOptions) => {
   return {
     'tool.definition': async ({ toolID }, output) => {
       const guidance = toolGuidance(options, toolID)
-      if (guidance)
+      if (guidance) {
         output.description = output.description
           ? `${output.description}\n\n[${SERVICE}] ${guidance}`
           : `[${SERVICE}] ${guidance}`
+      }
     },
     'experimental.chat.system.transform': async (_input, output) => {
-      if (options.defaults) output.system.push(systemDirective(options))
-      for (const line of options.system) output.system.push(line)
+      if (options.defaults) {
+        output.system.push(systemDirective(options))
+      }
+      for (const line of options.system) {
+        output.system.push(line)
+      }
     },
   }
 }

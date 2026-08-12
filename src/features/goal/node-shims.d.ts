@@ -1,6 +1,6 @@
 declare module 'node:crypto' {
   export function randomUUID(): string
-  export function createHash(algorithm: string): { update(value: string): { digest(encoding: 'hex'): string } }
+  export function createHash(algorithm: string): { update: (value: string) => { digest: (encoding: 'hex') => string } }
 }
 
 declare module 'node:os' {
@@ -10,7 +10,7 @@ declare module 'node:os' {
 declare module 'node:path' {
   export function join(...parts: string[]): string
   export function dirname(path: string): string
-  const path: { join(...parts: string[]): string }
+  const path: { join: (...parts: string[]) => string }
   export default path
 }
 

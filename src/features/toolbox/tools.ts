@@ -8,14 +8,20 @@ const server = tool.schema.string().regex(/^[A-Za-z0-9._-]{1,128}$/)
 const toolName = tool.schema.string().min(1).max(256)
 const resolve = (args: { server?: string; tool: string }, registry: ToolRegistry) => {
   const qualified = splitQualified(args.tool)
-  if (qualified)
+  if (qualified) {
     return registry.upstream.has(qualified.server)
       ? { server: qualified.server, tool: qualified.tool }
       : { error: `unknown server: ${qualified.server}` }
-  if (!args.server)
+  }
+  if (!args.server) {
     return { error: 'server is required when tool is a bare tool name (or pass the qualified servername__toolname)' }
-  if (!registry.upstream.has(args.server)) return { error: `unknown server: ${args.server}` }
-  if (!registry.validateToolName(args.tool)) return { error: `invalid tool name: ${args.tool}` }
+  }
+  if (!registry.upstream.has(args.server)) {
+    return { error: `unknown server: ${args.server}` }
+  }
+  if (!registry.validateToolName(args.tool)) {
+    return { error: `invalid tool name: ${args.tool}` }
+  }
   return { server: args.server, tool: args.tool }
 }
 const listDescription =
@@ -47,28 +53,32 @@ export function createTools(registry: ToolRegistry, connection: ConnectionManage
       },
       async execute(args) {
         const refresh = args.refresh === true || !config.cacheToolMetadata
-        if (refresh)
+        if (refresh) {
           for (const name of args.server
-            ? registry.upstream.has(args.server) && !registry.upstream.get(args.server)!.config.disabled
+            ? registry.upstream.has(args.server) && !registry.upstream.get(args.server)?.config.disabled
               ? [args.server]
               : []
-            : registry.upstream.enabledNames())
+            : registry.upstream.enabledNames()) {
             await connection.listToolsFor(name)
+          }
+        }
         const result = registry.search({ ...args, refresh })
         const lines = [
           `[mcp-aggregator] ${result.servers.length} servers, ${result.total} tools${result.searched.query ? ` (search: "${result.searched.query}", ${result.shown} shown)` : result.truncated ? ` (${result.shown} shown)` : ''}`,
         ]
-        if (result.servers.length) {
+        if (result.servers.length > 0) {
           lines.push('SERVERS:')
-          for (const item of result.servers)
+          for (const item of result.servers) {
             lines.push(
               `  ${item.name.padEnd(14)}  ${item.status.padEnd(10)}  ${item.toolCount} tools${item.error ? `  "${item.error}"` : ''}`,
             )
+          }
         }
-        if (result.tools.length) {
+        if (result.tools.length > 0) {
           lines.push('TOOLS (qualified name | summary):')
-          for (const item of result.tools)
+          for (const item of result.tools) {
             lines.push(`  ${item.qualifiedName.padEnd(30)}  ${item.summary}${item.stale ? ' [stale]' : ''}`)
+          }
         }
         return lines.join('\n')
       },
@@ -78,7 +88,9 @@ export function createTools(registry: ToolRegistry, connection: ConnectionManage
       args: { server: server.optional(), tool: toolName },
       async execute(args) {
         const target = resolve(args, registry)
-        if ('error' in target) return JSON.stringify({ error: target.error })
+        if ('error' in target) {
+          return JSON.stringify({ error: target.error })
+        }
         let upstream = registry.getTool(target.server, target.tool)
         if (!upstream) {
           const tools = await connection.listToolsFor(target.server)
@@ -102,7 +114,9 @@ export function createTools(registry: ToolRegistry, connection: ConnectionManage
       },
       async execute(args, context) {
         const target = resolve(args, registry)
-        if ('error' in target) return `[mcp-aggregator] ${args.tool} failed: ${target.error}`
+        if ('error' in target) {
+          return `[mcp-aggregator] ${args.tool} failed: ${target.error}`
+        }
         try {
           const result = await connection.callTool(target.server, target.tool, args.arguments, context.abort)
           return JSON.stringify(result)

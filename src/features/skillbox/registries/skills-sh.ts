@@ -18,7 +18,9 @@ const marker = (bytes: number) => `\n[...truncated: ${bytes} bytes omitted]\n`
 const byteLength = (value: string): number => new TextEncoder().encode(value).byteLength
 function cap(files: SkillFile[], max: number): void {
   const total = () => files.reduce((n, f) => n + byteLength(f.contents), 0)
-  if (total() <= max) return
+  if (total() <= max) {
+    return
+  }
   const main = files.find((f) => md(f.path))
   if (main && byteLength(main.contents) > max) {
     files
@@ -27,18 +29,22 @@ function cap(files: SkillFile[], max: number): void {
         f.contents = ''
       })
     let text = main.contents.slice(0, max)
-    while (byteLength(text + marker(byteLength(main.contents) - byteLength(text))) > max && text.length)
+    while (byteLength(text + marker(byteLength(main.contents) - byteLength(text))) > max && text.length > 0) {
       text = text.slice(0, -1)
+    }
     main.contents = text + marker(byteLength(main.contents) - byteLength(text))
     return
   }
   let remaining = max - (main ? byteLength(main.contents) : 0)
   for (const file of files.filter((f) => f !== main).sort((a, b) => byteLength(b.contents) - byteLength(a.contents))) {
     const size = byteLength(file.contents)
-    if (size <= remaining) remaining -= size
-    else {
+    if (size <= remaining) {
+      remaining -= size
+    } else {
       let text = file.contents.slice(0, Math.max(0, remaining))
-      while (byteLength(text + marker(size - byteLength(text))) > remaining && text.length) text = text.slice(0, -1)
+      while (byteLength(text + marker(size - byteLength(text))) > remaining && text.length > 0) {
+        text = text.slice(0, -1)
+      }
       file.contents = text + marker(size - byteLength(text))
       remaining = 0
     }
@@ -52,61 +58,79 @@ export class SkillsShRegistry implements SkillRegistry {
   private readonly searchCache = new TtlCache<string, unknown>()
   private readonly detailCache = new TtlCache<string, unknown>()
   constructor(opts: { token?: string; baseUrl?: string; maxBytes?: number }) {
-    if (!opts.token) throw new RegistryAuthError('skills.sh registry requires an API token')
+    if (!opts.token) {
+      throw new RegistryAuthError('skills.sh registry requires an API token')
+    }
     this.token = opts.token
     this.baseUrl = (opts.baseUrl ?? 'https://skills.sh').replace(/\/+$/, '')
-    this.maxBytes = opts.maxBytes ?? 200000
+    this.maxBytes = opts.maxBytes ?? 200_000
   }
   async listSkills(opts: ListSkillsOptions): Promise<SkillListResult> {
-    const view = opts.view ?? 'all-time',
-      page = opts.page ?? 1,
-      perPage = opts.perPage ?? 20,
-      key = `list:${view}:${page}:${perPage}:${opts.includeDescription ? 'desc' : 'plain'}`,
-      cached = this.listCache.get(key)
-    if (cached) return cached as SkillListResult
+    const view = opts.view ?? 'all-time'
+    const page = opts.page ?? 1
+    const perPage = opts.perPage ?? 20
+    const key = `list:${view}:${page}:${perPage}:${opts.includeDescription ? 'desc' : 'plain'}`
+    const cached = this.listCache.get(key)
+    if (cached) {
+      return cached as SkillListResult
+    }
     const body = await this.request(
-        `${this.baseUrl}/api/v1/skills?${new URLSearchParams({ view, page: String(page), perPage: String(perPage) })}`,
-      ),
-      result = this.map(body, page, perPage)
-    if (opts.includeDescription) await this.enrich(result.data)
-    this.listCache.set(key, result, 60000)
+      `${this.baseUrl}/api/v1/skills?${new URLSearchParams({ view, page: String(page), perPage: String(perPage) })}`,
+    )
+    const result = this.map(body, page, perPage)
+    if (opts.includeDescription) {
+      await this.enrich(result.data)
+    }
+    this.listCache.set(key, result, 60_000)
     return result
   }
   async searchSkills(opts: SearchSkillsOptions): Promise<SkillListResult> {
     const query = opts.query.trim()
-    if (query.length < 2) throw new Error('search query must be at least 2 characters')
-    const limit = opts.limit ?? 10,
-      owner = opts.owner?.trim(),
-      key = `search:${query}:${limit}:${owner ?? ''}:${opts.includeDescription ? 'desc' : 'plain'}`,
-      cached = this.searchCache.get(key)
-    if (cached) return cached as SkillListResult
+    if (query.length < 2) {
+      throw new Error('search query must be at least 2 characters')
+    }
+    const limit = opts.limit ?? 10
+    const owner = opts.owner?.trim()
+    const key = `search:${query}:${limit}:${owner ?? ''}:${opts.includeDescription ? 'desc' : 'plain'}`
+    const cached = this.searchCache.get(key)
+    if (cached) {
+      return cached as SkillListResult
+    }
     const params = new URLSearchParams({ q: query, limit: String(limit) })
-    if (owner) params.set('owner', owner)
+    if (owner) {
+      params.set('owner', owner)
+    }
     const result = this.mapSearch(await this.request(`${this.baseUrl}/api/v1/skills/search?${params}`), limit)
-    if (opts.includeDescription) await this.enrich(result.data)
-    this.searchCache.set(key, result, 60000)
+    if (opts.includeDescription) {
+      await this.enrich(result.data)
+    }
+    this.searchCache.set(key, result, 60_000)
     return result
   }
   async loadSkill(id: string): Promise<SkillDetail> {
-    const parts = id.split('/'),
-      source = parts.length >= 3 ? `${parts[0]}/${parts[1]}` : (parts[0] ?? ''),
-      slug = parts.length >= 3 ? parts.slice(2).join('/') : parts.slice(1).join('/'),
-      key = `detail:${source}:${slug}`,
-      cached = this.detailCache.get(key)
-    if (cached) return cached as SkillDetail
+    const parts = id.split('/')
+    const source = parts.length >= 3 ? `${parts[0]}/${parts[1]}` : (parts[0] ?? '')
+    const slug = parts.length >= 3 ? parts.slice(2).join('/') : parts.slice(1).join('/')
+    const key = `detail:${source}:${slug}`
+    const cached = this.detailCache.get(key)
+    if (cached) {
+      return cached as SkillDetail
+    }
     const raw = (await this.request(
-        `${this.baseUrl}/api/v1/skills/${encodeURIComponent(source)}/${encodeURIComponent(slug)}`,
-      )) as Record<string, unknown>,
-      files: SkillFile[] = Array.isArray(raw.files)
-        ? raw.files.flatMap((entry) => {
-            const f = entry as Record<string, unknown>
-            return typeof f.path === 'string' && typeof f.contents === 'string'
-              ? [{ path: f.path, contents: f.contents }]
-              : []
-          })
-        : []
+      `${this.baseUrl}/api/v1/skills/${encodeURIComponent(source)}/${encodeURIComponent(slug)}`,
+    )) as Record<string, unknown>
+    const files: SkillFile[] = Array.isArray(raw.files)
+      ? raw.files.flatMap((entry) => {
+          const f = entry as Record<string, unknown>
+          return typeof f.path === 'string' && typeof f.contents === 'string'
+            ? [{ path: f.path, contents: f.contents }]
+            : []
+        })
+      : []
     files.sort((a, b) => Number(!md(a.path)) - Number(!md(b.path)) || a.path.localeCompare(b.path))
-    if (!files.some((f) => md(f.path))) throw new SkillNotFoundError(`SKILL.md not found in ${id}`)
+    if (!files.some((f) => md(f.path))) {
+      throw new SkillNotFoundError(`SKILL.md not found in ${id}`)
+    }
     cap(files, this.maxBytes)
     const detail = {
       id: typeof raw.id === 'string' ? raw.id : id,
@@ -117,7 +141,7 @@ export class SkillsShRegistry implements SkillRegistry {
       ...(typeof raw.hash === 'string' || raw.hash === null ? { hash: raw.hash } : {}),
       files,
     }
-    this.detailCache.set(key, detail, 300000)
+    this.detailCache.set(key, detail, 300_000)
     return detail
   }
   private async request(url: string): Promise<unknown> {
@@ -127,46 +151,48 @@ export class SkillsShRegistry implements SkillRegistry {
       if (error instanceof HttpError && error.status === 401) {
         throw new RegistryAuthError(`skills.sh registry authentication failed for ${url}`)
       }
-      if (error instanceof HttpError && error.status === 404) throw new SkillNotFoundError(`skill not found: ${url}`)
+      if (error instanceof HttpError && error.status === 404) {
+        throw new SkillNotFoundError(`skill not found: ${url}`)
+      }
       throw error
     }
   }
   private map(body: unknown, page: number, perPage: number): SkillListResult {
-    const raw = body as Record<string, unknown>,
-      data = (Array.isArray(raw.data) ? raw.data : Array.isArray(raw.skills) ? raw.skills : []).map((x) =>
-        this.item(x as Record<string, unknown>),
-      ),
-      p = (raw.pagination ?? {}) as Record<string, unknown>
+    const raw = body as Record<string, unknown>
+    const data = (Array.isArray(raw.data) ? raw.data : Array.isArray(raw.skills) ? raw.skills : []).map((x) =>
+      this.item(x as Record<string, unknown>),
+    )
+    const p = (raw.pagination ?? {}) as Record<string, unknown>
     return {
       data,
       pagination: {
         page: typeof p.page === 'number' ? p.page : page,
         perPage: typeof p.perPage === 'number' ? p.perPage : perPage,
         ...(typeof p.total === 'number' ? { total: p.total } : {}),
-        hasMore: p.hasMore !== undefined ? Boolean(p.hasMore) : data.length >= perPage,
+        hasMore: p.hasMore === undefined ? data.length >= perPage : Boolean(p.hasMore),
       },
     }
   }
   private mapSearch(body: unknown, limit: number): SkillListResult {
-    const raw = body as Record<string, unknown>,
-      data = (Array.isArray(raw.data) ? raw.data : Array.isArray(raw.results) ? raw.results : []).map((x) =>
-        this.item(x as Record<string, unknown>),
-      ),
-      p = (raw.pagination ?? {}) as Record<string, unknown>,
-      total = typeof raw.count === 'number' ? raw.count : typeof p.total === 'number' ? p.total : undefined
+    const raw = body as Record<string, unknown>
+    const data = (Array.isArray(raw.data) ? raw.data : Array.isArray(raw.results) ? raw.results : []).map((x) =>
+      this.item(x as Record<string, unknown>),
+    )
+    const p = (raw.pagination ?? {}) as Record<string, unknown>
+    const total = typeof raw.count === 'number' ? raw.count : typeof p.total === 'number' ? p.total : undefined
     return {
       data,
       pagination: {
         page: typeof p.page === 'number' ? p.page : 1,
         perPage: typeof p.perPage === 'number' ? p.perPage : limit,
-        ...(total !== undefined ? { total } : {}),
-        hasMore: p.hasMore !== undefined ? Boolean(p.hasMore) : data.length >= limit,
+        ...(total === undefined ? {} : { total }),
+        hasMore: p.hasMore === undefined ? data.length >= limit : Boolean(p.hasMore),
       },
     }
   }
   private item(x: Record<string, unknown>): SkillSummary {
-    const source = typeof x.source === 'string' ? x.source : '',
-      slug = typeof x.slug === 'string' ? x.slug : ''
+    const source = typeof x.source === 'string' ? x.source : ''
+    const slug = typeof x.slug === 'string' ? x.slug : ''
     return {
       id: typeof x.id === 'string' ? x.id : `${source}/${slug}`,
       name: typeof x.name === 'string' ? x.name : slug,
@@ -182,9 +208,11 @@ export class SkillsShRegistry implements SkillRegistry {
     await Promise.all(
       items.slice(0, 20).map(async (item) => {
         try {
-          const detail = await this.loadSkill(`${item.source}/${item.slug}`),
-            file = detail.files.find((f) => md(f.path))
-          if (file) item.description = extractDescription(file.contents)
+          const detail = await this.loadSkill(`${item.source}/${item.slug}`)
+          const file = detail.files.find((f) => md(f.path))
+          if (file) {
+            item.description = extractDescription(file.contents)
+          }
         } catch {}
       }),
     )

@@ -11,7 +11,7 @@ import {
 } from './types.js'
 
 const MAX_DESCRIPTION_CHARS = 300
-const MAX_PAYLOAD_CHARS = 200000
+const MAX_PAYLOAD_CHARS = 200_000
 const byteLength = (value: string): number => new TextEncoder().encode(value).byteLength
 type Options = RegistryFactoryConfig & { debug?: boolean }
 type Env = Record<string, string | undefined>
@@ -20,27 +20,35 @@ const env = (): Env => {
   return value ?? {}
 }
 export function resolve(raw: Record<string, unknown> | undefined): Options {
-  const source = raw ?? {},
-    e = env(),
-    value = (key: string, envKey: string) => (source[key] !== undefined ? source[key] : e[envKey]),
-    registry = value('registry', 'SKILL_REGISTRY'),
-    sources = value('githubSources', 'SKILL_GITHUB_SOURCES'),
-    max = value('maxBytes', 'SKILL_MAX_BYTES'),
-    debug = value('debug', 'SKILL_DEBUG')
+  const source = raw ?? {}
+  const e = env()
+  const value = (key: string, envKey: string) => (source[key] === undefined ? e[envKey] : source[key])
+  const registry = value('registry', 'SKILL_REGISTRY')
+  const sources = value('githubSources', 'SKILL_GITHUB_SOURCES')
+  const max = value('maxBytes', 'SKILL_MAX_BYTES')
+  const debug = value('debug', 'SKILL_DEBUG')
   const config: Options = {}
-  if (registry === 'auto' || registry === 'skills-sh' || registry === 'github') config.registry = registry
-  if (typeof value('skillsShToken', 'SKILLS_SH_TOKEN') === 'string')
+  if (registry === 'auto' || registry === 'skills-sh' || registry === 'github') {
+    config.registry = registry
+  }
+  if (typeof value('skillsShToken', 'SKILLS_SH_TOKEN') === 'string') {
     config.skillsShToken = value('skillsShToken', 'SKILLS_SH_TOKEN') as string
-  if (typeof sources === 'string')
+  }
+  if (typeof sources === 'string') {
     config.githubSources = sources
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean)
-  else if (Array.isArray(sources)) config.githubSources = sources.filter((s): s is string => typeof s === 'string')
+  } else if (Array.isArray(sources)) {
+    config.githubSources = sources.filter((s): s is string => typeof s === 'string')
+  }
   const n = typeof max === 'number' ? max : Number(max)
-  if (Number.isFinite(n) && n > 0) config.maxBytes = Math.floor(n)
-  if (typeof value('githubToken', 'GITHUB_TOKEN') === 'string')
+  if (Number.isFinite(n) && n > 0) {
+    config.maxBytes = Math.floor(n)
+  }
+  if (typeof value('githubToken', 'GITHUB_TOKEN') === 'string') {
     config.githubToken = value('githubToken', 'GITHUB_TOKEN') as string
+  }
   config.debug = debug === true || debug === '1' || debug === 'true'
   return config
 }
@@ -57,9 +65,9 @@ function summary(item: SkillSummary, description: boolean): Record<string, unkno
     slug: item.slug,
     source: item.source,
     sourceType: item.sourceType,
-    ...(item.installs !== undefined ? { installs: item.installs } : {}),
-    ...(item.installUrl !== undefined ? { installUrl: item.installUrl } : {}),
-    ...(item.url !== undefined ? { url: item.url } : {}),
+    ...(item.installs === undefined ? {} : { installs: item.installs }),
+    ...(item.installUrl === undefined ? {} : { installUrl: item.installUrl }),
+    ...(item.url === undefined ? {} : { url: item.url }),
     ...(description && item.description !== undefined
       ? { description: truncate(item.description, MAX_DESCRIPTION_CHARS) }
       : {}),
@@ -70,9 +78,13 @@ function marker(bytes: number): string {
 }
 function truncateBytes(contents: string, budget: number): string {
   const original = byteLength(contents)
-  if (original <= budget) return contents
+  if (original <= budget) {
+    return contents
+  }
   let text = contents.slice(0, Math.max(0, budget))
-  while (byteLength(text + marker(original - byteLength(text))) > budget && text.length) text = text.slice(0, -1)
+  while (byteLength(text + marker(original - byteLength(text))) > budget && text.length > 0) {
+    text = text.slice(0, -1)
+  }
   return text + marker(original - byteLength(text))
 }
 function errorText(error: unknown, id?: string): string {
@@ -92,7 +104,9 @@ function loadPayload(detail: SkillDetail, includeSupporting: boolean, maxBytes: 
     size_bytes: byteLength(file.contents),
   }))
   let truncated = false
-  if (!includeSupporting) files = files.filter((file) => isSkillMd(file.path))
+  if (!includeSupporting) {
+    files = files.filter((file) => isSkillMd(file.path))
+  }
   if (maxBytes !== undefined && files.reduce((n, f) => n + f.size_bytes, 0) > maxBytes) {
     const main = files.filter((f) => isSkillMd(f.path))
     if (main.length < files.length) {
@@ -119,7 +133,7 @@ function loadPayload(detail: SkillDetail, includeSupporting: boolean, maxBytes: 
     id: detail.id,
     name: detail.name,
     source: detail.source,
-    ...(detail.installs !== undefined ? { installs: detail.installs } : {}),
+    ...(detail.installs === undefined ? {} : { installs: detail.installs }),
   }
   const payload = (list: typeof files, flag: boolean) => ({
     ...base,
@@ -139,9 +153,11 @@ function loadPayload(detail: SkillDetail, includeSupporting: boolean, maxBytes: 
 }
 function createLogger(input: PluginInput, enabled: boolean) {
   return async (level: 'warn' | 'error', message: string, extra?: Record<string, unknown>) => {
-    if (!enabled) return
+    if (!enabled) {
+      return
+    }
     await input.client.app
-      .log({ body: { service: 'opencode-beanie-plugin', level, message, ...(extra !== undefined ? { extra } : {}) } })
+      .log({ body: { service: 'opencode-beanie-plugin', level, message, ...(extra === undefined ? {} : { extra }) } })
       .catch(() => undefined)
   }
 }
@@ -203,8 +219,9 @@ const Skillbox: Plugin = async (input, rawOptions) => {
         execute: async (args) => {
           try {
             const query = args.query.trim()
-            if (query.length < 2)
+            if (query.length < 2) {
               return JSON.stringify({ error: 'Search query must be at least 2 characters' }, null, 2)
+            }
             const result = await registry.searchSkills({
               query,
               limit: args.limit,
@@ -231,11 +248,13 @@ const Skillbox: Plugin = async (input, rawOptions) => {
         args: {
           id: tool.schema.string().min(1),
           include_supporting_files: tool.schema.boolean().optional().default(false),
-          max_bytes: tool.schema.number().int().min(500).max(100000).optional(),
+          max_bytes: tool.schema.number().int().min(500).max(100_000).optional(),
         },
         execute: async (args) => {
           const id = args.id.trim()
-          if (!id) return JSON.stringify({ error: 'Skill id is required' }, null, 2)
+          if (!id) {
+            return JSON.stringify({ error: 'Skill id is required' }, null, 2)
+          }
           try {
             return loadPayload(await registry.loadSkill(id), args.include_supporting_files, args.max_bytes)
           } catch (error) {

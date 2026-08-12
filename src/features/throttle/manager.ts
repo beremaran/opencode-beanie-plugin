@@ -65,15 +65,23 @@ export class ThrottleManager {
       ((handle) => globalThis.clearTimeout(handle as Parameters<typeof globalThis.clearTimeout>[0]))
   }
 
-  async startTask(sessionID: string, callID: string, isBackground: boolean, description?: string): Promise<void> {
-    const semaphore = this.getSemaphore(sessionID)
+  async startTask(sessionId: string, callId: string, isBackground: boolean, description?: string): Promise<void> {
+    const semaphore = this.getSemaphore(sessionId)
     const running = semaphore.running
     const queued = semaphore.queued
     const position = queued + 1
     const immediate = running < this.maxParallel
 
-    if (!immediate && !this.disposed) {
-      this.onQueued({ sessionID, callID, description, position, running, queued: queued + 1, background: isBackground })
+    if (!(immediate || this.disposed)) {
+      this.onQueued({
+        sessionID: sessionId,
+        callID: callId,
+        description,
+        position,
+        running,
+        queued: queued + 1,
+        background: isBackground,
+      })
     }
 
     const release = await semaphore.acquire()
@@ -85,8 +93,8 @@ export class ThrottleManager {
 
     if (!immediate) {
       this.onStarted({
-        sessionID,
-        callID,
+        sessionID: sessionId,
+        callID: callId,
         description,
         position,
         running: semaphore.running,
@@ -95,13 +103,13 @@ export class ThrottleManager {
       })
     }
 
-    const key = this.key(sessionID, callID)
+    const key = this.key(sessionId, callId)
     const slot: Slot = { release, kind: isBackground ? 'background' : 'foreground', released: false, timer: undefined }
 
     this.slots.set(key, slot)
     const timer = this.setTimer(() => {
       if (this.releaseSlot(key)) {
-        this.onWarn(`Task ${sessionID}/${callID} was force-released by the watchdog`)
+        this.onWarn(`Task ${sessionId}/${callId} was force-released by the watchdog`)
       }
     }, this.maxWaitMs)
     slot.timer = timer
@@ -110,43 +118,47 @@ export class ThrottleManager {
     }
   }
 
-  endTask(sessionID: string, callID: string, childSessionID?: string): void {
-    const key = this.key(sessionID, callID)
+  endTask(sessionId: string, callId: string, childSessionId?: string): void {
+    const key = this.key(sessionId, callId)
     const slot = this.slots.get(key)
 
-    if (slot === undefined || slot.released) return
+    if (slot === undefined || slot.released) {
+      return
+    }
 
-    if (slot.kind === 'foreground' || childSessionID === undefined) {
+    if (slot.kind === 'foreground' || childSessionId === undefined) {
       this.releaseSlot(key)
       return
     }
 
-    if (this.recentlyIdle.has(childSessionID)) {
-      this.recentlyIdle.delete(childSessionID)
+    if (this.recentlyIdle.has(childSessionId)) {
+      this.recentlyIdle.delete(childSessionId)
       this.releaseSlot(key)
       return
     }
 
-    slot.watchedChildSessionID = childSessionID
-    this.watchers.set(childSessionID, key)
+    slot.watchedChildSessionID = childSessionId
+    this.watchers.set(childSessionId, key)
   }
 
-  onSessionIdle(sessionID: string): void {
-    const key = this.watchers.get(sessionID)
+  onSessionIdle(sessionId: string): void {
+    const key = this.watchers.get(sessionId)
     if (key !== undefined) {
-      this.watchers.delete(sessionID)
+      this.watchers.delete(sessionId)
       this.releaseSlot(key)
     }
 
     let timer: unknown
     timer = this.setTimer(() => {
-      if (this.recentlyIdle.get(sessionID) === timer) this.recentlyIdle.delete(sessionID)
+      if (this.recentlyIdle.get(sessionId) === timer) {
+        this.recentlyIdle.delete(sessionId)
+      }
     }, RECENT_IDLE_TTL_MS)
-    this.recentlyIdle.set(sessionID, timer)
+    this.recentlyIdle.set(sessionId, timer)
   }
 
-  onToolError(sessionID: string, callID: string): void {
-    this.releaseSlot(this.key(sessionID, callID))
+  onToolError(sessionId: string, callId: string): void {
+    this.releaseSlot(this.key(sessionId, callId))
   }
 
   get stats(): { running: number; queued: number } {
@@ -160,34 +172,44 @@ export class ThrottleManager {
   }
 
   dispose(): void {
-    if (this.disposed) return
+    if (this.disposed) {
+      return
+    }
     this.disposed = true
 
-    for (const key of this.slots.keys()) this.releaseSlot(key)
+    for (const key of this.slots.keys()) {
+      this.releaseSlot(key)
+    }
     this.watchers.clear()
-    for (const timer of this.recentlyIdle.values()) this.clearTimer(timer)
+    for (const timer of this.recentlyIdle.values()) {
+      this.clearTimer(timer)
+    }
     this.recentlyIdle.clear()
     this.sessionSemaphores.clear()
     this.globalSemaphore = undefined
   }
 
-  private getSemaphore(sessionID: string): Semaphore {
+  private getSemaphore(sessionId: string): Semaphore {
     if (this.mode === 'global') {
-      if (this.globalSemaphore === undefined) this.globalSemaphore = new Semaphore(this.maxParallel)
+      if (this.globalSemaphore === undefined) {
+        this.globalSemaphore = new Semaphore(this.maxParallel)
+      }
       return this.globalSemaphore
     }
 
-    let semaphore = this.sessionSemaphores.get(sessionID)
+    let semaphore = this.sessionSemaphores.get(sessionId)
     if (semaphore === undefined) {
       semaphore = new Semaphore(this.maxParallel)
-      this.sessionSemaphores.set(sessionID, semaphore)
+      this.sessionSemaphores.set(sessionId, semaphore)
     }
     return semaphore
   }
 
   private releaseSlot(key: string): boolean {
     const slot = this.slots.get(key)
-    if (slot === undefined || slot.released) return false
+    if (slot === undefined || slot.released) {
+      return false
+    }
 
     slot.released = true
     this.clearTimer(slot.timer)
@@ -195,7 +217,9 @@ export class ThrottleManager {
 
     if (slot.watchedChildSessionID !== undefined) {
       const watchedKey = this.watchers.get(slot.watchedChildSessionID)
-      if (watchedKey === key) this.watchers.delete(slot.watchedChildSessionID)
+      if (watchedKey === key) {
+        this.watchers.delete(slot.watchedChildSessionID)
+      }
     }
 
     slot.release()
@@ -203,11 +227,13 @@ export class ThrottleManager {
   }
 
   private *semaphores(): Iterable<Semaphore> {
-    if (this.globalSemaphore !== undefined) yield this.globalSemaphore
+    if (this.globalSemaphore !== undefined) {
+      yield this.globalSemaphore
+    }
     yield* this.sessionSemaphores.values()
   }
 
-  private key(sessionID: string, callID: string): string {
-    return `${sessionID}:${callID}`
+  private key(sessionId: string, callId: string): string {
+    return `${sessionId}:${callId}`
   }
 }

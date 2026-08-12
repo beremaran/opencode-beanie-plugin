@@ -39,9 +39,9 @@ export interface SkillListResult {
   pagination?: { page: number; perPage: number; total?: number; hasMore: boolean }
 }
 export interface SkillRegistry {
-  listSkills(opts: ListSkillsOptions): Promise<SkillListResult>
-  searchSkills(opts: SearchSkillsOptions): Promise<SkillListResult>
-  loadSkill(id: string): Promise<SkillDetail>
+  listSkills: (opts: ListSkillsOptions) => Promise<SkillListResult>
+  searchSkills: (opts: SearchSkillsOptions) => Promise<SkillListResult>
+  loadSkill: (id: string) => Promise<SkillDetail>
 }
 export class SkillNotFoundError extends Error {
   constructor(message: string) {

@@ -18,7 +18,9 @@ import type { GoalState, ResolvedGoalPluginOptions, TranscriptMessage } from './
 const SERVICE = 'opencode-beanie-plugin'
 function replaceTextPart(parts: Array<{ type: string; text?: string }>, text: string): void {
   const part = parts.find((candidate) => candidate.type === 'text')
-  if (!part) throw new Error('The /goal command template did not produce a text part')
+  if (!part) {
+    throw new Error('The /goal command template did not produce a text part')
+  }
   part.text = text
 }
 function asTranscriptMessages(value: unknown): TranscriptMessage[] {
@@ -30,7 +32,9 @@ function statusPayload(goal: GoalState | undefined): string {
     : JSON.stringify({ goal: null })
 }
 async function sleep(milliseconds: number): Promise<void> {
-  if (milliseconds > 0) await new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
+  if (milliseconds > 0) {
+    await new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
+  }
 }
 type Logger = (
   level: 'debug' | 'info' | 'warn' | 'error',
@@ -49,11 +53,13 @@ async function showToast(
   message: string,
   variant: 'info' | 'success' | 'warning' | 'error',
 ): Promise<void> {
-  await client.tui.showToast({ body: { title: 'Goal', message, variant, duration: 6_000 } }).catch(() => undefined)
+  await client.tui.showToast({ body: { title: 'Goal', message, variant, duration: 6000 } }).catch(() => undefined)
 }
-function isParentBusy(statuses: unknown, sessionID: string): boolean {
-  if (typeof statuses !== 'object' || statuses === null) return false
-  const status = (statuses as Record<string, { type?: string }>)[sessionID]
+function isParentBusy(statuses: unknown, sessionId: string): boolean {
+  if (typeof statuses !== 'object' || statuses === null) {
+    return false
+  }
+  const status = (statuses as Record<string, { type?: string }>)[sessionId]
   return Boolean(status && status.type !== 'idle')
 }
 async function continueParent(
@@ -75,14 +81,19 @@ async function continueParent(
     agent?: string
     model?: { providerID: string; modelID: string }
   } = { parts: [{ type: 'text', text }] }
-  if (execution.agent) body.agent = execution.agent
-  if (execution.model) body.model = execution.model
+  if (execution.agent) {
+    body.agent = execution.agent
+  }
+  if (execution.model) {
+    body.model = execution.model
+  }
   const response = await client.session.promptAsync({ path: { id: goal.sessionID }, body })
-  if (response.error)
+  if (response.error) {
     await log('error', 'OpenCode rejected an automatic goal continuation', {
       sessionID: goal.sessionID,
       error: String(response.error),
     })
+  }
 }
 async function handleIdle(input: {
   client: PluginInput['client']
@@ -92,11 +103,15 @@ async function handleIdle(input: {
   processing: Set<string>
   log: Logger
 }): Promise<void> {
-  if (input.processing.has(input.sessionID)) return
+  if (input.processing.has(input.sessionID)) {
+    return
+  }
   input.processing.add(input.sessionID)
   try {
     const goal = await input.store.get(input.sessionID)
-    if (goal?.status !== 'active') return
+    if (goal?.status !== 'active') {
+      return
+    }
     const response = await input.client.session.messages({ path: { id: input.sessionID } })
     if (response.error) {
       await input.log('error', 'Failed to read goal session messages', {
@@ -107,7 +122,9 @@ async function handleIdle(input: {
     }
     const messages = asTranscriptMessages(response.data)
     const assistant = latestAssistant(messages, goal.createdAt)
-    if (!assistant || assistant.info.id === goal.lastEvaluatedMessageID) return
+    if (!assistant || assistant.info.id === goal.lastEvaluatedMessageID) {
+      return
+    }
     const progress: GoalState = {
       ...goal,
       turns: goal.turns + 1,
@@ -124,10 +141,12 @@ async function handleIdle(input: {
       options: input.options,
     })
     const current = await input.store.get(input.sessionID)
-    if (!current || current.goalId !== progress.goalId || current.status !== 'active') return
+    if (!current || current.goalId !== progress.goalId || current.status !== 'active') {
+      return
+    }
     if (decision.error) {
       const paused = { ...current, status: 'paused' as const, updatedAt: Date.now(), lastReason: decision.reason }
-      delete paused.completionClaim
+      paused.completionClaim = undefined
       await input.store.set(paused)
       await input.log('error', 'Goal paused because completion evaluation failed', {
         sessionID: paused.sessionID,
@@ -144,7 +163,7 @@ async function handleIdle(input: {
         updatedAt: Date.now(),
         lastReason: decision.reason,
       }
-      delete completed.completionClaim
+      completed.completionClaim = undefined
       await input.store.set(completed)
       await input.log('info', 'Goal completed', {
         sessionID: completed.sessionID,
@@ -161,7 +180,7 @@ async function handleIdle(input: {
         updatedAt: Date.now(),
         lastReason: `Token budget reached (${current.tokensUsed.toLocaleString()} / ${current.tokenBudget.toLocaleString()}). Last evaluation: ${decision.reason}`,
       }
-      delete limited.completionClaim
+      limited.completionClaim = undefined
       await input.store.set(limited)
       await showToast(input.client, 'Goal stopped at its token budget', 'warning')
       await continueParent(input.client, limited, messages, budgetLimitPrompt(limited), input.log)
@@ -174,18 +193,20 @@ async function handleIdle(input: {
         updatedAt: Date.now(),
         lastReason: `Turn budget reached (${current.turns} / ${current.maxTurns} turns). Last evaluation: ${decision.reason}`,
       }
-      delete limited.completionClaim
+      limited.completionClaim = undefined
       await input.store.set(limited)
       await showToast(input.client, 'Goal stopped at its turn budget', 'warning')
       await continueParent(input.client, limited, messages, budgetLimitPrompt(limited), input.log)
       return
     }
     const continuing = { ...current, updatedAt: Date.now(), lastReason: decision.reason }
-    delete continuing.completionClaim
+    continuing.completionClaim = undefined
     await input.store.set(continuing)
     await sleep(input.options.continuationDelayMs)
     const latest = await input.store.get(input.sessionID)
-    if (!latest || latest.goalId !== continuing.goalId || latest.status !== 'active') return
+    if (!latest || latest.goalId !== continuing.goalId || latest.status !== 'active') {
+      return
+    }
     await continueParent(input.client, latest, messages, continuationPrompt(latest), input.log)
   } finally {
     input.processing.delete(input.sessionID)
@@ -208,7 +229,9 @@ const GoalPlugin: Plugin = async (input, rawOptions) => {
       }
     },
     'command.execute.before': async (command, output) => {
-      if (command.command !== 'goal') return
+      if (command.command !== 'goal') {
+        return
+      }
       const parsed = parseGoalCommand(command.arguments, options)
       if (parsed.action === 'status') {
         controlTurns.add(command.sessionID)
@@ -273,13 +296,19 @@ const GoalPlugin: Plugin = async (input, rawOptions) => {
       replaceTextPart(output.parts, startingPrompt(goal))
     },
     'experimental.chat.system.transform': async ({ sessionID }, output) => {
-      if (!sessionID || controlTurns.has(sessionID)) return
+      if (!sessionID || controlTurns.has(sessionID)) {
+        return
+      }
       const goal = await store.get(sessionID)
-      if (goal?.status === 'active') output.system.push(activeGoalContext(goal))
+      if (goal?.status === 'active') {
+        output.system.push(activeGoalContext(goal))
+      }
     },
     'experimental.session.compacting': async ({ sessionID }, output) => {
       const goal = await store.get(sessionID)
-      if (goal?.status === 'active') output.context.push(activeGoalContext(goal))
+      if (goal?.status === 'active') {
+        output.context.push(activeGoalContext(goal))
+      }
     },
     tool: {
       get_goal: tool({
@@ -299,11 +328,16 @@ const GoalPlugin: Plugin = async (input, rawOptions) => {
         },
         async execute(args, context) {
           const goal = await store.get(context.sessionID)
-          if (!goal) return 'No goal exists for this session.'
-          if (goal.status !== 'active') return `The goal is ${goal.status}, so it cannot be updated by the model.`
+          if (!goal) {
+            return 'No goal exists for this session.'
+          }
+          if (goal.status !== 'active') {
+            return `The goal is ${goal.status}, so it cannot be updated by the model.`
+          }
           if (args.status === 'blocked') {
-            if (goal.turns < 2)
+            if (goal.turns < 2) {
               return `Blocked status rejected: only ${goal.turns + 1} goal turn(s) have run. Continue making progress; the same blocker must recur for at least three turns.`
+            }
             const blocked = { ...goal, status: 'blocked' as const, updatedAt: Date.now(), lastReason: args.reason }
             await store.set(blocked)
             await showToast(input.client, `Goal blocked: ${args.reason}`, 'warning')

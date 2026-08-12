@@ -15,19 +15,29 @@ import { validateFullOptions } from './validate.js'
 const SERVICE = 'opencode-beanie-plugin'
 function replaceTextPart(parts: Array<{ type: string; text?: string }>, text: string): void {
   const part = parts.find((candidate) => candidate.type === 'text')
-  if (part) part.text = text
-  else parts.push({ type: 'text', text })
+  if (part) {
+    part.text = text
+  } else {
+    parts.push({ type: 'text', text })
+  }
 }
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-type BeanieState = { options: Record<string, unknown>; hasEntry: boolean; subagentDepth?: number }
+interface BeanieState {
+  options: Record<string, unknown>
+  hasEntry: boolean
+  subagentDepth?: number
+}
 function pluginEntryOf(config: Config): { options: Record<string, unknown>; hasEntry: boolean } {
   for (const entry of config.plugin ?? []) {
-    if (typeof entry === 'string' && entry === PLUGIN_NAME) return { options: {}, hasEntry: true }
-    if (Array.isArray(entry) && entry[0] === PLUGIN_NAME)
+    if (typeof entry === 'string' && entry === PLUGIN_NAME) {
+      return { options: {}, hasEntry: true }
+    }
+    if (Array.isArray(entry) && entry[0] === PLUGIN_NAME) {
       return { options: isRecord(entry[1]) ? entry[1] : {}, hasEntry: true }
+    }
   }
   return { options: {}, hasEntry: false }
 }
@@ -50,15 +60,19 @@ const Configurator: Plugin = async ({ client, worktree }, _options = {}) => {
       const subagentDepth = (cfg as Config & { subagent_depth?: unknown }).subagent_depth
       state.subagentDepth = typeof subagentDepth === 'number' ? subagentDepth : undefined
       const validation = validateFullOptions(state.options)
-      if (!state.hasEntry)
+      if (!state.hasEntry) {
         await warn(
           'The configurator could not find the plugin entry in the loaded config; /beanie and configure_plugin will operate on empty options.',
         )
-      for (const error of validation.errors)
+      }
+      for (const error of validation.errors) {
         await warn(`Existing configuration problem in "${error.feature}": ${error.message ?? ''}`)
+      }
     },
     'command.execute.before': async (command, output) => {
-      if (command.command !== 'beanie') return
+      if (command.command !== 'beanie') {
+        return
+      }
       const parsed = parseBeanie(command.arguments)
       if (parsed.action === 'help') {
         replaceTextPart(output.parts, renderHelp())
@@ -137,8 +151,10 @@ const Configurator: Plugin = async ({ client, worktree }, _options = {}) => {
             ),
         },
         async execute(args, _context) {
-          if (args.action === 'schema') return JSON.stringify(PLUGIN_OPTIONS_SCHEMA, null, 2)
-          if (args.action === 'status')
+          if (args.action === 'schema') {
+            return JSON.stringify(PLUGIN_OPTIONS_SCHEMA, null, 2)
+          }
+          if (args.action === 'status') {
             return JSON.stringify(
               {
                 plugin: PLUGIN_NAME,
@@ -151,18 +167,24 @@ const Configurator: Plugin = async ({ client, worktree }, _options = {}) => {
               null,
               2,
             )
+          }
           const decoded =
             args.config === undefined ? { ok: true as const, options: state.options } : parseConfigArgument(args.config)
-          if (!decoded.ok) return JSON.stringify({ error: decoded.error }, null, 2)
+          if (!decoded.ok) {
+            return JSON.stringify({ error: decoded.error }, null, 2)
+          }
           const candidate = decoded.options
           const validation = validateFullOptions(candidate)
-          if (args.action === 'validate') return JSON.stringify(validation, null, 2)
-          if (validation.errors.length > 0)
+          if (args.action === 'validate') {
+            return JSON.stringify(validation, null, 2)
+          }
+          if (validation.errors.length > 0) {
             return JSON.stringify(
               { applied: false, error: 'Refusing to write invalid configuration.', validation },
               null,
               2,
             )
+          }
           try {
             const result = applyOptionsToFile(worktree, args.scope, candidate)
             state.options = candidate

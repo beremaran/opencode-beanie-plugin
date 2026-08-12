@@ -3,7 +3,7 @@ export type Release = () => void
 export class Semaphore {
   private readonly max: number
   private active = 0
-  private waiters: Array<() => void> = []
+  private readonly waiters: Array<() => void> = []
 
   constructor(max: number) {
     if (!Number.isInteger(max) || max < 1) {

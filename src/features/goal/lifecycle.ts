@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { GoalState } from './types.js'
-export type CreateGoalInput = {
+export interface CreateGoalInput {
   sessionID: string
   directory: string
   objective: string
@@ -23,21 +23,31 @@ export function createGoalState(input: CreateGoalInput): GoalState {
     turns: 0,
     tokensUsed: 0,
   }
-  if (input.tokenBudget) state.tokenBudget = input.tokenBudget
-  if (input.maxTurns) state.maxTurns = input.maxTurns
+  if (input.tokenBudget) {
+    state.tokenBudget = input.tokenBudget
+  }
+  if (input.maxTurns) {
+    state.maxTurns = input.maxTurns
+  }
   return state
 }
 export function remainingTokens(goal: GoalState): number | undefined {
-  if (goal.tokenBudget === undefined) return undefined
+  if (goal.tokenBudget === undefined) {
+    return undefined
+  }
   return Math.max(goal.tokenBudget - goal.tokensUsed, 0)
 }
 export function formatDuration(milliseconds: number): string {
-  const seconds = Math.max(Math.floor(milliseconds / 1_000), 0)
-  const hours = Math.floor(seconds / 3_600)
-  const minutes = Math.floor((seconds % 3_600) / 60)
+  const seconds = Math.max(Math.floor(milliseconds / 1000), 0)
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
   const rest = seconds % 60
-  if (hours > 0) return `${hours}h ${minutes}m`
-  if (minutes > 0) return `${minutes}m ${rest}s`
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${rest}s`
+  }
   return `${rest}s`
 }
 export function goalSummary(goal: GoalState, now = Date.now()): string {

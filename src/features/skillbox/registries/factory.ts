@@ -20,7 +20,9 @@ export const DEFAULT_GITHUB_SOURCES = [
 export function createRegistry(config: RegistryFactoryConfig): SkillRegistry {
   const mode = config.registry ?? 'auto'
   if (mode === 'skills-sh' || (mode === 'auto' && config.skillsShToken)) {
-    if (!config.skillsShToken) throw new RegistryAuthError('skills-sh registry requires skillsShToken')
+    if (!config.skillsShToken) {
+      throw new RegistryAuthError('skills-sh registry requires skillsShToken')
+    }
     return new SkillsShRegistry({ token: config.skillsShToken, maxBytes: config.maxBytes })
   }
   return new GithubRegistry({ sources: config.githubSources, maxBytes: config.maxBytes, token: config.githubToken })
@@ -32,16 +34,21 @@ export function describe(config: RegistryFactoryConfig): {
 } {
   const mode = config.registry ?? 'auto'
   if (mode === 'skills-sh') {
-    if (!config.skillsShToken) throw new RegistryAuthError('skills-sh registry requires skillsShToken')
+    if (!config.skillsShToken) {
+      throw new RegistryAuthError('skills-sh registry requires skillsShToken')
+    }
     return { registry: 'skills-sh', reason: 'skills.sh registry requested explicitly' }
   }
-  if (mode === 'github')
+  if (mode === 'github') {
     return {
       registry: 'github',
       reason: 'github registry requested explicitly',
       sources: config.githubSources ?? DEFAULT_GITHUB_SOURCES,
     }
-  if (config.skillsShToken) return { registry: 'skills-sh', reason: 'skillsShToken provided; using skills.sh registry' }
+  }
+  if (config.skillsShToken) {
+    return { registry: 'skills-sh', reason: 'skillsShToken provided; using skills.sh registry' }
+  }
   return {
     registry: 'github',
     reason: 'no skillsShToken provided; using public GitHub registries',

@@ -37,9 +37,11 @@ export function parseModelResponse(text: string): DiscoveredModel[] | null {
   } catch {
     return null
   }
-  if (!isRecord(json)) return null
+  if (!isRecord(json)) {
+    return null
+  }
   const items = Array.isArray(json.data) ? json.data : Array.isArray(json.models) ? json.models : undefined
-  if (items)
+  if (items) {
     return items
       .flatMap((x) =>
         isRecord(x) && typeof x.id === 'string'
@@ -57,6 +59,7 @@ export function parseModelResponse(text: string): DiscoveredModel[] | null {
           : [],
       )
       .slice(0, MAX)
+  }
   return Object.entries(json)
     .map(([id, x]) => {
       const item = isRecord(x) ? x : {}
@@ -86,7 +89,9 @@ export async function fetchModels(source: ResolvedProvider, logger: Logger): Pro
       return null
     }
     const models = parseModelResponse(await response.text())
-    if (!models) logger('warn', `Could not parse model list from "${url}" for provider "${source.id}"`)
+    if (!models) {
+      logger('warn', `Could not parse model list from "${url}" for provider "${source.id}"`)
+    }
     return models
   } catch (error) {
     logger('warn', `Failed to fetch models from "${url}" for provider "${source.id}": ${String(error)}`)
@@ -116,7 +121,7 @@ export function buildModelEntries(models: DiscoveredModel[] | null, source: Reso
   const ids = [...discovered.keys(), ...Object.keys(staticModels).filter((id) => !discovered.has(id))]
     .filter(
       (id) =>
-        (!source.include?.length || source.include.some((p) => globMatch(p, id))) &&
+        (source.include == null || source.include.length === 0 || source.include.some((p) => globMatch(p, id))) &&
         !source.exclude?.some((p) => globMatch(p, id)),
     )
     .slice(0, MAX)
@@ -132,8 +137,8 @@ export function buildModelEntries(models: DiscoveredModel[] | null, source: Reso
         tool_call: s?.tool_call ?? true,
         ...((s?.name ?? d?.name) && (s?.name ?? d?.name) !== id ? { name: s?.name ?? d?.name } : {}),
         ...(context && output ? { limit: { context, output } } : {}),
-        ...(s?.reasoning !== undefined ? { reasoning: s.reasoning } : {}),
-        ...(s?.attachment !== undefined ? { attachment: s.attachment } : {}),
+        ...(s?.reasoning === undefined ? {} : { reasoning: s.reasoning }),
+        ...(s?.attachment === undefined ? {} : { attachment: s.attachment }),
         ...(s?.options ? { options: s.options } : {}),
         ...(s?.headers ? { headers: s.headers } : {}),
       }

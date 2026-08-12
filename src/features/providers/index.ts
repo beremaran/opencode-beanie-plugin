@@ -10,8 +10,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 function replaceTextPart(parts: Array<{ type: string; text?: string }>, text: string): void {
   const part = parts.find((candidate) => candidate.type === 'text')
-  if (part) part.text = text
-  else parts.push({ type: 'text', text })
+  if (part) {
+    part.text = text
+  } else {
+    parts.push({ type: 'text', text })
+  }
 }
 
 const Providers: Plugin = async (input, rawOptions) => {
@@ -47,7 +50,7 @@ const Providers: Plugin = async (input, rawOptions) => {
           }
           const { source, fetched } = result.value
           const models = buildModelEntries(fetched, source)
-          if (!Object.keys(models).length) {
+          if (Object.keys(models).length === 0) {
             logger('error', `Skipping provider "${source.id}": no models could be determined`, { provider: source.id })
             continue
           }
@@ -68,18 +71,23 @@ const Providers: Plugin = async (input, rawOptions) => {
             models: { ...userModels, ...models },
           }
         }
-        if (options.model) cfg.model = options.model
-        if (options.smallModel) cfg.small_model = options.smallModel
+        if (options.model) {
+          cfg.model = options.model
+        }
+        if (options.smallModel) {
+          cfg.small_model = options.smallModel
+        }
       } catch (error) {
         logger('error', `Unexpected error in opencode-beanie-plugin config hook: ${String(error)}`, { error })
       }
     },
     'command.execute.before': async ({ command, arguments: args }, output) => {
       try {
-        if (command === 'add-provider')
+        if (command === 'add-provider') {
           replaceTextPart(output.parts, addProviderCommand(args, options.storePath, logger))
-        else if (command === 'providers')
+        } else if (command === 'providers') {
           replaceTextPart(output.parts, await providersCommand(options.storePath, logger))
+        }
       } catch (error) {
         logger('error', `Unexpected error handling "/${command}": ${String(error)}`, { command, error })
       }

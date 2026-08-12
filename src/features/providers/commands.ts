@@ -9,19 +9,25 @@ type ParseResult = { ok: true; source: ProviderSource } | { ok: false; error: st
 function tokenize(raw: string): string[] {
   const tokens: string[] = []
   const re = /"((?:[^"\\]|\\.)*)"|(\S+)/g
-  for (let match = re.exec(raw); match !== null; match = re.exec(raw))
-    tokens.push(match[1] !== undefined ? match[1].replace(/\\(.)/g, '$1') : (match[2] as string))
+  for (let match = re.exec(raw); match !== null; match = re.exec(raw)) {
+    tokens.push(match[1] === undefined ? (match[2] as string) : match[1].replace(/\\(.)/g, '$1'))
+  }
   return tokens
 }
 export function parseAddProviderArgs(raw: string): ParseResult {
   const tokens = tokenize(raw.trim())
-  if (tokens.length < 2) return { ok: false, error: `Missing id or baseURL.\n${USAGE}` }
+  if (tokens.length < 2) {
+    return { ok: false, error: `Missing id or baseURL.\n${USAGE}` }
+  }
   const id = tokens[0] as string
-  if (!ID_PATTERN.test(id)) return { ok: false, error: `Provider id must match ${ID_PATTERN} (got "${id}").` }
-  const baseURL = tokens[1] as string
-  if (!/^https?:\/\//.test(baseURL))
-    return { ok: false, error: `baseURL must start with http:// or https:// (got "${baseURL}").` }
-  const source: ProviderSource = { id, baseURL }
+  if (!ID_PATTERN.test(id)) {
+    return { ok: false, error: `Provider id must match ${ID_PATTERN} (got "${id}").` }
+  }
+  const baseUrl = tokens[1] as string
+  if (!/^https?:\/\//.test(baseUrl)) {
+    return { ok: false, error: `baseURL must start with http:// or https:// (got "${baseUrl}").` }
+  }
+  const source: ProviderSource = { id, baseURL: baseUrl }
   let i = 2
   if (tokens[i] && !tokens[i].startsWith('--')) {
     source.apiKey = tokens[i]
@@ -31,21 +37,32 @@ export function parseAddProviderArgs(raw: string): ParseResult {
   for (; i < tokens.length; i += 1) {
     const flag = tokens[i]
     if (flag === '--name') {
-      if (tokens[i + 1] === undefined) return { ok: false, error: `--name requires a value.\n${USAGE}` }
+      if (tokens[i + 1] === undefined) {
+        return { ok: false, error: `--name requires a value.\n${USAGE}` }
+      }
       source.name = tokens[++i]
     } else if (flag === '--context' || flag === '--output') {
       const value = Number(tokens[++i])
-      if (!Number.isSafeInteger(value) || value <= 0) return { ok: false, error: `${flag} must be a positive integer.` }
+      if (!Number.isSafeInteger(value) || value <= 0) {
+        return { ok: false, error: `${flag} must be a positive integer.` }
+      }
       limit[flag.slice(2) as 'context' | 'output'] = value
-    } else if (flag === '--no-fetch') source.fetchModels = false
-    else return { ok: false, error: `Unknown option: ${flag}\n${USAGE}` }
+    } else if (flag === '--no-fetch') {
+      source.fetchModels = false
+    } else {
+      return { ok: false, error: `Unknown option: ${flag}\n${USAGE}` }
+    }
   }
-  if (Object.keys(limit).length) source.defaultLimit = limit
+  if (Object.keys(limit).length > 0) {
+    source.defaultLimit = limit
+  }
   return { ok: true, source }
 }
 export function addProviderCommand(args: string, storePath: string, logger: Logger): string {
   const parsed = parseAddProviderArgs(args)
-  if (!parsed.ok) return parsed.error
+  if (!parsed.ok) {
+    return parsed.error
+  }
   const { providers } = loadStore(storePath, logger)
   saveStore(
     storePath,
@@ -60,13 +77,16 @@ export function addProviderCommand(args: string, storePath: string, logger: Logg
 }
 export async function providersCommand(storePath: string, logger: Logger): Promise<string> {
   const { providers } = loadStore(storePath, logger)
-  if (!providers.length) return 'No OpenAI-compatible providers configured yet. Use /add-provider to add one.'
+  if (providers.length === 0) {
+    return 'No OpenAI-compatible providers configured yet. Use /add-provider to add one.'
+  }
   const rows = await Promise.all(
     providers.map(async (provider, i) => {
       const head = `${i + 1}. ${provider.id}${provider.name ? ` (${provider.name})` : ''} — ${provider.baseURL}`
-      if (provider.fetchModels === false)
+      if (provider.fetchModels === false) {
         return `${head} — fetch: off — models: ${Object.keys(provider.staticModels ?? {}).length} (static)`
-      const models = await fetchModels({ ...provider, fetchModels: true, timeoutMs: 3_000 }, logger)
+      }
+      const models = await fetchModels({ ...provider, fetchModels: true, timeoutMs: 3000 }, logger)
       return `${head} — fetch: on — models: ${models === null ? 'error' : models.length}`
     }),
   )

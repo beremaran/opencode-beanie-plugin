@@ -39,21 +39,27 @@ const Throttle: Plugin = async ({ client }, options = {}) => {
     typeof options.maxParallel === 'number' && Number.isInteger(options.maxParallel) && options.maxParallel > 0
       ? options.maxParallel
       : (() => {
-          if (options.maxParallel !== undefined) warn('Invalid maxParallel; falling back to 2.')
+          if (options.maxParallel !== undefined) {
+            warn('Invalid maxParallel; falling back to 2.')
+          }
           return DEFAULT_MAX_PARALLEL
         })()
   const mode =
     options.mode === 'session' || options.mode === 'global'
       ? options.mode
       : (() => {
-          if (options.mode !== undefined) warn('Invalid mode; falling back to session.')
+          if (options.mode !== undefined) {
+            warn('Invalid mode; falling back to session.')
+          }
           return DEFAULT_MODE
         })()
   const maxWaitMs =
     typeof options.maxWaitMs === 'number' && options.maxWaitMs > 0
       ? options.maxWaitMs
       : (() => {
-          if (options.maxWaitMs !== undefined) warn('Invalid maxWaitMs; falling back to 3600000.')
+          if (options.maxWaitMs !== undefined) {
+            warn('Invalid maxWaitMs; falling back to 3600000.')
+          }
           return DEFAULT_MAX_WAIT_MS
         })()
   const notifyQueue = options.notifyQueue === true
@@ -61,10 +67,10 @@ const Throttle: Plugin = async ({ client }, options = {}) => {
     warn('Invalid notifyQueue; falling back to false.')
   }
 
-  const notify = (sessionID: string, text: string): void => {
+  const notify = (sessionId: string, text: string): void => {
     try {
       const result = client.session.prompt({
-        path: { id: sessionID },
+        path: { id: sessionId },
         body: { noReply: true, parts: [{ type: 'text', text, ignored: true }] },
       })
       void Promise.resolve(result).catch(() => undefined)
@@ -82,26 +88,32 @@ const Throttle: Plugin = async ({ client }, options = {}) => {
 
   return {
     'tool.execute.before': async (input, output) => {
-      if (input.tool !== 'task') return
+      if (input.tool !== 'task') {
+        return
+      }
       const description = typeof output.args?.description === 'string' ? output.args.description : undefined
       await manager.startTask(input.sessionID, input.callID, output.args?.background === true, description)
     },
     'tool.execute.after': async (input, output) => {
-      if (input.tool !== 'task') return
-      let childSessionID: string | undefined
+      if (input.tool !== 'task') {
+        return
+      }
+      let childSessionId: string | undefined
       const metadata = isRecord(output.metadata) ? output.metadata : undefined
       if (typeof metadata?.sessionId === 'string' && metadata.sessionId.length > 0) {
-        childSessionID = metadata.sessionId
+        childSessionId = metadata.sessionId
       } else {
-        childSessionID = /<task id="([^"]+)"/.exec(output.output)?.[1]
+        childSessionId = /<task id="([^"]+)"/.exec(output.output)?.[1]
       }
-      manager.endTask(input.sessionID, input.callID, childSessionID)
+      manager.endTask(input.sessionID, input.callID, childSessionId)
     },
     event: async ({ event }) => {
       const legacyEvent = event as unknown as { type: string; properties?: unknown }
       const properties = isRecord(legacyEvent.properties) ? legacyEvent.properties : undefined
       if (legacyEvent.type === 'session.idle') {
-        if (typeof properties?.sessionID === 'string') manager.onSessionIdle(properties.sessionID)
+        if (typeof properties?.sessionID === 'string') {
+          manager.onSessionIdle(properties.sessionID)
+        }
         return
       }
       if (legacyEvent.type === 'message.part.updated') {

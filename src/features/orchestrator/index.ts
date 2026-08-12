@@ -15,7 +15,7 @@ export interface OrchestratorOptions {
   restrictTask?: boolean
 }
 
-type AgentLike = {
+interface AgentLike {
   model?: string
   mode?: string
   disable?: boolean
@@ -24,7 +24,7 @@ type AgentLike = {
   permission?: Record<string, unknown>
 }
 
-type NormalizedOptions = {
+interface NormalizedOptions {
   subagentModel: string
   orchestratorModel?: string
   orchestratorAgent: string
@@ -61,34 +61,48 @@ const invalidOption = (name: string, expected: string): never => {
 }
 
 const nonEmptyString = (value: unknown, name: string): string => {
-  if (typeof value !== 'string') invalidOption(name, 'a non-empty string')
+  if (typeof value !== 'string') {
+    invalidOption(name, 'a non-empty string')
+  }
   const trimmed = (value as string).trim()
-  if (trimmed === '') invalidOption(name, 'a non-empty string')
+  if (trimmed === '') {
+    invalidOption(name, 'a non-empty string')
+  }
   return trimmed
 }
 
 const booleanOption = (value: unknown, name: string): boolean => {
-  if (typeof value !== 'boolean') invalidOption(name, 'a boolean')
+  if (typeof value !== 'boolean') {
+    invalidOption(name, 'a boolean')
+  }
   return value as boolean
 }
 
 const positiveIntegerOption = (value: unknown, name: string): number => {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) invalidOption(name, 'a positive integer')
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    invalidOption(name, 'a positive integer')
+  }
   return value as number
 }
 
 const optionalString = (value: unknown, name: string): string | undefined => {
-  if (value === undefined || (typeof value === 'string' && value.trim() === '')) return undefined
+  if (value === undefined || (typeof value === 'string' && value.trim() === '')) {
+    return undefined
+  }
   return nonEmptyString(value, name)
 }
 
 const stringArray = (value: unknown, name: string): string[] => {
-  if (!Array.isArray(value)) invalidOption(name, 'an array of non-empty strings')
+  if (!Array.isArray(value)) {
+    invalidOption(name, 'an array of non-empty strings')
+  }
   return [...new Set((value as unknown[]).map((entry) => nonEmptyString(entry, `${name} entries`)))]
 }
 
 const stringRecord = (value: unknown, name: string): Record<string, string> => {
-  if (!isRecord(value)) invalidOption(name, 'an object with non-empty string values')
+  if (!isRecord(value)) {
+    invalidOption(name, 'an object with non-empty string values')
+  }
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
       nonEmptyString(key, `${name} keys`),
@@ -99,14 +113,20 @@ const stringRecord = (value: unknown, name: string): Record<string, string> => {
 
 const modelString = (value: unknown, name: string): string => {
   const model = nonEmptyString(value, name)
-  if (!MODEL_PATTERN.test(model)) invalidOption(name, `a model id like "provider/model" (got \`${model}\`)`)
+  if (!MODEL_PATTERN.test(model)) {
+    invalidOption(name, `a model id like "provider/model" (got \`${model}\`)`)
+  }
   return model
 }
 
 const normalizeOrchestratorModels = (value: unknown, depth: number): string[] | undefined => {
-  if (value === undefined) return undefined
+  if (value === undefined) {
+    return undefined
+  }
   const models = stringArray(value, 'orchestratorModels').map((model) => modelString(model, 'orchestratorModels'))
-  if (models.length === 0) return undefined
+  if (models.length === 0) {
+    return undefined
+  }
   if (models.length > depth) {
     throw new Error(
       `[${PLUGIN_ID}] The \`orchestratorModels\` option has ${models.length} entries but \`orchestratorDepth\` is ${depth}.`,
@@ -117,8 +137,9 @@ const normalizeOrchestratorModels = (value: unknown, depth: number): string[] | 
 
 const validateBlockedTools = (names: string[]): string[] => {
   for (const name of names) {
-    if (!BLOCKED_TOOL_PATTERN.test(name))
+    if (!BLOCKED_TOOL_PATTERN.test(name)) {
       invalidOption('blockedTools entries', `tool names matching /^[a-z0-9_-]+$/ (got \`${name}\`)`)
+    }
   }
   return names
 }
@@ -135,13 +156,19 @@ const subagentDepthOf = (cfg: Config): number => {
 
 const taskRuleFor = (targets: string[]): Record<string, 'deny' | 'allow'> => {
   const rule: Record<string, 'deny' | 'allow'> = { '*': 'deny' }
-  for (const name of targets) rule[name] = 'allow'
+  for (const name of targets) {
+    rule[name] = 'allow'
+  }
   return rule
 }
 
 const sameTaskRule = (value: unknown, expected: Record<string, 'deny' | 'allow'> | string): boolean => {
-  if (typeof expected === 'string') return value === expected
-  if (!isRecord(value)) return false
+  if (typeof expected === 'string') {
+    return value === expected
+  }
+  if (!isRecord(value)) {
+    return false
+  }
   const keys = Object.keys(value)
   return keys.length === Object.keys(expected).length && keys.every((key) => value[key] === expected[key])
 }
@@ -149,8 +176,10 @@ const sameTaskRule = (value: unknown, expected: Record<string, 'deny' | 'allow'>
 const REQUIRED_MODEL_MESSAGE = `[${PLUGIN_ID}] The \`subagentModel\` option is required, e.g. ["${PLUGIN_ID}", { "subagentModel": "anthropic/claude-sonnet-4-6" }]. Run \`/beanie init\` after installing to configure the plugin interactively.`
 
 export const normalizeOptions = (rawOptions: unknown): NormalizedOptions => {
-  const candidate = rawOptions == null ? {} : rawOptions
-  if (!isRecord(candidate)) invalidOption('options', 'an object')
+  const candidate = rawOptions === null ? {} : rawOptions
+  if (!isRecord(candidate)) {
+    invalidOption('options', 'an object')
+  }
   const options = candidate as Record<string, unknown>
   if (
     options.subagentModel === undefined ||
@@ -172,7 +201,9 @@ export const normalizeOptions = (rawOptions: unknown): NormalizedOptions => {
       ? undefined
       : modelString(options.orchestratorModel, 'orchestratorModel')
   const agentModels = options.agentModels === undefined ? {} : stringRecord(options.agentModels, 'agentModels')
-  for (const model of Object.values(agentModels)) modelString(model, 'agentModels values')
+  for (const model of Object.values(agentModels)) {
+    modelString(model, 'agentModels values')
+  }
   return {
     subagentModel: modelString(options.subagentModel, 'subagentModel'),
     orchestratorModel,
@@ -192,7 +223,9 @@ export const normalizeOptions = (rawOptions: unknown): NormalizedOptions => {
 
 const orchestratorLevels = (opts: NormalizedOptions): string[] => {
   const names = [opts.orchestratorAgent]
-  for (let level = 2; level <= opts.orchestratorDepth; level += 1) names.push(`${opts.orchestratorAgent}-${level}`)
+  for (let level = 2; level <= opts.orchestratorDepth; level += 1) {
+    names.push(`${opts.orchestratorAgent}-${level}`)
+  }
   return names
 }
 
@@ -204,7 +237,7 @@ const orchestratorDirective = (
 ): string => {
   const blocked = opts.blockedTools.length > 0 ? opts.blockedTools.join(', ') : 'none'
   const extra = opts.instructions && level === 1 ? `\n\n${opts.instructions}` : ''
-  if (depth === 1)
+  if (depth === 1) {
     return `${LEVEL1_DIRECTIVE_MARKER}
 
 You are the ORCHESTRATOR. You do not do hands-on work. You plan, decompose, delegate, and review.
@@ -234,8 +267,9 @@ You are the ORCHESTRATOR. You do not do hands-on work. You plan, decompose, dele
 - \`explore\` — codebase research, locating code, understanding existing implementations.
 - \`general\` — implementation, refactoring, testing, and any task without a more specific subagent.
 - Prefer the most specialized subagent for each subtask; fall back to \`general\`.${extra}`
+  }
   const header = levelDirectiveMarker(level, depth)
-  if (level < depth)
+  if (level < depth) {
     return `${header}
 
 You are ORCHESTRATOR level ${level} of ${depth} in a delegation chain. You do not do hands-on work. You plan, decompose, delegate, and review.
@@ -255,6 +289,7 @@ You are ORCHESTRATOR level ${level} of ${depth} in a delegation chain. You do no
 - \`task\` for all work (mandatory), \`todowrite\` to track subtasks, \`question\` only to clarify genuinely ambiguous requests.
 - \`read\`/\`glob\`/\`grep\`/\`webfetch\`/\`websearch\` only when needed to write a better brief or verify a result.
 - Hands-on tools are hard-blocked for you (${blocked}). If \`${nextName}\` lacks a tool it needs, tell the level above instead of doing it yourself.${extra}`
+  }
   return `${header}
 
 You are ORCHESTRATOR level ${level} of ${depth} in a delegation chain — the FINAL orchestrator level. You do not do hands-on work. You plan, decompose, delegate, and review. Your subagents (\`explore\`, \`general\`) have the hands-on tools; they do the implementation.
@@ -281,8 +316,15 @@ You are ORCHESTRATOR level ${level} of ${depth} in a delegation chain — the FI
 - Prefer the most specialized subagent for each subtask; fall back to \`general\`.${extra}`
 }
 
-type LogBody = { service: string; level: 'error' | 'warn' | 'info'; message: string; extra?: Record<string, unknown> }
-type LogEntry = { body: LogBody }
+interface LogBody {
+  service: string
+  level: 'error' | 'warn' | 'info'
+  message: string
+  extra?: Record<string, unknown>
+}
+interface LogEntry {
+  body: LogBody
+}
 type LogFn = (entry: LogEntry) => Promise<void>
 
 const permissionFor = async (entry: AgentLike, name: string, log: LogFn): Promise<Record<string, unknown>> => {
@@ -300,7 +342,9 @@ const permissionFor = async (entry: AgentLike, name: string, log: LogFn): Promis
 }
 
 const applyBlockedTools = async (entry: AgentLike, name: string, tools: string[], log: LogFn): Promise<void> => {
-  if (tools.length === 0) return
+  if (tools.length === 0) {
+    return
+  }
   const permission = await permissionFor(entry, name, log)
   for (const tool of tools) {
     if (permission[tool] !== undefined && permission[tool] !== 'deny') {
@@ -339,7 +383,9 @@ const applyTaskRule = async (
       },
     })
     permission[toolName] = rule
-  } else if (existing === undefined) permission[toolName] = rule
+  } else if (existing === undefined) {
+    permission[toolName] = rule
+  }
   entry.permission = permission
 }
 
@@ -358,19 +404,22 @@ const OrchestratorPlugin: Plugin = async ({ client }, options = {}) => {
   return {
     config: async (cfg) => {
       try {
-        if (cfg.agent == null) cfg.agent = {}
+        if (cfg.agent === null) {
+          cfg.agent = {}
+        }
         const agent = cfg.agent as Record<string, AgentLike>
         const hasAgent = (name: string) => Object.hasOwn(agent, name)
         const getAgent = (name: string) => (hasAgent(name) ? agent[name] : undefined)
         const ensureAgent = (name: string) => {
-          if (!hasAgent(name) || agent[name] == null)
+          if (!hasAgent(name) || agent[name] === null) {
             Object.defineProperty(agent, name, { configurable: true, enumerable: true, value: {}, writable: true })
+          }
           return agent[name]
         }
         const levels = orchestratorLevels(opts)
         const levelNames = new Set(levels)
         const inScope = (name: string, def: AgentLike | undefined) =>
-          !KNOWN_BUILTINS.includes(name) && !def?.disable && isSubagentLike(def) && !levelNames.has(name)
+          !(KNOWN_BUILTINS.includes(name) || def?.disable) && isSubagentLike(def) && !levelNames.has(name)
         for (const name of levels) {
           if (getAgent(name)?.disable) {
             await log({
@@ -384,7 +433,7 @@ const OrchestratorPlugin: Plugin = async ({ client }, options = {}) => {
           }
         }
         const blockedDirectiveTools = DIRECTIVE_TOOLS.filter((tool) => opts.blockedTools.includes(tool))
-        if (blockedDirectiveTools.length > 0)
+        if (blockedDirectiveTools.length > 0) {
           await log({
             body: {
               service: PLUGIN_ID,
@@ -393,8 +442,9 @@ const OrchestratorPlugin: Plugin = async ({ client }, options = {}) => {
               extra: { blockedTools: opts.blockedTools },
             },
           })
+        }
         const subagentDepth = subagentDepthOf(cfg)
-        if (opts.orchestratorDepth > subagentDepth)
+        if (opts.orchestratorDepth > subagentDepth) {
           await log({
             body: {
               service: PLUGIN_ID,
@@ -403,9 +453,10 @@ const OrchestratorPlugin: Plugin = async ({ client }, options = {}) => {
               extra: { orchestratorDepth: opts.orchestratorDepth, subagentDepth },
             },
           })
+        }
         const candidates = opts.agents ?? [...BUILTIN_SUBAGENTS, ...Object.keys(agent)]
         const targets = [...new Set(candidates)].filter((name) => inScope(name, getAgent(name)))
-        if (opts.agents !== undefined && !BUILTIN_SUBAGENTS.some((name) => targets.includes(name)))
+        if (opts.agents !== undefined && !BUILTIN_SUBAGENTS.some((name) => targets.includes(name))) {
           await log({
             body: {
               service: PLUGIN_ID,
@@ -415,10 +466,11 @@ const OrchestratorPlugin: Plugin = async ({ client }, options = {}) => {
               extra: { agents: opts.agents, targets },
             },
           })
+        }
         for (const name of targets) {
           const existed = hasAgent(name)
           const def = ensureAgent(name)
-          if (!existed && !BUILTIN_SUBAGENTS.includes(name) && !KNOWN_BUILTINS.includes(name))
+          if (!(existed || BUILTIN_SUBAGENTS.includes(name) || KNOWN_BUILTINS.includes(name))) {
             await log({
               body: {
                 service: PLUGIN_ID,
@@ -426,8 +478,11 @@ const OrchestratorPlugin: Plugin = async ({ client }, options = {}) => {
                 message: `Creating agent entry for unknown name "${name}" (typo in agents list?)`,
               },
             })
+          }
           const model = Object.hasOwn(opts.agentModels, name) ? opts.agentModels[name] : opts.subagentModel
-          if (!def.model) def.model = model
+          if (!def.model) {
+            def.model = model
+          }
         }
         let topOrchestrator: AgentLike | undefined
         const effectiveModels: string[] = []
@@ -436,23 +491,27 @@ const OrchestratorPlugin: Plugin = async ({ client }, options = {}) => {
           const level = index + 1
           const isFinal = level === opts.orchestratorDepth
           const levelModel = opts.orchestratorModels?.[level - 1] ?? opts.orchestratorModel
-          const existed = hasAgent(name) && getAgent(name) != null
+          const existed = hasAgent(name) && getAgent(name) !== null
           const entry = ensureAgent(name)
-          if (index === 0) topOrchestrator = entry
-          if (!existed)
+          if (index === 0) {
+            topOrchestrator = entry
+          }
+          if (!existed) {
             await log({ body: { service: PLUGIN_ID, level: 'info', message: `Creating orchestrator agent "${name}"` } })
-          if (!entry.description)
+          }
+          if (!entry.description) {
             entry.description =
               level === 1
                 ? 'Orchestrator agent: decomposes every request and delegates to subagents.'
                 : isFinal
                   ? `Orchestrator agent (level ${level}/${opts.orchestratorDepth}): decomposes requests from the level above and delegates to the routed subagents.`
                   : `Orchestrator agent (level ${level}/${opts.orchestratorDepth}): decomposes requests from the level above and delegates to the next level.`
+          }
           const targetMode = level === 1 ? 'primary' : 'subagent'
           const previousMode = entry.mode
           if (entry.mode !== targetMode) {
             entry.mode = targetMode
-            if (previousMode !== undefined)
+            if (previousMode !== undefined) {
               await log({
                 body: {
                   service: PLUGIN_ID,
@@ -460,17 +519,23 @@ const OrchestratorPlugin: Plugin = async ({ client }, options = {}) => {
                   message: `Converting agent "${name}" mode "${previousMode}" to "${targetMode}" for orchestrator use`,
                 },
               })
+            }
           }
-          if (levelModel) entry.model = levelModel
+          if (levelModel) {
+            entry.model = levelModel
+          }
           await applyBlockedTools(entry, name, opts.blockedTools, log)
           if (isFinal) {
             const pinToTargets = opts.restrictTask && targets.length > 0
-            if (opts.orchestratorDepth > 1 || pinToTargets)
+            if (opts.orchestratorDepth > 1 || pinToTargets) {
               await applyTaskRule(entry, name, pinToTargets ? taskRuleFor(targets) : { '*': 'allow' }, log)
+            }
           } else {
             await applyTaskRule(entry, name, taskRuleFor([levels[index + 1]]), log)
           }
-          if (level > 1) await applyTaskRule(entry, name, 'allow', log, 'todowrite')
+          if (level > 1) {
+            await applyTaskRule(entry, name, 'allow', log, 'todowrite')
+          }
           const marker = levelDirectiveMarker(level, opts.orchestratorDepth)
           if (!entry.prompt?.includes(marker)) {
             const directive = orchestratorDirective(

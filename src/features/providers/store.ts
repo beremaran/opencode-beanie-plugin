@@ -6,7 +6,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
 export function validateProviderSource(value: unknown): value is ProviderSource {
-  if (!isRecord(value)) return false
+  if (!isRecord(value)) {
+    return false
+  }
   return (
     typeof value.id === 'string' &&
     value.id.trim() !== '' &&
@@ -20,8 +22,9 @@ export function loadStore(path: string, logger: Logger): { providers: ProviderSo
   try {
     text = readFileSync(path, 'utf8')
   } catch (error) {
-    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT')
+    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
       logger('warn', `Failed to read provider store "${path}": ${String(error)}`)
+    }
     return { providers: [] }
   }
   let parsed: unknown
@@ -31,18 +34,22 @@ export function loadStore(path: string, logger: Logger): { providers: ProviderSo
     logger('warn', `Provider store "${path}" is not valid JSON: ${String(error)}`)
     return { providers: [] }
   }
-  if (!isRecord(parsed) || !Array.isArray(parsed.providers)) {
+  if (!(isRecord(parsed) && Array.isArray(parsed.providers))) {
     logger('warn', `Provider store "${path}" has an unexpected shape; ignoring it`)
     return { providers: [] }
   }
   const providers: ProviderSource[] = []
   const skipped: string[] = []
   for (const entry of parsed.providers) {
-    if (validateProviderSource(entry)) providers.push(entry)
-    else skipped.push(isRecord(entry) && typeof entry.id === 'string' ? entry.id : '(unnamed)')
+    if (validateProviderSource(entry)) {
+      providers.push(entry)
+    } else {
+      skipped.push(isRecord(entry) && typeof entry.id === 'string' ? entry.id : '(unnamed)')
+    }
   }
-  if (skipped.length > 0)
+  if (skipped.length > 0) {
     logger('warn', `Skipped ${skipped.length} malformed provider entry/entries in "${path}"`, { skipped })
+  }
   return { providers }
 }
 

@@ -1,19 +1,36 @@
 import { PLUGIN_NAME, resolveTargetPath } from './opencode-file.js'
 import type { ValidationResult } from './validate.js'
 export type BeanieAction = 'status' | 'help' | 'validate' | 'apply' | 'init' | 'unknown'
-export type BeanieCommand = { action: BeanieAction; payload: string }
+export interface BeanieCommand {
+  action: BeanieAction
+  payload: string
+}
 
 export function parseBeanie(raw: string): BeanieCommand {
   const trimmed = raw.trim()
-  if (!trimmed) return { action: 'status', payload: '' }
+  if (!trimmed) {
+    return { action: 'status', payload: '' }
+  }
   const first = trimmed.split(/\s+/, 1)[0] ?? ''
   const rest = trimmed.slice(first.length).trim()
-  if (first === 'help' || first === '--help' || first === '-h') return { action: 'help', payload: '' }
-  if (first === 'status') return { action: 'status', payload: rest }
-  if (first === 'validate') return { action: 'validate', payload: rest }
-  if (first === 'apply') return { action: 'apply', payload: rest }
-  if (first === 'init') return { action: 'init', payload: rest }
-  if (first.startsWith('{')) return { action: 'apply', payload: trimmed }
+  if (first === 'help' || first === '--help' || first === '-h') {
+    return { action: 'help', payload: '' }
+  }
+  if (first === 'status') {
+    return { action: 'status', payload: rest }
+  }
+  if (first === 'validate') {
+    return { action: 'validate', payload: rest }
+  }
+  if (first === 'apply') {
+    return { action: 'apply', payload: rest }
+  }
+  if (first === 'init') {
+    return { action: 'init', payload: rest }
+  }
+  if (first.startsWith('{')) {
+    return { action: 'apply', payload: trimmed }
+  }
   return { action: 'unknown', payload: trimmed }
 }
 
@@ -21,11 +38,14 @@ export function parseOptionsPayload(
   payload: string,
 ): { ok: true; options: Record<string, unknown> } | { ok: false; error: string } {
   const trimmed = payload.trim()
-  if (trimmed === '') return { ok: true, options: {} }
+  if (trimmed === '') {
+    return { ok: true, options: {} }
+  }
   try {
     const parsed: unknown = JSON.parse(trimmed)
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
       return { ok: false, error: 'The config must be a JSON object of feature options.' }
+    }
     return { ok: true, options: parsed as Record<string, unknown> }
   } catch (error) {
     return { ok: false, error: `Invalid JSON: ${error instanceof Error ? error.message : String(error)}` }

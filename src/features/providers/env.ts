@@ -1,12 +1,18 @@
 const ENV_PATTERN = /\{env:([A-Za-z0-9_]+)\}|\$\{([A-Za-z0-9_]+)\}/g
 
 export function interpolate(value: string, enabled: boolean): string {
-  if (!enabled || (!value.includes('{') && !value.includes('$'))) return value
+  if (!enabled || !(value.includes('{') || value.includes('$'))) {
+    return value
+  }
   return value.replace(ENV_PATTERN, (match, braceName, dollarName) => {
     const name = (braceName ?? dollarName) as string
     const resolved = process.env[name]
-    if (resolved !== undefined) return resolved
-    if (braceName !== undefined) return match
+    if (resolved !== undefined) {
+      return resolved
+    }
+    if (braceName !== undefined) {
+      return match
+    }
     return `\${${dollarName}}`
   })
 }
@@ -15,11 +21,15 @@ export function interpolateHeaders(
   headers: Record<string, string> | undefined,
   enabled: boolean,
 ): Record<string, string> | undefined {
-  if (!headers) return undefined
+  if (!headers) {
+    return undefined
+  }
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(headers)) {
     const resolved = interpolate(value, enabled)
-    if (resolved.length > 0) out[key] = resolved
+    if (resolved.length > 0) {
+      out[key] = resolved
+    }
   }
   return Object.keys(out).length > 0 ? out : undefined
 }

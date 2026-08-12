@@ -24,19 +24,24 @@ export async function composePlugins(
 
     for (const key of Object.keys(partial)) {
       const value = (partial as unknown as Record<string, unknown>)[key]
-      if (value === undefined) continue
+      if (value === undefined) {
+        continue
+      }
 
       if (key === 'tool') {
-        hasTools = true
-        for (const toolName of Object.keys(partial.tool ?? {})) {
-          const owner = toolOwners.get(toolName)
-          if (owner !== undefined) {
-            throw new Error(
-              `[opencode-beanie-plugin] tool "${toolName}" is defined by features "${owner}" and "${featureName}"`,
-            )
+        const featureTools = partial.tool
+        if (featureTools) {
+          hasTools = true
+          for (const toolName of Object.keys(featureTools)) {
+            const owner = toolOwners.get(toolName)
+            if (owner !== undefined) {
+              throw new Error(
+                `[opencode-beanie-plugin] tool "${toolName}" is defined by features "${owner}" and "${featureName}"`,
+              )
+            }
+            tools[toolName] = featureTools[toolName]
+            toolOwners.set(toolName, featureName)
           }
-          tools[toolName] = partial.tool![toolName]
-          toolOwners.set(toolName, featureName)
         }
         continue
       }
@@ -52,7 +57,9 @@ export async function composePlugins(
     }
   }
 
-  if (hasTools) output.tool = tools
+  if (hasTools) {
+    output.tool = tools
+  }
 
   for (const [key, featureHooks] of hooks) {
     output[key] = async (...args: unknown[]) => {

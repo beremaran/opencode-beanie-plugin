@@ -15,9 +15,15 @@ const strings = (value: unknown): string[] | undefined =>
     ? value.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim())
     : undefined
 const records = (value: unknown): Record<string, Record<string, unknown>> | undefined => {
-  if (!isRecord(value)) return undefined
+  if (!isRecord(value)) {
+    return undefined
+  }
   const out: Record<string, Record<string, unknown>> = {}
-  for (const [key, entry] of Object.entries(value)) if (isRecord(entry)) out[key] = entry
+  for (const [key, entry] of Object.entries(value)) {
+    if (isRecord(entry)) {
+      out[key] = entry
+    }
+  }
   return out
 }
 
@@ -33,33 +39,54 @@ function sanitize(value: ProviderSource): ProviderSource {
   const out: ProviderSource = { id: value.id.trim(), baseURL: value.baseURL.trim() }
   for (const key of ['name', 'apiKey', 'npm', 'modelsURL'] as const) {
     const v = optionalString(raw[key])
-    if (v) out[key] = v
+    if (v) {
+      out[key] = v
+    }
   }
-  if (isRecord(raw.headers))
+  if (isRecord(raw.headers)) {
     out.headers = Object.fromEntries(Object.entries(raw.headers).filter(([, v]) => typeof v === 'string')) as Record<
       string,
       string
     >
-  if (typeof raw.fetchModels === 'boolean') out.fetchModels = raw.fetchModels
+  }
+  if (typeof raw.fetchModels === 'boolean') {
+    out.fetchModels = raw.fetchModels
+  }
   for (const key of ['include', 'exclude'] as const) {
     const v = strings(raw[key])
-    if (v?.length) out[key] = v
+    if (v && v.length > 0) {
+      out[key] = v
+    }
   }
-  if (isRecord(raw.defaultLimit))
+  if (isRecord(raw.defaultLimit)) {
     out.defaultLimit = {
       ...(positive(raw.defaultLimit.context) ? { context: positive(raw.defaultLimit.context) } : {}),
       ...(positive(raw.defaultLimit.output) ? { output: positive(raw.defaultLimit.output) } : {}),
     }
+  }
   const overrides = records(raw.overrides)
-  if (overrides) out.overrides = overrides as ProviderSource['overrides']
+  if (overrides) {
+    out.overrides = overrides as ProviderSource['overrides']
+  }
   const staticModels = records(raw.staticModels)
-  if (staticModels) out.staticModels = staticModels as ProviderSource['staticModels']
-  if (typeof raw.env === 'boolean') out.env = raw.env
-  if (positive(raw.timeout)) out.timeout = positive(raw.timeout)
+  if (staticModels) {
+    out.staticModels = staticModels as ProviderSource['staticModels']
+  }
+  if (typeof raw.env === 'boolean') {
+    out.env = raw.env
+  }
+  if (positive(raw.timeout)) {
+    out.timeout = positive(raw.timeout)
+  }
   return out
 }
 
-export type NormalizedOptions = { sources: ResolvedProvider[]; storePath: string; model?: string; smallModel?: string }
+export interface NormalizedOptions {
+  sources: ResolvedProvider[]
+  storePath: string
+  model?: string
+  smallModel?: string
+}
 export function normalizeOptions(
   raw: unknown,
   stored: ProviderSource[],
@@ -71,14 +98,20 @@ export function normalizeOptions(
   const timeout = positive(input.timeout) ?? 10_000
   const byId = new Map<string, ProviderSource>()
   const skipped: string[] = []
-  for (const [i, entry] of (Array.isArray(input.providers) ? input.providers : []).entries())
+  for (const [i, entry] of (Array.isArray(input.providers) ? input.providers : []).entries()) {
     validateProviderSource(entry) ? byId.set(entry.id, sanitize(entry)) : skipped.push(`options.providers[${i}]`)
+  }
   for (const entry of stored) {
     const candidate: unknown = entry
-    if (validateProviderSource(candidate)) byId.set(entry.id, sanitize(entry))
-    else skipped.push(`store:${isRecord(candidate) && typeof candidate.id === 'string' ? candidate.id : '?'}`)
+    if (validateProviderSource(candidate)) {
+      byId.set(entry.id, sanitize(entry))
+    } else {
+      skipped.push(`store:${isRecord(candidate) && typeof candidate.id === 'string' ? candidate.id : '?'}`)
+    }
   }
-  if (skipped.length) logger('warn', `Skipped ${skipped.length} malformed provider entries`, { skipped })
+  if (skipped.length > 0) {
+    logger('warn', `Skipped ${skipped.length} malformed provider entries`, { skipped })
+  }
   const globalEnv = input.env !== false
   const sources = [...byId.values()].map((source) => ({
     ...source,

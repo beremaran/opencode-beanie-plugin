@@ -5,16 +5,20 @@ import type { EvaluationDecision, GoalState, ModelRef, ResolvedGoalPluginOptions
 
 type OpenCodeClient = PluginInput['client']
 export function parseModelRef(value: string | undefined): ModelRef | undefined {
-  if (!value) return undefined
-  const [providerID, ...modelParts] = value.split('/')
-  const modelID = modelParts.join('/')
-  return providerID && modelID ? { providerID, modelID } : undefined
+  if (!value) {
+    return undefined
+  }
+  const [providerId, ...modelParts] = value.split('/')
+  const modelId = modelParts.join('/')
+  return providerId && modelId ? { providerID: providerId, modelID: modelId } : undefined
 }
 export function parseEvaluation(text: string): EvaluationDecision | undefined {
   const trimmed = text.trim()
   const fenced = trimmed.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i)?.[1]
   const candidate = fenced ?? trimmed.match(/\{[\s\S]*\}/)?.[0]
-  if (!candidate) return undefined
+  if (!candidate) {
+    return undefined
+  }
   try {
     const value = JSON.parse(candidate) as Record<string, unknown>
     return typeof value.complete === 'boolean' && typeof value.reason === 'string' && value.reason.trim()
@@ -25,7 +29,9 @@ export function parseEvaluation(text: string): EvaluationDecision | undefined {
   }
 }
 function responseText(parts: unknown): string {
-  if (!Array.isArray(parts)) return ''
+  if (!Array.isArray(parts)) {
+    return ''
+  }
   return parts
     .filter(
       (part): part is { type: 'text'; text: string } =>
@@ -43,14 +49,18 @@ async function evaluatorModel(
   configured: string | undefined,
 ): Promise<ModelRef | undefined> {
   const explicit = parseModelRef(configured)
-  if (explicit) return explicit
+  if (explicit) {
+    return explicit
+  }
   try {
     const small = parseModelRef((await client.config.get()).data?.small_model)
-    if (small) return small
+    if (small) {
+      return small
+    }
   } catch {}
   return latestUserExecution(messages).model
 }
-export type EvaluateGoalInput = {
+export interface EvaluateGoalInput {
   client: OpenCodeClient
   parentSessionID: string
   goal: GoalState
@@ -63,13 +73,14 @@ export async function evaluateGoal(input: EvaluateGoalInput): Promise<Evaluation
   const created = await input.client.session.create({
     body: { parentID: input.parentSessionID, title: `[goal evaluator] ${input.goal.objective.slice(0, 60)}` },
   })
-  const evaluatorSessionID = created.data?.id
-  if (!evaluatorSessionID)
+  const evaluatorSessionId = created.data?.id
+  if (!evaluatorSessionId) {
     return {
       complete: false,
       reason: 'Completion evaluation could not start; continue and surface clearer verification evidence.',
       error: true,
     }
+  }
   try {
     const body: {
       system: string
@@ -82,15 +93,20 @@ export async function evaluateGoal(input: EvaluateGoalInput): Promise<Evaluation
       tools: { '*': false },
       parts: [{ type: 'text', text: evaluatorPrompt(input.goal, transcript) }],
     }
-    if (model) body.model = model
-    if (input.options.evaluatorAgent) body.agent = input.options.evaluatorAgent
-    const response = await input.client.session.prompt({ path: { id: evaluatorSessionID }, body })
-    if (response.error)
+    if (model) {
+      body.model = model
+    }
+    if (input.options.evaluatorAgent) {
+      body.agent = input.options.evaluatorAgent
+    }
+    const response = await input.client.session.prompt({ path: { id: evaluatorSessionId }, body })
+    if (response.error) {
       return {
         complete: false,
         reason: 'Completion evaluation failed because the evaluator model returned an error.',
         error: true,
       }
+    }
     return (
       parseEvaluation(responseText(response.data?.parts)) ?? {
         complete: false,
@@ -105,7 +121,8 @@ export async function evaluateGoal(input: EvaluateGoalInput): Promise<Evaluation
       error: true,
     }
   } finally {
-    if (input.options.deleteEvaluatorSessions)
-      await input.client.session.delete({ path: { id: evaluatorSessionID } }).catch(() => undefined)
+    if (input.options.deleteEvaluatorSessions) {
+      await input.client.session.delete({ path: { id: evaluatorSessionId } }).catch(() => undefined)
+    }
   }
 }

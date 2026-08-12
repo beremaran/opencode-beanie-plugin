@@ -1,13 +1,13 @@
 import type { Config, ServerConfig } from './config.js'
 export const TOOL_NAME_RE = /^[A-Za-z0-9._-]{1,128}$/
-export type UpstreamTool = {
+export interface UpstreamTool {
   name: string
   title?: string
   description?: string
   inputSchema: unknown
   outputSchema?: unknown
 }
-type Entry = {
+interface Entry {
   config: ServerConfig
   connState: 'idle' | 'connected' | 'error' | 'disabled'
   session: unknown
@@ -24,7 +24,7 @@ export class UpstreamRegistry {
   readonly entries = new Map<string, Entry>()
   constructor(config: Config) {
     this.config = config
-    for (const [name, serverConfig] of Object.entries(config.mcpServers))
+    for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
       this.entries.set(name, {
         config: serverConfig,
         connState: serverConfig.disabled ? 'disabled' : 'idle',
@@ -37,6 +37,7 @@ export class UpstreamRegistry {
         failCount: 0,
         nextRetryAt: 0,
       })
+    }
   }
   get(name: string) {
     return this.entries.get(name)
@@ -55,29 +56,39 @@ export class UpstreamRegistry {
   }
   clearSession(name: string) {
     const entry = this.get(name)
-    if (entry) entry.session = null
+    if (entry) {
+      entry.session = null
+    }
   }
   touch(name: string) {
     const entry = this.get(name)
-    if (entry) entry.lastUsedAt = Date.now()
+    if (entry) {
+      entry.lastUsedAt = Date.now()
+    }
   }
   setState(name: string, state: Entry['connState']) {
     const entry = this.get(name)
-    if (entry) entry.connState = state
+    if (entry) {
+      entry.connState = state
+    }
   }
   markError(name: string, message: string) {
     const entry = this.get(name)
-    if (!entry) return
+    if (!entry) {
+      return
+    }
     entry.connState = 'error'
     entry.lastError = message.replace(/\s+/g, ' ').trim().slice(0, 300)
     entry.failCount++
     entry.nextRetryAt =
-      Date.now() + (entry.failCount <= 1 ? 1000 : entry.failCount > 6 ? 30000 : 1000 * 2 ** (entry.failCount - 1))
+      Date.now() + (entry.failCount <= 1 ? 1000 : entry.failCount > 6 ? 30_000 : 1000 * 2 ** (entry.failCount - 1))
     entry.session = null
   }
   clearError(name: string) {
     const entry = this.get(name)
-    if (!entry) return
+    if (!entry) {
+      return
+    }
     entry.connState = 'connected'
     entry.lastError = null
     entry.failCount = 0
@@ -92,7 +103,9 @@ export class UpstreamRegistry {
   }
   markCacheStale(name: string) {
     const entry = this.get(name)
-    if (entry) entry.metadataStale = true
+    if (entry) {
+      entry.metadataStale = true
+    }
   }
   evict(name: string) {
     const entry = this.get(name)
@@ -105,9 +118,11 @@ export class UpstreamRegistry {
 export const qualifiedName = (server: string, tool: string) => `${server}__${tool}`
 export function splitQualified(name: string) {
   const index = name.indexOf('__')
-  if (index < 0) return null
-  const server = name.slice(0, index),
-    tool = name.slice(index + 2)
+  if (index < 0) {
+    return null
+  }
+  const server = name.slice(0, index)
+  const tool = name.slice(index + 2)
   return /^[A-Za-z0-9._-]{1,128}$/.test(server) && TOOL_NAME_RE.test(tool) ? { server, tool } : null
 }
 export class ToolRegistry {
@@ -128,9 +143,9 @@ export class ToolRegistry {
     this.upstream.evict(server)
   }
   search(input: { query?: string | null; server?: string | null; limit?: number; refresh: boolean }) {
-    const names = input.server ? (this.upstream.has(input.server) ? [input.server] : []) : this.upstream.enabledNames(),
-      query = (input.query ?? '').toLowerCase(),
-      limit = Number.isInteger(input.limit) ? Math.min(input.limit!, 500) : this.upstream.config.searchTopK
+    const names = input.server ? (this.upstream.has(input.server) ? [input.server] : []) : this.upstream.enabledNames()
+    const query = (input.query ?? '').toLowerCase()
+    const limit = Number.isInteger(input.limit) ? Math.min(input.limit!, 500) : this.upstream.config.searchTopK
     const servers = names.map((name) => {
       const entry = this.upstream.get(name)!
       const tools = entry.metadataCache ?? []

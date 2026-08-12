@@ -1,11 +1,13 @@
 export class TtlCache<K, V> {
-  private store = new Map<K, { value: V; expiresAt: number }>()
+  private readonly store = new Map<K, { value: V; expiresAt: number }>()
   private hitCount = 0
   private missCount = 0
   get(key: K): V | undefined {
     const entry = this.store.get(key)
     if (!entry || Date.now() >= entry.expiresAt) {
-      if (entry) this.store.delete(key)
+      if (entry) {
+        this.store.delete(key)
+      }
       this.missCount++
       return undefined
     }

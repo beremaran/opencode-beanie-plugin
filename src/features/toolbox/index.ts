@@ -8,7 +8,9 @@ import { createTools } from './tools.js'
 const Toolbox: Plugin = async (input, options) => {
   const logger = createLogger(input.client)
   const config = loadConfig({ config: options?.config, servers: options?.servers, logger })
-  if (!config) return { tool: {} }
+  if (!config) {
+    return { tool: {} }
+  }
   const upstream = new UpstreamRegistry(config)
   const registry = new ToolRegistry(upstream)
   const connection = new ConnectionManager(config, registry, logger)

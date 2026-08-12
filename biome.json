@@ -17,15 +17,26 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended",
-      "suspicious": {
-        "noExplicitAny": "off"
+      "preset": "all",
+      "correctness": {
+        "noNodejsModules": "off",
+        "noProcessGlobal": "off",
+        "useQwikValidLexicalScope": "off",
+        "useImportExtensions": "off"
       },
       "style": {
-        "noNonNullAssertion": "off"
+        "noDefaultExport": "off",
+        "noProcessEnv": "off",
+        "noNamespace": "off"
+      },
+      "suspicious": {
+        "noConsole": "off"
+      },
+      "security": {
+        "noSecrets": "off"
       },
       "complexity": {
-        "noCommaOperator": "off"
+        "noVoid": "off"
       }
     }
   },
