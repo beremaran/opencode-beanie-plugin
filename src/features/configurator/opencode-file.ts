@@ -6,6 +6,14 @@ export const PLUGIN_NAME = 'opencode-beanie-plugin'
 const PLUGIN_QUOTED = `"${PLUGIN_NAME}"`
 const isWhitespace = (char: string | undefined): boolean => char !== undefined && /\s/.test(char)
 
+export function isPluginEntryName(value: unknown): boolean {
+  if (typeof value !== 'string') {
+    return false
+  }
+  const trimmed = value.replace(/[/\\]+$/, '')
+  return trimmed === PLUGIN_NAME || trimmed.split(/[/\\]/).pop() === PLUGIN_NAME
+}
+
 export function globalConfigPath(): string {
   const xdg = process.env.XDG_CONFIG_HOME?.trim()
   return join(xdg || join(homedir(), '.config'), 'opencode', 'opencode.json')
@@ -49,7 +57,7 @@ export function resolveTargetPath(worktree: string, scope: ConfigScope = 'auto')
         : candidateConfigPaths(worktree)
   for (const path of candidates) {
     const text = readConfigFile(path)
-    if (text?.includes(PLUGIN_QUOTED)) {
+    if (text !== null && findPluginEntrySpan(text) !== null) {
       return path
     }
   }
@@ -97,7 +105,7 @@ function findMatching(text: string, open: number, openChar: string, closeChar: s
   return -1
 }
 
-export function findPluginEntrySpan(text: string): [number, number] | null {
+export function findPluginNameSpan(text: string): [number, number] | null {
   const nameIndex = text.indexOf(PLUGIN_NAME)
   if (nameIndex === -1) {
     return null
@@ -119,7 +127,15 @@ export function findPluginEntrySpan(text: string): [number, number] | null {
   if (end >= text.length) {
     return null
   }
-  end += 1
+  return [start, end + 1]
+}
+
+export function findPluginEntrySpan(text: string): [number, number] | null {
+  const nameSpan = findPluginNameSpan(text)
+  if (!nameSpan) {
+    return null
+  }
+  const [start, end] = nameSpan
   let i = end
   while (isWhitespace(text[i])) {
     i += 1
@@ -183,7 +199,9 @@ export function findPluginArrayOpen(text: string): number | null {
 }
 
 export function upsertPluginEntry(text: string, options: Record<string, unknown>): string {
-  const entryText = Object.keys(options).length === 0 ? PLUGIN_QUOTED : JSON.stringify([PLUGIN_NAME, options])
+  const nameSpan = findPluginNameSpan(text)
+  const quotedName = nameSpan ? text.slice(nameSpan[0], nameSpan[1]) : PLUGIN_QUOTED
+  const entryText = Object.keys(options).length === 0 ? quotedName : `[${quotedName},${JSON.stringify(options)}]`
   const existing = findPluginEntrySpan(text)
   if (existing) {
     return `${text.slice(0, existing[0])}${entryText}${text.slice(existing[1])}`

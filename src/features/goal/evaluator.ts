@@ -10,7 +10,7 @@ export function parseModelRef(value: string | undefined): ModelRef | undefined {
   }
   const [providerId, ...modelParts] = value.split('/')
   const modelId = modelParts.join('/')
-  return providerId && modelId ? { providerID: providerId, modelID: modelId } : undefined
+  return providerId && modelId ? { providerId, modelId } : undefined
 }
 export function parseEvaluation(text: string): EvaluationDecision | undefined {
   const trimmed = text.trim()
@@ -86,7 +86,7 @@ export async function evaluateGoal(input: EvaluateGoalInput): Promise<Evaluation
       system: string
       tools: Record<string, boolean>
       parts: Array<{ type: 'text'; text: string }>
-      model?: ModelRef
+      model?: { providerID: string; modelID: string }
       agent?: string
     } = {
       system: EVALUATOR_SYSTEM_PROMPT,
@@ -94,7 +94,7 @@ export async function evaluateGoal(input: EvaluateGoalInput): Promise<Evaluation
       parts: [{ type: 'text', text: evaluatorPrompt(input.goal, transcript) }],
     }
     if (model) {
-      body.model = model
+      body.model = { providerID: model.providerId, modelID: model.modelId }
     }
     if (input.options.evaluatorAgent) {
       body.agent = input.options.evaluatorAgent

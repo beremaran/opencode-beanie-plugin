@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { GoalState } from './types.js'
 export interface CreateGoalInput {
-  sessionID: string
+  sessionId: string
   directory: string
   objective: string
   tokenBudget?: number
@@ -14,7 +14,7 @@ export function createGoalState(input: CreateGoalInput): GoalState {
   const state: GoalState = {
     version: 1,
     goalId: input.goalId ?? randomUUID(),
-    sessionID: input.sessionID,
+    sessionId: input.sessionId,
     directory: input.directory,
     objective: input.objective.trim(),
     status: 'active',

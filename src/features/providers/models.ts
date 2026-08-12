@@ -121,7 +121,7 @@ export function buildModelEntries(models: DiscoveredModel[] | null, source: Reso
   const ids = [...discovered.keys(), ...Object.keys(staticModels).filter((id) => !discovered.has(id))]
     .filter(
       (id) =>
-        (source.include === null || source.include.length === 0 || source.include.some((p) => globMatch(p, id))) &&
+        (!source.include || source.include.length === 0 || source.include.some((p) => globMatch(p, id))) &&
         !source.exclude?.some((p) => globMatch(p, id)),
     )
     .slice(0, MAX)

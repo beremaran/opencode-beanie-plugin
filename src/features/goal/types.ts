@@ -8,7 +8,7 @@ export interface CompletionClaim {
 export interface GoalState {
   version: 1
   goalId: string
-  sessionID: string
+  sessionId: string
   directory: string
   objective: string
   status: GoalStatus
@@ -19,7 +19,7 @@ export interface GoalState {
   tokensUsed: number
   tokenBudget?: number
   maxTurns?: number
-  lastEvaluatedMessageID?: string
+  lastEvaluatedMessageId?: string
   lastReason?: string
   completionClaim?: CompletionClaim
 }
@@ -57,8 +57,8 @@ export type GoalCommand =
   | { action: 'set'; objective: string; tokenBudget?: number; maxTurns?: number }
   | { action: 'invalid'; message: string }
 export interface ModelRef {
-  providerID: string
-  modelID: string
+  providerId: string
+  modelId: string
 }
 export interface TranscriptPart {
   type: string

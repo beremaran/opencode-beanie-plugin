@@ -8,7 +8,7 @@ import {
   renderStatus,
   renderValidation,
 } from './commands.js'
-import { applyOptionsToFile, PLUGIN_NAME, resolveTargetPath } from './opencode-file.js'
+import { applyOptionsToFile, isPluginEntryName, PLUGIN_NAME, resolveTargetPath } from './opencode-file.js'
 import { PLUGIN_OPTIONS_SCHEMA } from './schema.js'
 import { validateFullOptions } from './validate.js'
 
@@ -32,10 +32,10 @@ interface BeanieState {
 }
 function pluginEntryOf(config: Config): { options: Record<string, unknown>; hasEntry: boolean } {
   for (const entry of config.plugin ?? []) {
-    if (typeof entry === 'string' && entry === PLUGIN_NAME) {
+    if (isPluginEntryName(entry)) {
       return { options: {}, hasEntry: true }
     }
-    if (Array.isArray(entry) && entry[0] === PLUGIN_NAME) {
+    if (Array.isArray(entry) && isPluginEntryName(entry[0])) {
       return { options: isRecord(entry[1]) ? entry[1] : {}, hasEntry: true }
     }
   }
@@ -54,6 +54,11 @@ const Configurator: Plugin = async ({ client, worktree }, _options = {}) => {
   }
   return {
     config: async (cfg) => {
+      cfg.command ??= {}
+      cfg.command.beanie ??= {
+        description: 'Inspect, validate, or write the opencode-beanie-plugin configuration',
+        template: '<beanie-command>$ARGUMENTS</beanie-command>',
+      }
       const found = pluginEntryOf(cfg)
       state.options = found.options
       state.hasEntry = found.hasEntry

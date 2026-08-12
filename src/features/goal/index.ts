@@ -70,8 +70,8 @@ async function continueParent(
   log: Logger,
 ): Promise<void> {
   try {
-    if (isParentBusy((await client.session.status()).data, goal.sessionID)) {
-      await log('debug', 'Skipped continuation because the parent session is busy', { sessionID: goal.sessionID })
+    if (isParentBusy((await client.session.status()).data, goal.sessionId)) {
+      await log('debug', 'Skipped continuation because the parent session is busy', { sessionID: goal.sessionId })
       return
     }
   } catch {}
@@ -85,12 +85,12 @@ async function continueParent(
     body.agent = execution.agent
   }
   if (execution.model) {
-    body.model = execution.model
+    body.model = { providerID: execution.model.providerId, modelID: execution.model.modelId }
   }
-  const response = await client.session.promptAsync({ path: { id: goal.sessionID }, body })
+  const response = await client.session.promptAsync({ path: { id: goal.sessionId }, body })
   if (response.error) {
     await log('error', 'OpenCode rejected an automatic goal continuation', {
-      sessionID: goal.sessionID,
+      sessionID: goal.sessionId,
       error: String(response.error),
     })
   }
@@ -122,7 +122,7 @@ async function handleIdle(input: {
     }
     const messages = asTranscriptMessages(response.data)
     const assistant = latestAssistant(messages, goal.createdAt)
-    if (!assistant || assistant.info.id === goal.lastEvaluatedMessageID) {
+    if (!assistant || assistant.info.id === goal.lastEvaluatedMessageId) {
       return
     }
     const progress: GoalState = {
@@ -130,7 +130,7 @@ async function handleIdle(input: {
       turns: goal.turns + 1,
       tokensUsed: totalGoalTokens(messages, goal.createdAt),
       updatedAt: Date.now(),
-      lastEvaluatedMessageID: assistant.info.id,
+      lastEvaluatedMessageId: assistant.info.id,
     }
     await input.store.set(progress)
     const decision = await evaluateGoal({
@@ -149,7 +149,7 @@ async function handleIdle(input: {
       paused.completionClaim = undefined
       await input.store.set(paused)
       await input.log('error', 'Goal paused because completion evaluation failed', {
-        sessionID: paused.sessionID,
+        sessionID: paused.sessionId,
         reason: decision.reason,
       })
       await showToast(input.client, 'Goal paused: evaluator failed', 'error')
@@ -166,7 +166,7 @@ async function handleIdle(input: {
       completed.completionClaim = undefined
       await input.store.set(completed)
       await input.log('info', 'Goal completed', {
-        sessionID: completed.sessionID,
+        sessionID: completed.sessionId,
         turns: completed.turns,
         tokensUsed: completed.tokensUsed,
       })
@@ -286,7 +286,7 @@ const GoalPlugin: Plugin = async (input, rawOptions) => {
         return
       }
       const goal = createGoalState({
-        sessionID: command.sessionID,
+        sessionId: command.sessionID,
         directory: input.directory,
         objective: parsed.objective,
         ...(parsed.tokenBudget ? { tokenBudget: parsed.tokenBudget } : {}),

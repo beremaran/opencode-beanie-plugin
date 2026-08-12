@@ -8,9 +8,9 @@ declare module 'node:os' {
 }
 
 declare module 'node:path' {
+  const path: { join: (...parts: string[]) => string }
   export function join(...parts: string[]): string
   export function dirname(path: string): string
-  const path: { join: (...parts: string[]) => string }
   export default path
 }
 

@@ -20,8 +20,8 @@ export function parseGoalState(value: unknown): GoalState | undefined {
     value.version !== 1 ||
     typeof value.goalId !== 'string' ||
     !value.goalId ||
-    typeof value.sessionID !== 'string' ||
-    !value.sessionID ||
+    typeof value.sessionId !== 'string' ||
+    !value.sessionId ||
     typeof value.directory !== 'string' ||
     typeof value.objective !== 'string' ||
     !value.objective.trim()
@@ -70,7 +70,7 @@ export class FileGoalStore implements GoalStore {
   }
   async set(goal: GoalState): Promise<void> {
     await mkdir(this.directory, { recursive: true, mode: 0o700 })
-    const destination = this.file(goal.sessionID)
+    const destination = this.file(goal.sessionId)
     const temporary = `${destination}.${randomUUID()}.tmp`
     await writeFile(temporary, `${JSON.stringify(goal, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 })
     await rename(temporary, destination)
@@ -95,7 +95,7 @@ export class MemoryGoalStore implements GoalStore {
     return this.values.get(sessionId)
   }
   async set(goal: GoalState): Promise<void> {
-    this.values.set(goal.sessionID, structuredClone(goal))
+    this.values.set(goal.sessionId, structuredClone(goal))
   }
   async clear(sessionId: string): Promise<void> {
     this.values.delete(sessionId)
