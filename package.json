@@ -17,6 +17,7 @@
     "check": "tsc --noEmit",
     "lint": "biome check src",
     "lint:fix": "biome check --write src",
+    "lint:fix-all": "biome check --write --unsafe",
     "format": "biome format --write src",
     "format:check": "biome format src"
   },

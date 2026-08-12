@@ -179,7 +179,9 @@ export class ConnectionManager {
   }
   async callTool(server: string, tool: string, args: Record<string, unknown>, signal?: AbortSignal) {
     const entry = this.tools.upstream.get(server)
-    if (!entry) throw new UnknownServerError(`unknown upstream server: ${server}`)
+    if (!entry) {
+      throw new UnknownServerError(`unknown upstream server: ${server}`)
+    }
     const session = await this.getSession(server)
     const result = await session.client.callTool({ name: tool, arguments: args }, {
       timeout: this.timeout(entry.config),

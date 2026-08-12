@@ -55,7 +55,9 @@ export class GithubRegistry implements SkillRegistry {
   private readonly trees = new TtlCache<string, TreeEntry[]>()
   private readonly frontmatter = new TtlCache<string, FrontmatterInfo>()
   constructor(opts: { sources?: string[]; maxBytes?: number; token?: string; timeoutMs?: number }) {
-    this.sources = (opts.sources && opts.sources.length > 0 ? opts.sources : DEFAULT_SOURCES).map((s) => s.trim()).filter(Boolean)
+    this.sources = (opts.sources && opts.sources.length > 0 ? opts.sources : DEFAULT_SOURCES)
+      .map((s) => s.trim())
+      .filter(Boolean)
     this.maxBytes = opts.maxBytes ?? 200_000
     this.token = opts.token
   }

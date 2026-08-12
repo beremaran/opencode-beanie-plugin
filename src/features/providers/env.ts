@@ -1,7 +1,7 @@
 const ENV_PATTERN = /\{env:([A-Za-z0-9_]+)\}|\$\{([A-Za-z0-9_]+)\}/g
 
 export function interpolate(value: string, enabled: boolean): string {
-  if (!enabled || !(value.includes('{') || value.includes('$'))) {
+  if (!(enabled && (value.includes('{') || value.includes('$')))) {
     return value
   }
   return value.replace(ENV_PATTERN, (match, braceName, dollarName) => {
