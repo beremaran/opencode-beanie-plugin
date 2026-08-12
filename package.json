@@ -1,0 +1,26 @@
+{
+  "name": "opencode-beanie-plugin",
+  "version": "0.1.0",
+  "description": "Combined OpenCode plugin: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-configuration, MCP tool aggregation, and skill discovery.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@opencode-ai/plugin": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
