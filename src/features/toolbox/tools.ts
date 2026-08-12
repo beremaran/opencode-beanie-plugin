@@ -6,13 +6,13 @@ import type { Logger } from "./logger.js"
 const server = tool.schema.string().regex(/^[A-Za-z0-9._-]{1,128}$/)
 const toolName = tool.schema.string().min(1).max(256)
 const resolve = (args: { server?: string; tool: string }, registry: ToolRegistry) => { const qualified = splitQualified(args.tool); if (qualified) return registry.upstream.has(qualified.server) ? { server: qualified.server, tool: qualified.tool } : { error: `unknown server: ${qualified.server}` }; if (!args.server) return { error: "server is required when tool is a bare tool name (or pass the qualified servername__toolname)" }; if (!registry.upstream.has(args.server)) return { error: `unknown server: ${args.server}` }; if (!registry.validateToolName(args.tool)) return { error: `invalid tool name: ${args.tool}` }; return { server: args.server, tool: args.tool } }
-const listDescription = "Lists or searches the upstream tools this aggregator can reach. Returns one-line summaries plus per-server status. Each result includes servername__toolname; use mcp_aggregator_schema for a full schema and mcp_aggregator_invoke to call a tool."
+const listDescription = "Lists or searches the upstream tools this aggregator can reach. Returns one-line summaries plus per-server status. Each result includes servername__toolname; use get_tool_schema for a full schema and invoke_tool to call a tool."
 const schemaDescription = "Returns the full JSON Schema for one upstream tool. Provide server and a bare tool name, or pass servername__toolname as tool."
 const invokeDescription = "Invokes one upstream tool and serializes its result faithfully. Upstream content, structuredContent, and isError are returned as JSON."
 function schemaPayload(serverName: string, name: string, upstream: UpstreamTool) { return { server: serverName, tool: name, qualifiedName: qualifiedName(serverName, name), ...(upstream.title === undefined ? {} : { title: upstream.title }), ...(upstream.description === undefined ? {} : { description: upstream.description }), inputSchema: JSON.parse(JSON.stringify(upstream.inputSchema)), ...(upstream.outputSchema === undefined ? {} : { outputSchema: JSON.parse(JSON.stringify(upstream.outputSchema)) }) } }
 export function createTools(registry: ToolRegistry, connection: ConnectionManager, config: Config, logger: Logger) {
   return {
-    mcp_aggregator_list: tool({
+    list_tools: tool({
       description: listDescription,
       args: { query: tool.schema.string().min(1).optional(), server: server.optional(), limit: tool.schema.number().int().min(1).max(500).optional(), refresh: tool.schema.boolean().optional() },
       async execute(args) {
@@ -25,7 +25,7 @@ export function createTools(registry: ToolRegistry, connection: ConnectionManage
         return lines.join("\n")
       }
     }),
-    mcp_aggregator_schema: tool({
+    get_tool_schema: tool({
       description: schemaDescription,
       args: { server: server.optional(), tool: toolName },
       async execute(args) {
@@ -36,7 +36,7 @@ export function createTools(registry: ToolRegistry, connection: ConnectionManage
         return JSON.stringify(upstream ? schemaPayload(target.server, target.tool, upstream) : { error: `unknown tool: ${target.server}__${target.tool}` }, null, 2)
       }
     }),
-    mcp_aggregator_invoke: tool({
+    invoke_tool: tool({
       description: invokeDescription,
       args: { server: server.optional(), tool: toolName, arguments: tool.schema.record(tool.schema.string(), tool.schema.unknown()).default({}) },
       async execute(args, context) {
