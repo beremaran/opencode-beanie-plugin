@@ -1,7 +1,7 @@
 import type { Plugin } from "@opencode-ai/plugin"
 
 const SERVICE = "opencode-beanie-plugin"
-const MECHANISMS = ["goal", "orchestrator", "throttle", "skillbox", "toolbox", "providers"] as const
+export const MECHANISMS = ["goal", "orchestrator", "throttle", "skillbox", "toolbox", "providers", "configurator"] as const
 const TOOL_PATTERN = /^[a-z0-9_-]+$/
 const DEFAULT_TOOL_GUIDANCE: Record<string, string> = {
   get_goal: "Use to check the active goal, its budgets, and the latest evaluation before starting or resuming goal-driven work in this session.",
@@ -9,6 +9,7 @@ const DEFAULT_TOOL_GUIDANCE: Record<string, string> = {
   list_skills: "Use to browse available agent skills before hand-writing common, reusable logic.",
   search_skills: "Use to find a matching agent skill before implementing a well-known pattern; prefer loading a found skill over writing from scratch.",
   load_skill: "Use to read the full SKILL.md and optional supporting files for a skill you intend to follow.",
+  configure_plugin: "Use to inspect, validate, or write the plugin's own configuration in opencode.json (status/schema/validate/apply).",
 }
 const DEFAULT_MECHANISM_NOTES: Record<string, string> = {
   goal: "- Persistent goals: set an objective with /goal; the plugin evaluates progress on every idle turn, may auto-continue, and get_goal/update_goal expose live status.",
@@ -17,6 +18,7 @@ const DEFAULT_MECHANISM_NOTES: Record<string, string> = {
   skillbox: "- Skill discovery: before implementing a common pattern, run search_skills, then load_skill to reuse an existing agent skill.",
   toolbox: "- Tool aggregation: tools from configured MCP servers are aggregated and available alongside built-ins; prefer them when they match the task.",
   providers: "- Providers: manage OpenAI-compatible providers with /add-provider and /providers; the plugin auto-configures their models.",
+  configurator: "- Configuration: run /beanie status, /beanie validate, or /beanie apply to inspect or write the plugin's options, or /beanie init for a guided setup; the configure_plugin tool does the same programmatically.",
 }
 
 type Resolved = {
@@ -30,7 +32,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const booleanOption = (value: unknown, fallback: boolean): boolean => (typeof value === "boolean" ? value : fallback)
 const stringList = (value: unknown): string[] => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim() !== "").map((entry) => entry.trim()) : [])
 const stringMap = (value: unknown): Record<string, string> => { const result: Record<string, string> = {}; if (!isRecord(value)) return result; for (const [key, entry] of Object.entries(value)) if (typeof entry === "string" && entry.trim() !== "" && TOOL_PATTERN.test(key)) result[key] = entry.trim(); return result }
-const resolveOptions = (raw: Record<string, unknown> | undefined): Resolved => { const source = raw ?? {}; const mechanisms = stringList(source.mechanisms).filter((entry): entry is string => (MECHANISMS as readonly string[]).includes(entry)); return { defaults: booleanOption(source.defaults, true), system: stringList(source.system), tools: stringMap(source.tools), mechanisms } }
+export const resolveOptions = (raw: Record<string, unknown> | undefined): Resolved => { const source = raw ?? {}; const mechanisms = stringList(source.mechanisms).filter((entry): entry is string => (MECHANISMS as readonly string[]).includes(entry)); return { defaults: booleanOption(source.defaults, true), system: stringList(source.system), tools: stringMap(source.tools), mechanisms } }
 const mechanismNotes = (options: Resolved): string[] => { const keys = options.mechanisms.length > 0 ? options.mechanisms : [...MECHANISMS]; return keys.map((key) => DEFAULT_MECHANISM_NOTES[key]) }
 const systemDirective = (options: Resolved): string => `# Plugin capabilities (${SERVICE})
 This plugin adds tools and background mechanisms. Prefer them over manual work when the mechanism applies.

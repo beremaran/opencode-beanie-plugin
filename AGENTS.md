@@ -1,6 +1,6 @@
 # AGENTS.md
 
-OpenCode plugin (TypeScript, ESM) that combines 6 prior tools into one package: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-config, MCP tool aggregation, and skill discovery (see TODO.md for the source repos).
+OpenCode plugin (TypeScript, ESM) that combines 6 prior tools into one package: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-config, MCP tool aggregation, and skill discovery (see TODO.md for the source repos), plus a self-configuration feature.
 
 ## Commands
 
@@ -30,6 +30,7 @@ OpenCode plugin (TypeScript, ESM) that combines 6 prior tools into one package: 
 - **throttle**: intercepts the `task` tool (`tool.execute.before`/`after`), default `maxParallel` 2, mode `session`|`global`.
 - **toolbox**: aggregates MCP tools via `ConnectionManager`, which spawns child processes; `dispose` closes connections and force-kills stale processes.
 - **skillbox**: exposes `list_skills`/`search_skills`/`load_skill` MCP-driven tools with byte-budgeted payload truncation.
+- **configurator**: lets the user/agent configure the whole plugin (`/beanie status|validate|apply|init` + the `configure_plugin` tool). Reads the full options from the `config` hook's `cfg.plugin`, validates each feature with the real normalizers in `validate.ts`, and writes options by text-splicing the `plugin` array in `opencode.json`/`.jsonc` (`opencode-file.ts`). Options are captured from `cfg.plugin`, not from the feature's own options slice (compose only passes `options.configurator`).
 
 ## Gotchas
 

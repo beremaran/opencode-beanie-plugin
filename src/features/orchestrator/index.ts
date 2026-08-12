@@ -141,9 +141,9 @@ const sameTaskRule = (value: unknown, expected: Record<string, "deny" | "allow">
   return keys.length === Object.keys(expected).length && keys.every((key) => value[key] === expected[key])
 }
 
-const REQUIRED_MODEL_MESSAGE = `[${PLUGIN_ID}] The \`subagentModel\` option is required, e.g. ["${PLUGIN_ID}", { "subagentModel": "anthropic/claude-sonnet-4-6" }]`
+const REQUIRED_MODEL_MESSAGE = `[${PLUGIN_ID}] The \`subagentModel\` option is required, e.g. ["${PLUGIN_ID}", { "subagentModel": "anthropic/claude-sonnet-4-6" }]. Run \`/beanie init\` after installing to configure the plugin interactively.`
 
-const normalizeOptions = (rawOptions: unknown): NormalizedOptions => {
+export const normalizeOptions = (rawOptions: unknown): NormalizedOptions => {
   const candidate = rawOptions == null ? {} : rawOptions
   if (!isRecord(candidate)) invalidOption("options", "an object")
   const options = candidate as Record<string, unknown>

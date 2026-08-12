@@ -7,6 +7,7 @@ import Providers from "./features/providers/index.js"
 import Skillbox from "./features/skillbox/index.js"
 import Toolbox from "./features/toolbox/index.js"
 import Directives from "./features/directives/index.js"
+import Configurator from "./features/configurator/index.js"
 
 const features: Record<string, Plugin> = {
   orchestrator: OrchestratorPlugin,
@@ -16,6 +17,7 @@ const features: Record<string, Plugin> = {
   skillbox: Skillbox,
   toolbox: Toolbox,
   directives: Directives,
+  configurator: Configurator,
 }
 
 const BeaniePlugin: Plugin = async (input, options) =>

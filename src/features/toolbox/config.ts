@@ -52,6 +52,7 @@ export function loadConfig(options: { config?: unknown; servers?: unknown; env?:
   const env = options.env ?? process.env as Record<string, string | undefined>, cwd = options.cwd ?? ".", configured = typeof options.config === "string" && options.config.trim() ? options.config : env.MCP_AGGREGATOR_CONFIG
   let raw: unknown
   if (options.servers !== undefined) raw = { mcpServers: options.servers }
+  else if (plain(options.config)) raw = options.config
   else { const file = configured || path.join(cwd, "mcp-aggregator.json"); let stat: any; try { stat = (fs as any).statSync(file) } catch { options.logger.info(`toolbox disabled: config file not found: ${file}`); return null }; if (!stat.isFile()) fail("config", `config file is not a regular file: ${file}`); if ((stat.mode & 4) !== 0) options.logger.warn(`config file ${file} is world-readable`); try { raw = JSON.parse((fs as any).readFileSync(file, "utf8")) } catch (error) { fail("config", `failed to parse ${file}: ${String(error)}`) } }
   const result = normalize(substituteEnv(raw, env)); if (!Object.values(result.mcpServers).some(server => !server.disabled)) options.logger.warn("no enabled upstream servers configured"); return result
 }
