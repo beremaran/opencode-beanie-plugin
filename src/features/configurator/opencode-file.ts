@@ -6,12 +6,17 @@ export const PLUGIN_NAME = 'opencode-beanie-plugin'
 const PLUGIN_QUOTED = `"${PLUGIN_NAME}"`
 const isWhitespace = (char: string | undefined): boolean => char !== undefined && /\s/.test(char)
 
+const containsPluginSegment = (value: string): boolean =>
+  value
+    .replace(/[/\\]+$/, '')
+    .split(/[/\\]/)
+    .includes(PLUGIN_NAME)
+
 export function isPluginEntryName(value: unknown): boolean {
   if (typeof value !== 'string') {
     return false
   }
-  const trimmed = value.replace(/[/\\]+$/, '')
-  return trimmed === PLUGIN_NAME || trimmed.split(/[/\\]/).pop() === PLUGIN_NAME
+  return value === PLUGIN_NAME || containsPluginSegment(value)
 }
 
 export function globalConfigPath(): string {
