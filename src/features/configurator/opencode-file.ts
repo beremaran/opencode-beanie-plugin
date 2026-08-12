@@ -66,25 +66,32 @@ function findMatching(text: string, open: number, openChar: string, closeChar: s
 }
 
 export function findPluginEntrySpan(text: string): [number, number] | null {
-  const start = text.indexOf(PLUGIN_QUOTED)
-  if (start === -1) return null
-  let i = start + PLUGIN_QUOTED.length
+  const nameIndex = text.indexOf(PLUGIN_NAME)
+  if (nameIndex === -1) return null
+  let start = nameIndex
+  while (start > 0 && text[start] !== '"') start -= 1
+  if (text[start] !== '"') return null
+  let end = start + 1
+  while (end < text.length && text[end] !== '"') { if (text[end] === "\\") end += 1; end += 1 }
+  if (end >= text.length) return null
+  end += 1
+  let i = end
   while (isWhitespace(text[i])) i += 1
-  if (text[i] !== ",") return [start, start + PLUGIN_QUOTED.length]
+  if (text[i] !== ",") return [start, end]
   i += 1
   while (isWhitespace(text[i])) i += 1
-  if (text[i] !== "{") return [start, start + PLUGIN_QUOTED.length]
+  if (text[i] !== "{") return [start, end]
   const objectEnd = findMatching(text, i, "{", "}")
   if (objectEnd === -1) return null
-  let end = objectEnd + 1
+  let close = objectEnd + 1
   let after = objectEnd + 1
   while (isWhitespace(text[after])) after += 1
-  if (text[after] === "]") end = after + 1
+  if (text[after] === "]") close = after + 1
   let begin = start
   let before = start - 1
   while (before >= 0 && isWhitespace(text[before])) before -= 1
   if (text[before] === "[") begin = before
-  return [begin, end]
+  return [begin, close]
 }
 
 export function findPluginArrayOpen(text: string): number | null {
