@@ -52,6 +52,8 @@ export async function composePlugins(
     }
   }
 
+  output.tool = tools
+
   for (const [key, featureHooks] of hooks) {
     output[key] = async (...args: unknown[]): Promise<void> => {
       for (const hook of featureHooks) {

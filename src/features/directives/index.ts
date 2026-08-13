@@ -107,7 +107,7 @@ const toolGuidance = (options: Resolved, toolId: string): string | undefined => 
 
 const Directives: Plugin = async ({ client }, rawOptions) => {
   const options = resolveOptions(rawOptions)
-  if (options.system.length === 0 && options.tools && Object.keys(options.tools).length === 0) {
+  if (!options.defaults && options.system.length === 0 && Object.keys(options.tools).length === 0) {
     return {}
   }
   await client.app
