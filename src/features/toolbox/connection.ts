@@ -22,6 +22,7 @@ interface Session {
 
 const MS_PER_SECOND = 1000
 const MAX_ERROR_MESSAGE_LENGTH = 300
+const MAX_STDERR_CAPTURE_LENGTH = 1024
 const TIMEOUT_RE = /tim(eo|e)out/i
 const WHITESPACE_RE = /\s+/g
 const maybeUnref = (timer: number): void => {
@@ -107,12 +108,14 @@ export class ConnectionManager {
     let slot = false
     let transport: Transport | undefined
     let client: Client | undefined
+    const stderrTail: string[] = []
     try {
       if (entry.config.type === 'stdio') {
         await this.acquire(timeout)
         slot = true
       }
       transport = this.transport(entry.config)
+      this.captureStderr(transport, stderrTail)
       client = new Client(
         { name: 'mcp-aggregator', version: this.version },
         {
@@ -165,7 +168,7 @@ export class ConnectionManager {
       }
       let message = this.safe(error)
       if (entry.config.type === 'stdio') {
-        message = `spawn ${entry.config.command}: ${message}`
+        message = `spawn ${entry.config.command}: ${message}${this.stderrDetail(stderrTail)}`
       }
       this.tools.upstream.markError(name, message)
       throw new Error(message, { cause: error })
@@ -298,6 +301,32 @@ export class ConnectionManager {
     } else {
       this.available += 1
     }
+  }
+  private captureStderr(transport: Transport, sink: string[]) {
+    if (!(transport instanceof StdioClientTransport)) {
+      return
+    }
+    const stderr = transport.stderr as { on: (event: 'data', listener: (chunk: unknown) => void) => void } | null
+    if (!stderr) {
+      return
+    }
+    stderr.on('data', (chunk: unknown) => {
+      const size = sink.reduce((total, item) => total + item.length, 0)
+      if (size >= MAX_STDERR_CAPTURE_LENGTH) {
+        return
+      }
+      sink.push(String(chunk))
+    })
+  }
+  private stderrDetail(chunks: string[]) {
+    const text = chunks.join('').replace(WHITESPACE_RE, ' ').trim()
+    if (!text) {
+      return ''
+    }
+    if (text.length <= MAX_ERROR_MESSAGE_LENGTH) {
+      return ` (stderr: ${text})`
+    }
+    return ` (stderr: …${text.slice(-MAX_ERROR_MESSAGE_LENGTH)})`
   }
   private safe(error: unknown) {
     const value = error as { message?: string; status?: number; statusText?: string }

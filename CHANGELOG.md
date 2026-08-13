@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Toolbox (MCP aggregation): surface the spawned process's stderr in stdio server errors. A failing `npx`/`uvx` server previously surfaced only the SDK's cryptic `spawn <cmd>: Connection closed`; the child's actual diagnostic (e.g. `npm error 404`, missing package, permission errors) is now appended as `(stderr: …)`, so server misconfiguration is actionable.
+
 ## [0.2.0] - 2026-08-13
 
 ### Added
