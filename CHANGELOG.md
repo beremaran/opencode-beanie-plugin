@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-08-13
+
+### Fixed
+
+- Expose a `./server` entrypoint (plus `main`/`types` fields) in the package `exports`. OpenCode 1.18's plugin loader resolves an npm plugin's server entrypoint from the `exports["./server"]` subpath or the `main` field; with only a root `.` export the plugin was reported as "does not expose a server entrypoint" and silently skipped, so no tools, slash commands, or provider models ever loaded. This matches the shape used by the working sibling plugins (`opencode-goal` exports `./server`; `opencode-agent-tree` etc. set `main`).
+
 ## [0.1.3] - 2026-08-13
 
 ### Added
