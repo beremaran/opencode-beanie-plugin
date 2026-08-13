@@ -2,6 +2,31 @@
   "name": "opencode-beanie-plugin",
   "version": "0.1.0",
   "description": "Combined OpenCode plugin: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-configuration, MCP tool aggregation, and skill discovery.",
+  "license": "MIT",
+  "author": "Berke Arslan <berke@beremaran.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beremaran/opencode-beanie-plugin.git"
+  },
+  "homepage": "https://github.com/beremaran/opencode-beanie-plugin",
+  "bugs": {
+    "url": "https://github.com/beremaran/opencode-beanie-plugin/issues"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "agent-orchestration",
+    "subagent",
+    "throttle",
+    "goals",
+    "mcp",
+    "skills",
+    "provider",
+    "openai-compatible"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "exports": {
     ".": {

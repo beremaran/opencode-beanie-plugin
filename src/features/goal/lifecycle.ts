@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { GoalState } from './types.js'
+
 export interface CreateGoalInput {
   sessionId: string
   directory: string
@@ -9,7 +10,8 @@ export interface CreateGoalInput {
   now?: number
   goalId?: string
 }
-export function createGoalState(input: CreateGoalInput): GoalState {
+
+function createGoalState(input: CreateGoalInput): GoalState {
   const now = input.now ?? Date.now()
   const state: GoalState = {
     version: 1,
@@ -31,17 +33,23 @@ export function createGoalState(input: CreateGoalInput): GoalState {
   }
   return state
 }
-export function remainingTokens(goal: GoalState): number | undefined {
+
+function remainingTokens(goal: GoalState): number | undefined {
   if (goal.tokenBudget === undefined) {
     return undefined
   }
   return Math.max(goal.tokenBudget - goal.tokensUsed, 0)
 }
+
+const MILLISECONDS_PER_SECOND = 1000
+const SECONDS_PER_HOUR = 3600
+const SECONDS_PER_MINUTE = 60
+
 export function formatDuration(milliseconds: number): string {
-  const seconds = Math.max(Math.floor(milliseconds / 1000), 0)
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const rest = seconds % 60
+  const seconds = Math.max(Math.floor(milliseconds / MILLISECONDS_PER_SECOND), 0)
+  const hours = Math.floor(seconds / SECONDS_PER_HOUR)
+  const minutes = Math.floor((seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE)
+  const rest = seconds % SECONDS_PER_MINUTE
   if (hours > 0) {
     return `${hours}h ${minutes}m`
   }
@@ -50,18 +58,33 @@ export function formatDuration(milliseconds: number): string {
   }
   return `${rest}s`
 }
+
 export function goalSummary(goal: GoalState, now = Date.now()): string {
-  const budget =
-    goal.tokenBudget === undefined
-      ? `${goal.tokensUsed.toLocaleString()} tokens`
-      : `${goal.tokensUsed.toLocaleString()} / ${goal.tokenBudget.toLocaleString()} tokens`
-  const turns = goal.maxTurns === undefined ? `${goal.turns} turns` : `${goal.turns} / ${goal.maxTurns} turns`
-  const reason = goal.lastReason ? `\nLast evaluation: ${goal.lastReason}` : ''
-  return (
-    [
-      `Goal status: ${goal.status}`,
-      `Objective: ${goal.objective}`,
-      `Progress: ${turns}; ${budget}; ${formatDuration(now - goal.createdAt)} elapsed`,
-    ].join('\n') + reason
-  )
+  let budgetStr: string
+  if (goal.tokenBudget === undefined) {
+    budgetStr = `${goal.tokensUsed.toLocaleString()} tokens`
+  } else {
+    budgetStr = `${goal.tokensUsed.toLocaleString()} / ${goal.tokenBudget.toLocaleString()} tokens`
+  }
+  let turnsStr: string
+  if (goal.maxTurns === undefined) {
+    turnsStr = `${goal.turns} turns`
+  } else {
+    turnsStr = `${goal.turns} / ${goal.maxTurns} turns`
+  }
+  const budget = budgetStr
+  const turns = turnsStr
+  let reason: string
+  if (goal.lastReason) {
+    reason = `\nLast evaluation: ${goal.lastReason}`
+  } else {
+    reason = ''
+  }
+  return [
+    `Goal status: ${goal.status}`,
+    `Objective: ${goal.objective}`,
+    `Progress: ${turns}; ${budget}; ${formatDuration(now - goal.createdAt)} elapsed`,
+  ].join('\n') + reason
 }
+
+export { createGoalState, remainingTokens }

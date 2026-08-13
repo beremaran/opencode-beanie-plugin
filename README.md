@@ -1,25 +1,30 @@
 # opencode-beanie-plugin
 
-An OpenCode plugin scaffold written in TypeScript.
+A batteries-included plugin for [OpenCode](https://opencode.ai) that merges eight productivity features into a single package: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-configuration, MCP tool aggregation, skill discovery, tool-usage directives, and self-configuration.
 
-## Development
+This plugin consolidates six previously separate projects — [mcp-skillbox](https://github.com/beremaran/mcp-skillbox), [agent-toolbox](https://github.com/beremaran/agent-toolbox), [opencode-subagent-throttle](https://github.com/beremaran/opencode-subagent-throttle), [opencode-agent-tree](https://github.com/beremaran/opencode-agent-tree), [opencode-openai-compatible-auto-configure](https://github.com/beremaran/opencode-openai-compatible-auto-configure), and [opencode-goal](https://github.com/beremaran/opencode-goal) — into one composable, configurable plugin.
 
-Install dependencies and run the type check:
+## Features
 
-```sh
-npm install
-npm run check
-```
+| Feature | What it does |
+| --- | --- |
+| **Orchestrator** | Turns the main agent into an orchestrator that decomposes requests into small, verifiable subtasks and delegates them via the `task` tool to routed subagents (`explore`/`general`), with per-level models and an optional multi-level delegation chain. |
+| **Throttle** | Limits how many `task` invocations run in parallel (default 2), queues the rest, and releases them as sessions go idle. |
+| **Goal** | Persistent, independently evaluated goals. Set an objective with `/goal`; after every turn an evaluator model decides whether it's complete, and the plugin auto-continues, budget-limits, or reports completion. |
+| **Providers** | Auto-configures OpenAI-compatible providers (baseURL, apiKey, headers, model fetching) into OpenCode via `/add-provider` and `/providers`, with a persisted provider store. |
+| **Toolbox** | Aggregates tools from configured MCP servers (stdio and HTTP) behind three tools: `list_tools`, `get_tool_schema`, `invoke_tool`. |
+| **Skillbox** | Discovers agent skills from the skills.sh API or public GitHub repositories and exposes `list_skills`, `search_skills`, and `load_skill`. |
+| **Directives** | Injects system-prompt guidance about the plugin's own tools and mechanisms, and appends "when to use" notes to their descriptions. |
+| **Configurator** | Self-configuration: `/beanie status\|validate\|apply\|init` plus the `configure_plugin` tool inspect, validate, and write the plugin's options directly into `opencode.json`. |
 
-Build the package with:
+## Requirements
 
-```sh
-npm run build
-```
+- Node.js 18+ (NodeNext ESM)
+- OpenCode with plugin support
 
-## Use In OpenCode
+## Installation
 
-Add the package to `opencode.json`:
+Build and register the plugin in your project's `opencode.json`:
 
 ```json
 {
@@ -28,4 +33,224 @@ Add the package to `opencode.json`:
 }
 ```
 
-Add hooks to `src/index.ts` as the plugin grows.
+When developing locally, reference the built output directly:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["file:/path/to/opencode-beanie-plugin/dist/index.js"]
+}
+```
+
+The only option that is strictly required is the orchestrator's subagent model. If `orchestrator.subagentModel` is missing, the plugin refuses to start. After installing, run `/beanie init` in OpenCode for a guided, interactive setup.
+
+## Quick start
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    [
+      "opencode-beanie-plugin",
+      {
+        "orchestrator": { "subagentModel": "anthropic/claude-sonnet-4-6" },
+        "throttle": { "maxParallel": 3 },
+        "goal": { "defaultTokenBudget": 100000, "defaultMaxTurns": 20 }
+      }
+    ]
+  ]
+}
+```
+
+Configuration is read from the plugin tuple's options object. Feature names are **camelCase** (matching the schema); the JSON schema itself uses kebab-case for property names like `per_page`.
+
+> Restart OpenCode after changing plugin options for changes to take effect.
+
+## Configuration reference
+
+All options are optional per feature; only `orchestrator.subagentModel` is required. The complete schema is exposed by `configure_plugin` with action `schema`, or via `/beanie validate`.
+
+### Orchestrator
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `subagentModel` | `string` | *required* | Model id used for every routed subagent, e.g. `"anthropic/claude-sonnet-4-6"`. |
+| `orchestratorModel` | `string` | — | Model used for the orchestrator agent(s). Falls back to OpenCode's default model. |
+| `orchestratorAgent` | `string` | `"Manager"` | Name of the top-level orchestrator agent. |
+| `orchestratorDepth` | `integer` | `1` | Number of orchestrator levels; level 1 is the primary agent, deeper levels are subagents (`<agent>-2`, ...). |
+| `orchestratorModels` | `string[]` | — | Per-level orchestrator models; length must not exceed `orchestratorDepth`. |
+| `agents` | `string[]` | built-ins + existing | Explicit list of subagents the orchestrator is allowed to delegate to. |
+| `agentModels` | `object` | — | Per-agent model overrides, e.g. `{ "general": "anthropic/claude-sonnet-4-6" }`. |
+| `instructions` | `string` | — | Extra instructions appended to the orchestrator's prompt. |
+| `blockedTools` | `string[]` | `["edit", "bash"]` | Hands-on tools denied to orchestrator agents so they only plan and delegate. |
+| `restrictTask` | `boolean` | `false` | Restrict the final orchestrator's `task` tool to the routed subagents only. |
+
+### Throttle
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `maxParallel` | `integer` | `2` | Maximum number of `task` calls running at once. |
+| `mode` | `"session" \| "global"` | `"session"` | Scope of the parallel limit: per session or across all sessions. |
+| `maxWaitMs` | `number` | `3600000` | Max time a queued task waits before being dropped. |
+| `notifyQueue` | `boolean` | `false` | Post progress messages to the session when tasks are queued/started. |
+
+### Goal
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `evaluatorModel` | `string` | — | Model used for independent completion evaluation. Defaults to the session's model. |
+| `evaluatorAgent` | `string` | — | Agent used for the evaluator session. |
+| `stateDirectory` | `string` | XDG state dir | Directory where goal state JSON files are stored. |
+| `maxTranscriptChars` | `integer` | `48000` | Max transcript characters sent to the evaluator per turn. |
+| `defaultTokenBudget` | `integer` | — | Default token budget applied to new goals. |
+| `defaultMaxTurns` | `integer` | — | Default turn budget applied to new goals. |
+| `continuationDelayMs` | `integer` | `0` | Delay before the plugin auto-continues an active goal. |
+| `deleteEvaluatorSessions` | `boolean` | `true` | Delete the temporary evaluator session after each evaluation. |
+
+### Providers
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `providers` | `array` | — | Static provider sources (see below). Merged with the persisted store. |
+| `configFile` | `string` | `~/.config/opencode/openai-compatible-providers.json` | Path to the persisted provider store. |
+| `model` | `string` | — | Set `config.model` (default model) to this id. |
+| `smallModel` | `string` | — | Set `config.small_model` to this id. |
+| `timeout` | `integer` | `10000` | Model-fetch timeout in milliseconds. |
+| `npm` | `string` | `@ai-sdk/openai-compatible` | npm package used for the provider. |
+| `env` | `boolean` | `true` | Allow `${VAR}` interpolation of apiKey/headers/baseURL from environment variables. |
+
+A provider source entry:
+
+```json
+{
+  "id": "my-ollama",
+  "name": "Local Ollama",
+  "baseURL": "http://localhost:11434/v1",
+  "apiKey": "${OLLAMA_KEY}",
+  "headers": { "X-Custom": "value" },
+  "fetchModels": true,
+  "defaultLimit": { "context": 64000, "output": 8192 },
+  "include": ["my-model-*"],
+  "exclude": ["test-*"],
+  "env": true
+}
+```
+
+### Skillbox
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `registry` | `"auto" \| "skills-sh" \| "github"` | `"auto"` | Registry backend. `auto` uses skills.sh when a token is present, otherwise GitHub. |
+| `skillsShToken` | `string` | env `SKILLS_SH_TOKEN` | Token for the skills.sh API. |
+| `githubSources` | `string[]` | 7 curated repos | GitHub `owner/repo` skill sources. |
+| `githubToken` | `string` | env `GITHUB_TOKEN` | Token for private/high-rate GitHub access. |
+| `maxBytes` | `integer` | — | Byte budget for `load_skill` payloads; overflow is truncated with a marker. |
+| `debug` | `boolean` | env `SKILL_DEBUG` | Emit debug logs to OpenCode. |
+
+Defaults for `githubSources`: `vercel-labs/skills`, `anthropics/skills`, `obra/superpowers`, `mattpocock/skills`, `microsoft/azure-skills`, `supabase/agent-skills`, `prisma/skills`.
+
+### Toolbox
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `config` | `string \| object` | — | Path to an MCP config file (e.g. `.mcp.json`) or an inline config object. |
+| `servers` | `object` | — | Inline MCP server map (merged with `config`). |
+
+An MCP server can be stdio or HTTP:
+
+```json
+{
+  "servers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "env": { "HOME": "/home/user" },
+      "cwd": "/path/to/project",
+      "timeout": 30,
+      "toolFilter": ["browser_*"],
+      "tags": ["web"],
+      "disabled": false
+    },
+    "remote": {
+      "url": "https://mcp.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${TOKEN}" },
+      "transportType": "streamable-http"
+    }
+  }
+}
+```
+
+Inline config options also accept `searchTopK` (default 20), `cacheToolMetadata` (default `true`), `processPoolSize` (default 8), `timeoutSeconds` (default 30), and `idleTimeoutMs` (default 300000).
+
+### Directives
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `defaults` | `boolean` | `true` | Inject the default plugin-capabilities system directive. |
+| `system` | `string[]` | `[]` | Extra system prompt lines appended verbatim. |
+| `tools` | `object` | `{}` | Extra "when to use" guidance appended to specific tool descriptions. |
+| `mechanisms` | `string[]` | all | Which mechanism notes to include in the system directive: `goal`, `orchestrator`, `throttle`, `skillbox`, `toolbox`, `providers`, `configurator`. |
+
+## Slash commands
+
+| Command | Description |
+| --- | --- |
+| `/beanie` | Show current effective configuration and validation. |
+| `/beanie status` | Same as above. |
+| `/beanie help` | Show usage help. |
+| `/beanie validate [json]` | Validate the current config, or a JSON object of options. |
+| `/beanie apply <json>` | Validate and write options to `opencode.json`. |
+| `/beanie init` | Guided setup: the agent walks through each feature and writes the config. |
+| `/goal <condition>` | Set a persistent goal, e.g. `/goal --tokens 100k --max-turns 20 Fix the failing checkout tests`. |
+| `/goal status` | Show the current goal's status, budgets, and latest evaluation. |
+| `/goal pause` / `/goal resume` / `/goal clear` | Pause, resume, or clear the session goal. |
+| `/add-provider <id> <baseURL> [apiKey] [--name "..." --context N --output N --no-fetch]` | Add or update an OpenAI-compatible provider. |
+| `/providers` | List configured providers with live model counts. |
+
+`/goal` supports `--tokens` (plain integers or `k`/`m` suffixes) and `--max-turns` before the objective.
+
+## Tools
+
+| Tool | Feature | Description |
+| --- | --- | --- |
+| `get_goal` | Goal | Read the active goal's status, budgets, usage, and last evaluator reason. |
+| `update_goal` | Goal | Claim the goal complete (for independent verification) or blocked (after ≥3 recurring turns of the same blocker). |
+| `list_skills` | Skillbox | Browse skills from the registry with pagination and views (`all-time`, `trending`, `hot`). |
+| `search_skills` | Skillbox | Keyword search across the registry. |
+| `load_skill` | Skillbox | Load a skill's full `SKILL.md` and optional supporting files, byte-budgeted. |
+| `list_tools` | Toolbox | List or search aggregated MCP tools; qualified names use `servername__toolname`. |
+| `get_tool_schema` | Toolbox | Fetch the full JSON Schema for one upstream tool. |
+| `invoke_tool` | Toolbox | Invoke one upstream tool and serialize the result faithfully. |
+| `configure_plugin` | Configurator | `status`/`schema`/`validate`/`apply` the plugin's options in `opencode.json`. |
+
+## How goals work
+
+1. `/goal <objective>` persists a goal keyed to the session (state stored under the XDG state directory, scoped by project and directory).
+2. While a goal is `active`, every session turn triggers an independent evaluator call that judges completion against evidence in the transcript.
+3. If incomplete and under budget, the plugin auto-continues with a continuation prompt. `completionClaim`s made via `update_goal` are verified by the evaluator.
+4. Goals stop at completion, pause (interruption/error), `blocked` (after ≥3 turns of the same blocker), or budget/turn limits — the last case produces a concise handoff.
+
+To avoid surprises, set `goal.evaluatorModel` and budgets (`defaultTokenBudget`, `defaultMaxTurns`) so evaluation cost and runtime stay bounded.
+
+## Development
+
+```sh
+npm install
+npm run check   # tsc --noEmit — the verification gate
+npm run lint    # biome check src
+npm run build   # tsc emitting to dist/ (required before loading the plugin)
+```
+
+- `dist/` is gitignored build output; it is never edited by hand.
+- Relative imports must use explicit `.js` extensions (NodeNext).
+- There is no `@types/node`; each feature ships a hand-written `node-shims.d.ts` for the Node APIs it uses. Extend the local shim if more APIs are needed — do not add `@types/node`.
+- To add a feature, create `src/features/<name>/index.ts` exporting a `Plugin`, and register it in the `features` record in `src/index.ts` (feature options are read from `options.<featureName>`).
+- `@opencode-ai/plugin` is pinned to `latest` and its API surface can drift; reconcile features when hooks/types change upstream.
+
+## Contributing
+
+Bug reports, feature ideas, and pull requests are welcome. Please open an issue first for non-trivial changes so the direction is agreed before the work begins. Ensure `npm run check` and `npm run lint` pass on your changes.
+
+## License
+
+[MIT](LICENSE)

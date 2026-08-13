@@ -11,7 +11,6 @@ export async function composePlugins(
   const tools: NonNullable<Hooks['tool']> = {}
   const toolOwners = new Map<string, string>()
   const hooks = new Map<string, ComposableHook[]>()
-  let hasTools = false
 
   for (const [featureName, feature] of Object.entries(features)) {
     let partial: Hooks
@@ -24,24 +23,20 @@ export async function composePlugins(
 
     for (const key of Object.keys(partial)) {
       const value = (partial as unknown as Record<string, unknown>)[key]
-      if (value === undefined) {
-        continue
-      }
+      if (value === undefined) continue
 
       if (key === 'tool') {
         const featureTools = partial.tool
-        if (featureTools) {
-          hasTools = true
-          for (const toolName of Object.keys(featureTools)) {
-            const owner = toolOwners.get(toolName)
-            if (owner !== undefined) {
-              throw new Error(
-                `[opencode-beanie-plugin] tool "${toolName}" is defined by features "${owner}" and "${featureName}"`,
-              )
-            }
-            tools[toolName] = featureTools[toolName]
-            toolOwners.set(toolName, featureName)
+        if (!featureTools) continue
+        for (const toolName of Object.keys(featureTools)) {
+          const owner = toolOwners.get(toolName)
+          if (owner !== undefined) {
+            throw new Error(
+              `[opencode-beanie-plugin] tool "${toolName}" is defined by features "${owner}" and "${featureName}"`,
+            )
           }
+          tools[toolName] = featureTools[toolName]
+          toolOwners.set(toolName, featureName)
         }
         continue
       }
@@ -57,12 +52,8 @@ export async function composePlugins(
     }
   }
 
-  if (hasTools) {
-    output.tool = tools
-  }
-
   for (const [key, featureHooks] of hooks) {
-    output[key] = async (...args: unknown[]) => {
+    output[key] = async (...args: unknown[]): Promise<void> => {
       for (const hook of featureHooks) {
         await Reflect.apply(hook, undefined, args)
       }
