@@ -1,6 +1,6 @@
 {
   "name": "@beremaran/opencode-beanie-plugin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Combined OpenCode plugin: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-configuration, MCP tool aggregation, and skill discovery.",
   "license": "MIT",
   "author": "Berke Arslan <berke@beremaran.com>",

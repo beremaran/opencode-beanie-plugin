@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-13
+
 ### Fixed
 
 - Toolbox (MCP aggregation): surface the spawned process's stderr in stdio server errors. A failing `npx`/`uvx` server previously surfaced only the SDK's cryptic `spawn <cmd>: Connection closed`; the child's actual diagnostic (e.g. `npm error 404`, missing package, permission errors) is now appended as `(stderr: …)`, so server misconfiguration is actionable.
+- Toolbox (MCP aggregation): `list_tools` now auto-connects servers with no loaded metadata instead of reporting stale `0 tools`. Default calls trigger a connect-and-refresh when the cache is empty, stale, or the server is idle; `refresh=true` forces a reconnect+reload, `refresh=false` uses only already-loaded metadata (both documented in the tool description, schema, and README). Server rows carry a `[stale]` hint when counts come from a not-yet-loaded or stale cache.
 
 ## [0.2.0] - 2026-08-13
 
