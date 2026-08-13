@@ -1,6 +1,6 @@
+import { applyOptionsToFile } from '../configurator/opencode-file.js'
 import { fetchModels } from './models.js'
-import { loadStore, saveStore } from './store.js'
-import type { Logger, ProviderSource } from './types.js'
+import type { Logger, ProviderSource, ResolvedProvider } from './types.js'
 
 const ID_PATTERN = /^[A-Za-z0-9._-]+$/
 const USAGE =
@@ -58,43 +58,57 @@ export function parseAddProviderArgs(raw: string): ParseResult {
   }
   return { ok: true, source }
 }
-export function addProviderCommand(args: string, storePath: string, logger: Logger): string {
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+export function addProviderCommand(
+  args: string,
+  fullOptions: Record<string, unknown>,
+  worktree: string,
+  logger: Logger,
+): string {
   const parsed = parseAddProviderArgs(args)
   if (!parsed.ok) {
     return parsed.error
   }
-  const { providers } = loadStore(storePath, logger)
-  saveStore(
-    storePath,
-    { version: 1, providers: [...providers.filter((p) => p.id !== parsed.source.id), parsed.source] },
-    logger,
-  )
+  const options = { ...fullOptions }
+  const feature = isRecord(options.providers) ? { ...options.providers } : {}
+  const list = Array.isArray(feature.providers) ? [...feature.providers] : []
+  const existing = list.findIndex((entry) => isRecord(entry) && entry.id === parsed.source.id)
+  if (existing === -1) {
+    list.push(parsed.source)
+  } else {
+    list[existing] = parsed.source
+  }
+  feature.providers = list
+  options.providers = feature
+  let result: { path: string; created: boolean }
+  try {
+    result = applyOptionsToFile(worktree, 'auto', options)
+  } catch (error) {
+    logger('error', `Failed to write provider config: ${String(error)}`, { provider: parsed.source.id, error })
+    return `Failed to write the provider into opencode.json: ${error instanceof Error ? error.message : String(error)}`
+  }
   return [
     `Added provider "${parsed.source.id}"${parsed.source.fetchModels === false ? ' (static models only)' : ''}: ${parsed.source.baseURL}`,
-    `Store: ${storePath}`,
+    `Written to: ${result.path}`,
     'Restart opencode for changes to take effect.',
   ].join('\n')
 }
-export async function providersCommand(storePath: string, logger: Logger): Promise<string> {
-  const { providers } = loadStore(storePath, logger)
-  if (providers.length === 0) {
-    return 'No OpenAI-compatible providers configured yet. Use /add-provider to add one.'
+export async function providersCommand(sources: ResolvedProvider[], logger: Logger): Promise<string> {
+  if (sources.length === 0) {
+    return 'No OpenAI-compatible providers configured. Add them via the providers.providers plugin option or run /add-provider.'
   }
   const rows = await Promise.all(
-    providers.map(async (provider, i) => {
+    sources.map(async (provider, i) => {
       const head = `${i + 1}. ${provider.id}${provider.name ? ` (${provider.name})` : ''} — ${provider.baseURL}`
       if (provider.fetchModels === false) {
         return `${head} — fetch: off — models: ${Object.keys(provider.staticModels ?? {}).length} (static)`
       }
-      const models = await fetchModels({ ...provider, fetchModels: true, timeoutMs: 3000 }, logger)
+      const models = await fetchModels(provider, logger)
       return `${head} — fetch: on — models: ${models === null ? 'error' : models.length}`
     }),
   )
-  return [
-    'Configured OpenAI-compatible providers:',
-    ...rows,
-    '',
-    `Store: ${storePath}`,
-    'Restart opencode for changes to take effect.',
-  ].join('\n')
+  return ['Configured OpenAI-compatible providers:', ...rows, '', 'Restart opencode for changes to take effect.'].join(
+    '\n',
+  )
 }

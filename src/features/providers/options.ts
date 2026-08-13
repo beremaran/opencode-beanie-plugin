@@ -1,5 +1,3 @@
-import { homedir } from 'node:os'
-import { join } from 'node:path'
 import { interpolate, interpolateHeaders } from './env.js'
 import { validateProviderSource } from './store.js'
 import type { Logger, PluginOptions, ProviderSource, ResolvedProvider } from './types.js'
@@ -25,13 +23,6 @@ const records = (value: unknown): Record<string, Record<string, unknown>> | unde
     }
   }
   return out
-}
-
-export function defaultStorePath(): string {
-  return join(process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'opencode', 'openai-compatible-providers.json')
-}
-export function storePathFromRaw(raw: unknown, fallback: string): string {
-  return isRecord(raw) && typeof raw.configFile === 'string' && raw.configFile.trim() ? raw.configFile.trim() : fallback
 }
 
 function sanitize(value: ProviderSource): ProviderSource {
@@ -83,31 +74,16 @@ function sanitize(value: ProviderSource): ProviderSource {
 
 export interface NormalizedOptions {
   sources: ResolvedProvider[]
-  storePath: string
   model?: string
   smallModel?: string
 }
-export function normalizeOptions(
-  raw: unknown,
-  stored: ProviderSource[],
-  fallback: string,
-  logger: Logger,
-): NormalizedOptions {
+export function normalizeOptions(raw: unknown, logger: Logger): NormalizedOptions {
   const input = (isRecord(raw) ? raw : {}) as PluginOptions
-  const path = storePathFromRaw(raw, fallback)
   const timeout = positive(input.timeout) ?? 10_000
   const byId = new Map<string, ProviderSource>()
   const skipped: string[] = []
   for (const [i, entry] of (Array.isArray(input.providers) ? input.providers : []).entries()) {
     validateProviderSource(entry) ? byId.set(entry.id, sanitize(entry)) : skipped.push(`options.providers[${i}]`)
-  }
-  for (const entry of stored) {
-    const candidate: unknown = entry
-    if (validateProviderSource(candidate)) {
-      byId.set(entry.id, sanitize(entry))
-    } else {
-      skipped.push(`store:${isRecord(candidate) && typeof candidate.id === 'string' ? candidate.id : '?'}`)
-    }
   }
   if (skipped.length > 0) {
     logger('warn', `Skipped ${skipped.length} malformed provider entries`, { skipped })
@@ -126,7 +102,6 @@ export function normalizeOptions(
   }))
   return {
     sources,
-    storePath: path,
     ...(optionalString(input.model) ? { model: optionalString(input.model) } : {}),
     ...(optionalString(input.smallModel) ? { smallModel: optionalString(input.smallModel) } : {}),
   }

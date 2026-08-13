@@ -156,7 +156,6 @@ export const PLUGIN_OPTIONS_SCHEMA = {
       additionalProperties: false,
       properties: {
         providers: { type: 'array', items: { $ref: '#/$defs/providerSource' } },
-        configFile: nonEmptyString,
         model: modelRef,
         smallModel: modelRef,
         timeout: { type: 'integer', exclusiveMinimum: 0, default: 10_000 },
@@ -181,22 +180,17 @@ export const PLUGIN_OPTIONS_SCHEMA = {
       additionalProperties: false,
       properties: {
         config: {
-          oneOf: [
-            { type: 'string', minLength: 1 },
-            {
-              type: 'object',
-              additionalProperties: false,
-              required: ['mcpServers'],
-              properties: {
-                mcpServers: serversMap,
-                searchTopK: { type: 'integer', minimum: 1, maximum: 500, default: 20 },
-                cacheToolMetadata: { type: 'boolean', default: true },
-                processPoolSize: { type: 'integer', minimum: 1, maximum: 64, default: 8 },
-                timeoutSeconds: { type: 'number', minimum: 1, maximum: 600, default: 30 },
-                idleTimeoutMs: { type: 'integer', minimum: 0, maximum: 3_600_000, default: 300_000 },
-              },
-            },
-          ],
+          type: 'object',
+          additionalProperties: false,
+          required: ['mcpServers'],
+          properties: {
+            mcpServers: serversMap,
+            searchTopK: { type: 'integer', minimum: 1, maximum: 500, default: 20 },
+            cacheToolMetadata: { type: 'boolean', default: true },
+            processPoolSize: { type: 'integer', minimum: 1, maximum: 64, default: 8 },
+            timeoutSeconds: { type: 'number', minimum: 1, maximum: 600, default: 30 },
+            idleTimeoutMs: { type: 'integer', minimum: 0, maximum: 3_600_000, default: 300_000 },
+          },
         },
         servers: serversMap,
       },

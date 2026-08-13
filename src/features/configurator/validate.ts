@@ -133,9 +133,6 @@ function checkProviders(raw: unknown): FeatureReport {
     ok: false,
     message: `The \`${key}\` option must be ${expected}.`,
   })
-  if (o.configFile !== undefined && !isNonEmptyString(o.configFile)) {
-    return fail('configFile', 'a non-empty string')
-  }
   if (o.model !== undefined && !isNonEmptyString(o.model)) {
     return fail('model', 'a non-empty string')
   }
@@ -152,7 +149,7 @@ function checkProviders(raw: unknown): FeatureReport {
     return fail('env', 'a boolean')
   }
   try {
-    normalizeProviders(o, [], '', () => undefined)
+    normalizeProviders(o, () => undefined)
     return { feature: 'providers', ok: true }
   } catch (error) {
     return { feature: 'providers', ok: false, message: error instanceof Error ? error.message : String(error) }
@@ -209,19 +206,16 @@ function checkToolbox(raw: unknown): FeatureReport {
   if (o.config === undefined && o.servers === undefined) {
     return { feature: 'toolbox', ok: true }
   }
+  if (typeof o.config === 'string') {
+    return {
+      feature: 'toolbox',
+      ok: false,
+      message:
+        'The `config` option must be an inline object with mcpServers; external JSON config files are not supported.',
+    }
+  }
   const silent = { info: () => undefined, warn: () => undefined }
   try {
-    if (typeof o.config === 'string') {
-      if (o.config.trim() === '') {
-        return {
-          feature: 'toolbox',
-          ok: false,
-          message: 'The `config` option must be a non-empty string or an object.',
-        }
-      }
-      loadConfig({ config: o.config, logger: silent })
-      return { feature: 'toolbox', ok: true }
-    }
     loadConfig({ config: o.config, servers: o.servers, logger: silent })
     return { feature: 'toolbox', ok: true }
   } catch (error) {

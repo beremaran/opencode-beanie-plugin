@@ -11,7 +11,7 @@ This plugin consolidates six previously separate projects — [mcp-skillbox](htt
 | **Orchestrator** | Turns the main agent into an orchestrator that decomposes requests into small, verifiable subtasks and delegates them via the `task` tool to routed subagents (`explore`/`general`), with per-level models and an optional multi-level delegation chain. |
 | **Throttle** | Limits how many `task` invocations run in parallel (default 2), queues the rest, and releases them as sessions go idle. |
 | **Goal** | Persistent, independently evaluated goals. Set an objective with `/goal`; after every turn an evaluator model decides whether it's complete, and the plugin auto-continues, budget-limits, or reports completion. |
-| **Providers** | Auto-configures OpenAI-compatible providers (baseURL, apiKey, headers, model fetching) into OpenCode via `/add-provider` and `/providers`, with a persisted provider store. |
+| **Providers** | Auto-configures OpenAI-compatible providers (baseURL, apiKey, headers, model fetching) into OpenCode via `/add-provider` and `/providers`, with sources defined inline in the plugin config. |
 | **Toolbox** | Aggregates tools from configured MCP servers (stdio and HTTP) behind three tools: `list_tools`, `get_tool_schema`, `invoke_tool`. |
 | **Skillbox** | Discovers agent skills from the skills.sh API or public GitHub repositories and exposes `list_skills`, `search_skills`, and `load_skill`. |
 | **Directives** | Injects system-prompt guidance about the plugin's own tools and mechanisms, and appends "when to use" notes to their descriptions. |
@@ -111,8 +111,7 @@ All options are optional per feature; only `orchestrator.subagentModel` is requi
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `providers` | `array` | — | Static provider sources (see below). Merged with the persisted store. |
-| `configFile` | `string` | `~/.config/opencode/openai-compatible-providers.json` | Path to the persisted provider store. |
+| `providers` | `array` | — | Static provider sources defined inline (see below). |
 | `model` | `string` | — | Set `config.model` (default model) to this id. |
 | `smallModel` | `string` | — | Set `config.small_model` to this id. |
 | `timeout` | `integer` | `10000` | Model-fetch timeout in milliseconds. |
@@ -153,7 +152,7 @@ Defaults for `githubSources`: `vercel-labs/skills`, `anthropics/skills`, `obra/s
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `config` | `string \| object` | — | Path to an MCP config file (e.g. `.mcp.json`) or an inline config object. |
+| `config` | `object` | — | Inline config object with `mcpServers` (and optional tuning keys, see below). External JSON config files are not supported. |
 | `servers` | `object` | — | Inline MCP server map (merged with `config`). |
 
 An MCP server can be stdio or HTTP:
@@ -204,7 +203,7 @@ Inline config options also accept `searchTopK` (default 20), `cacheToolMetadata`
 | `/goal <condition>` | Set a persistent goal, e.g. `/goal --tokens 100k --max-turns 20 Fix the failing checkout tests`. |
 | `/goal status` | Show the current goal's status, budgets, and latest evaluation. |
 | `/goal pause` / `/goal resume` / `/goal clear` | Pause, resume, or clear the session goal. |
-| `/add-provider <id> <baseURL> [apiKey] [--name "..." --context N --output N --no-fetch]` | Add or update an OpenAI-compatible provider. |
+| `/add-provider <id> <baseURL> [apiKey] [--name "..." --context N --output N --no-fetch]` | Add or update an OpenAI-compatible provider by writing it into the plugin's `providers` option in `opencode.json`. |
 | `/providers` | List configured providers with live model counts. |
 
 `/goal` supports `--tokens` (plain integers or `k`/`m` suffixes) and `--max-turns` before the objective.

@@ -1,6 +1,3 @@
-import fs from 'node:fs'
-import path from 'node:path'
-
 export const SERVER_NAME_RE = /^[A-Za-z0-9._-]{1,128}$/
 const GLOB_RE = /^[A-Za-z0-9._*-]+$/
 export type ServerConfig =
@@ -207,38 +204,19 @@ export function loadConfig(options: {
   config?: unknown
   servers?: unknown
   env?: Record<string, string | undefined>
-  cwd?: string
   logger: { info: (message: string) => void; warn: (message: string) => void }
 }): Config | null {
   const env = options.env ?? (process.env as Record<string, string | undefined>)
-  const cwd = options.cwd ?? '.'
-  const configured =
-    typeof options.config === 'string' && options.config.trim() ? options.config : env.MCP_AGGREGATOR_CONFIG
   let raw: unknown
   if (options.servers !== undefined) {
     raw = { mcpServers: options.servers }
   } else if (plain(options.config)) {
     raw = options.config
+  } else if (options.config !== undefined) {
+    fail('config', 'config must be an inline object with mcpServers; external JSON config files are not supported')
   } else {
-    const file = configured || path.join(cwd, 'mcp-aggregator.json')
-    let stat: any
-    try {
-      stat = (fs as any).statSync(file)
-    } catch {
-      options.logger.info(`toolbox disabled: config file not found: ${file}`)
-      return null
-    }
-    if (!stat.isFile()) {
-      fail('config', `config file is not a regular file: ${file}`)
-    }
-    if ((stat.mode & 4) !== 0) {
-      options.logger.warn(`config file ${file} is world-readable`)
-    }
-    try {
-      raw = JSON.parse((fs as any).readFileSync(file, 'utf8'))
-    } catch (error) {
-      fail('config', `failed to parse ${file}: ${String(error)}`)
-    }
+    options.logger.info('toolbox disabled: no inline mcpServers configured')
+    return null
   }
   const result = normalize(substituteEnv(raw, env))
   if (!Object.values(result.mcpServers).some((server) => !server.disabled)) {

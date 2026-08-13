@@ -1,9 +1,9 @@
 import type { Config, Plugin } from '@opencode-ai/plugin'
+import { isPluginEntryName } from '../configurator/opencode-file.js'
 import { addProviderCommand, providersCommand } from './commands.js'
 import { createLogger } from './log.js'
 import { buildModelEntries, fetchModels } from './models.js'
-import { defaultStorePath, normalizeOptions, storePathFromRaw } from './options.js'
-import { loadStore } from './store.js'
+import { normalizeOptions } from './options.js'
 import type { Logger } from './types.js'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -16,15 +16,23 @@ function replaceTextPart(parts: Array<{ type: string; text?: string }>, text: st
     parts.push({ type: 'text', text })
   }
 }
+function pluginEntryOptions(config: Config): Record<string, unknown> {
+  for (const entry of config.plugin ?? []) {
+    if (Array.isArray(entry) && isPluginEntryName(entry[0])) {
+      return isRecord(entry[1]) ? entry[1] : {}
+    }
+  }
+  return {}
+}
 
 const Providers: Plugin = async (input, rawOptions) => {
   const logger: Logger = createLogger(input.client)
-  const storePath = storePathFromRaw(rawOptions, defaultStorePath())
-  const { providers: storedProviders } = loadStore(storePath, logger)
-  const options = normalizeOptions(rawOptions, storedProviders, storePath, logger)
+  const options = normalizeOptions(rawOptions, logger)
+  const fullOptions: Record<string, unknown> = {}
   return {
     config: async (cfg: Config) => {
       try {
+        Object.assign(fullOptions, pluginEntryOptions(cfg))
         cfg.provider ??= {}
         cfg.command ??= {}
         cfg.command['add-provider'] = {
@@ -84,9 +92,9 @@ const Providers: Plugin = async (input, rawOptions) => {
     'command.execute.before': async ({ command, arguments: args }, output) => {
       try {
         if (command === 'add-provider') {
-          replaceTextPart(output.parts, addProviderCommand(args, options.storePath, logger))
+          replaceTextPart(output.parts, addProviderCommand(args, fullOptions, input.worktree, logger))
         } else if (command === 'providers') {
-          replaceTextPart(output.parts, await providersCommand(options.storePath, logger))
+          replaceTextPart(output.parts, await providersCommand(options.sources, logger))
         }
       } catch (error) {
         logger('error', `Unexpected error handling "/${command}": ${String(error)}`, { command, error })

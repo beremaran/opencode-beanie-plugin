@@ -28,7 +28,7 @@ OpenCode plugin (TypeScript, ESM) that combines 6 prior tools into one package: 
 
 - **orchestrator**: `subagentModel` option is required and throws at init otherwise; it injects/permission-blocks agents and tools via the `config` hook.
 - **goal**: persists state to disk via `FileGoalStore` (state dir scoped by project + directory). Every idle turn triggers an evaluator model call (the expensive path); token/turn budgets cap it.
-- **providers**: persists a provider store to disk, injects providers into `config`, and serves the `/add-provider` and `/providers` slash commands.
+- **providers**: injects providers from the inline `providers` option into `config`, and serves the `/add-provider` and `/providers` slash commands. `/add-provider` writes the provider into the plugin's options in `opencode.json` via `applyOptionsToFile` (configurator/opencode-file.ts), capturing current options from `cfg.plugin` in the `config` hook.
 - **throttle**: intercepts the `task` tool (`tool.execute.before`/`after`), default `maxParallel` 2, mode `session`|`global`.
 - **toolbox**: aggregates MCP tools via `ConnectionManager`, which spawns child processes; `dispose` closes connections and force-kills stale processes.
 - **skillbox**: exposes `list_skills`/`search_skills`/`load_skill` MCP-driven tools with byte-budgeted payload truncation.

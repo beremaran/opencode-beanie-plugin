@@ -30,7 +30,6 @@ export interface ProviderSource {
 
 export interface PluginOptions {
   providers?: ProviderSource[]
-  configFile?: string
   model?: string
   smallModel?: string
   timeout?: number
@@ -44,9 +43,5 @@ export interface DiscoveredModel {
   name?: string
   limit?: { context: number; output: number }
   vendor?: Record<string, unknown>
-}
-export interface StoreFile {
-  version: 1
-  providers: ProviderSource[]
 }
 export type Logger = (level: 'info' | 'warn' | 'error' | 'debug', message: string, extra?: unknown) => void
