@@ -31,5 +31,8 @@ export function interpolateHeaders(
       out[key] = resolved
     }
   }
-  return Object.keys(out).length > 0 ? out : undefined
+  if (Object.keys(out).length > 0) {
+    return out
+  }
+  return undefined
 }

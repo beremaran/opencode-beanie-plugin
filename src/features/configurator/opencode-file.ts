@@ -4,29 +4,62 @@ import { dirname, join } from 'node:path'
 
 const PLUGIN_SEGMENT = 'opencode-beanie-plugin'
 const PLUGIN_QUOTED = `"@beremaran/opencode-beanie-plugin"`
-export const PLUGIN_NAME = '@beremaran/opencode-beanie-plugin'
-const isWhitespace = (char: string | undefined): boolean => char !== undefined && /\s/.test(char)
+const WHITESPACE_RE = /\s/
+const TRAILING_SEPARATOR_RE = /[/\\]+$/
+const SEPARATOR_RE = /[/\\]/
+
+const isWhitespace = (char: string | undefined): boolean => char !== undefined && WHITESPACE_RE.test(char)
 
 const containsPluginSegment = (value: string): boolean =>
-  value
-    .replace(/[/\\]+$/, '')
-    .split(/[/\\]/)
-    .includes(PLUGIN_SEGMENT)
+  value.replace(TRAILING_SEPARATOR_RE, '').split(SEPARATOR_RE).includes(PLUGIN_SEGMENT)
+
+const firstIndexOf = (text: string, needles: string[]): number => {
+  const indexes = needles.map((needle) => text.indexOf(needle)).filter((index) => index !== -1)
+  if (indexes.length > 0) {
+    return Math.min(...indexes)
+  }
+  return -1
+}
+
+function stepInString(escaped: boolean, char: string): { escaped: boolean; inString: boolean } {
+  if (escaped) {
+    return { escaped: false, inString: true }
+  }
+  if (char === '\\') {
+    return { escaped: true, inString: true }
+  }
+  return { escaped: false, inString: char !== '"' }
+}
+
+function findMatching(text: string, open: number, openChar: string, closeChar: string): number {
+  let depth = 0
+  let inString = false
+  let escaped = false
+  for (let i = open; i < text.length; i += 1) {
+    const char = text[i]
+    if (inString) {
+      ;({ escaped, inString } = stepInString(escaped, char))
+    } else if (char === '"') {
+      inString = true
+    } else if (char === openChar) {
+      depth += 1
+    } else if (char === closeChar) {
+      depth -= 1
+      if (depth === 0) {
+        return i
+      }
+    }
+  }
+  return -1
+}
+
+export const PLUGIN_NAME = '@beremaran/opencode-beanie-plugin'
 
 export function isPluginEntryName(value: unknown): boolean {
   if (typeof value !== 'string') {
     return false
   }
   return value === PLUGIN_NAME || value === PLUGIN_SEGMENT || containsPluginSegment(value)
-}
-
-const firstIndexOf = (text: string, needles: string[]): number => {
-  const indexes = needles.map((needle) => text.indexOf(needle)).filter((index) => index !== -1)
-  if (indexes.length > 0) {
-    return Math.min(...indexes)
-  } else {
-    return -1
-  }
 }
 
 export function globalConfigPath(): string {
@@ -50,9 +83,8 @@ export function readConfigFile(path: string): string | null {
   try {
     if (existsSync(path)) {
       return readFileSync(path, 'utf8')
-    } else {
-      return null
     }
+    return null
   } catch {
     return null
   }
@@ -88,42 +120,6 @@ export function resolveTargetPath(worktree: string, scope: ConfigScope = 'auto')
     }
   }
   return candidates[0] ?? join(worktree, 'opencode.json')
-}
-
-function findMatching(text: string, open: number, openChar: string, closeChar: string): number {
-  let depth = 0
-  let inString = false
-  let escaped = false
-  for (let i = open; i < text.length; i += 1) {
-    const char = text[i]
-    if (inString) {
-      if (escaped) {
-        escaped = false
-        continue
-      }
-      if (char === '\\') {
-        escaped = true
-        continue
-      }
-      if (char === '"') {
-        inString = false
-      }
-      continue
-    }
-    if (char === '"') {
-      inString = true
-      continue
-    }
-    if (char === openChar) {
-      depth += 1
-    } else if (char === closeChar) {
-      depth -= 1
-      if (depth === 0) {
-        return i
-      }
-    }
-  }
-  return -1
 }
 
 export function findPluginNameSpan(text: string): [number, number] | null {
@@ -221,8 +217,14 @@ export function findPluginArrayOpen(text: string): number | null {
 
 export function upsertPluginEntry(text: string, options: Record<string, unknown>): string {
   const nameSpan = findPluginNameSpan(text)
-  const quotedName = nameSpan ? text.slice(nameSpan[0], nameSpan[1]) : PLUGIN_QUOTED
-  const entryText = Object.keys(options).length === 0 ? quotedName : `[${quotedName},${JSON.stringify(options)}]`
+  let quotedName = PLUGIN_QUOTED
+  if (nameSpan) {
+    quotedName = text.slice(nameSpan[0], nameSpan[1])
+  }
+  let entryText = quotedName
+  if (Object.keys(options).length > 0) {
+    entryText = `[${quotedName},${JSON.stringify(options)}]`
+  }
   const existing = findPluginEntrySpan(text)
   if (existing) {
     return `${text.slice(0, existing[0])}${entryText}${text.slice(existing[1])}`
@@ -235,7 +237,14 @@ export function upsertPluginEntry(text: string, options: Record<string, unknown>
     }
     const inner = text.slice(arrayOpen + 1, arrayClose)
     const needsComma = inner.trim() !== '' && !inner.trimEnd().endsWith(',')
-    return `${text.slice(0, arrayClose)}${needsComma ? ',' : ''}${inner.trim() === '' ? '' : ' '}${entryText}${text.slice(arrayClose)}`
+    let joined = text.slice(0, arrayClose)
+    if (needsComma) {
+      joined += ','
+    }
+    if (inner.trim() !== '') {
+      joined += ' '
+    }
+    return joined + entryText + text.slice(arrayClose)
   }
   const objectOpen = text.indexOf('{')
   if (objectOpen === -1) {
@@ -248,7 +257,11 @@ export function upsertPluginEntry(text: string, options: Record<string, unknown>
   const head = text.slice(objectOpen + 1, objectClose).trimEnd()
   const tail = text.slice(objectClose)
   const needsComma = head.trim() !== '' && !head.trimEnd().endsWith(',')
-  return `${text.slice(0, objectOpen + 1)}${head}${needsComma ? ',' : ''}\n  "plugin": [${entryText}]\n${tail}`
+  let result = `${text.slice(0, objectOpen + 1)}${head}`
+  if (needsComma) {
+    result += ','
+  }
+  return `${result}\n  "plugin": [${entryText}]\n${tail}`
 }
 
 export interface ApplyResult {

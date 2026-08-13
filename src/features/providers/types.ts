@@ -5,6 +5,7 @@ export interface ModelOverride {
   temperature?: boolean
   reasoning?: boolean
   attachment?: boolean
+  // biome-ignore lint/style/useNamingConvention: tool_call is the provider-config field name used in opencode.json (snake_case).
   tool_call?: boolean
   modalities?: { input?: string[]; output?: string[] }
   options?: Record<string, unknown>
@@ -16,11 +17,13 @@ export type ProviderKind = 'auto' | 'openai' | 'ollama' | 'unsloth' | 'lmstudio'
 export interface ProviderSource {
   id: string
   name?: string
+  // biome-ignore lint/style/useNamingConvention: baseURL is the provider-config field name used in opencode.json.
   baseURL: string
   apiKey?: string
   headers?: Record<string, string>
   npm?: string
   kind?: ProviderKind
+  // biome-ignore lint/style/useNamingConvention: modelsURL is the provider-config field name used in opencode.json.
   modelsURL?: string
   fetchModels?: boolean
   staticModels?: Record<string, ModelOverride>

@@ -1,26 +1,22 @@
 import type { Plugin } from '@opencode-ai/plugin'
 
 const SERVICE = 'opencode-beanie-plugin'
-
-export const MECHANISMS = [
-  'goal',
-  'orchestrator',
-  'throttle',
-  'skillbox',
-  'toolbox',
-  'providers',
-  'configurator',
-] as const
 const TOOL_PATTERN = /^[a-z0-9_-]+$/
 const DEFAULT_TOOL_GUIDANCE: Record<string, string> = {
+  // biome-ignore lint/style/useNamingConvention: tool ID keys (get_goal, update_goal, ...) must match the actual snake_case tool names.
   get_goal:
     'Use to check the active goal, its budgets, and the latest evaluation before starting or resuming goal-driven work in this session.',
+  // biome-ignore lint/style/useNamingConvention: tool ID keys (get_goal, update_goal, ...) must match the actual snake_case tool names.
   update_goal:
     'Use to claim the goal complete for independent verification, or to mark it blocked after the same external blocker has recurred for at least three goal turns.',
+  // biome-ignore lint/style/useNamingConvention: tool ID keys (get_goal, update_goal, ...) must match the actual snake_case tool names.
   list_skills: 'Use to browse available agent skills before hand-writing common, reusable logic.',
+  // biome-ignore lint/style/useNamingConvention: tool ID keys (get_goal, update_goal, ...) must match the actual snake_case tool names.
   search_skills:
     'Use to find a matching agent skill before implementing a well-known pattern; prefer loading a found skill over writing from scratch.',
+  // biome-ignore lint/style/useNamingConvention: tool ID keys (get_goal, update_goal, ...) must match the actual snake_case tool names.
   load_skill: 'Use to read the full SKILL.md and optional supporting files for a skill you intend to follow.',
+  // biome-ignore lint/style/useNamingConvention: tool ID keys (get_goal, update_goal, ...) must match the actual snake_case tool names.
   configure_plugin:
     "Use to inspect, validate, or write the plugin's own configuration in opencode.json (status/schema/validate/apply).",
 }
@@ -52,9 +48,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const booleanOption = (value: unknown, fallback: boolean): boolean => {
   if (typeof value === 'boolean') {
     return value
-  } else {
-    return fallback
   }
+  return fallback
 }
 
 const stringList = (value: unknown): string[] => {
@@ -62,9 +57,8 @@ const stringList = (value: unknown): string[] => {
     return value
       .filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
       .map((entry) => entry.trim())
-  } else {
-    return []
   }
+  return []
 }
 const stringMap = (value: unknown): Record<string, string> => {
   const result: Record<string, string> = {}
@@ -78,20 +72,13 @@ const stringMap = (value: unknown): Record<string, string> => {
   }
   return result
 }
-export const resolveOptions = (raw: Record<string, unknown> | undefined): Resolved => {
-  const source = raw ?? {}
-  const mechanisms = stringList(source.mechanisms).filter((entry): entry is string =>
-    (MECHANISMS as readonly string[]).includes(entry),
-  )
-  return {
-    defaults: booleanOption(source.defaults, true),
-    system: stringList(source.system),
-    tools: stringMap(source.tools),
-    mechanisms,
-  }
-}
 const mechanismNotes = (options: Resolved): string[] => {
-  const keys = options.mechanisms.length > 0 ? options.mechanisms : [...MECHANISMS] // eslint-disable-line biome/no-unsafe-ternary
+  let keys: string[]
+  if (options.mechanisms.length > 0) {
+    keys = options.mechanisms
+  } else {
+    keys = [...MECHANISMS]
+  }
   return keys.map((key) => DEFAULT_MECHANISM_NOTES[key])
 }
 const systemDirective = (options: Resolved): string => `# Plugin capabilities (${SERVICE})
@@ -115,9 +102,8 @@ const toolGuidance = (options: Resolved, toolId: string): string | undefined => 
   }
   if (parts.length > 0) {
     return parts.join(' ')
-  } else {
-    return undefined
   }
+  return undefined
 }
 
 const Directives: Plugin = async ({ client }, rawOptions) => {
@@ -141,16 +127,18 @@ const Directives: Plugin = async ({ client }, rawOptions) => {
     })
     .catch(() => undefined)
   return {
+    // biome-ignore lint/suspicious/useAwait: the Hooks contract requires a Promise<void>; this handler is synchronous.
     'tool.definition': async ({ toolID }, output) => {
       const guidance = toolGuidance(options, toolID)
       if (guidance) {
-        if (output.description !== undefined) {
-          output.description = `${output.description}\n\n[${SERVICE}] ${guidance}`
-        } else {
+        if (output.description === undefined) {
           output.description = `[${SERVICE}] ${guidance}`
+        } else {
+          output.description = `${output.description}\n\n[${SERVICE}] ${guidance}`
         }
       }
     },
+    // biome-ignore lint/suspicious/useAwait: the Hooks contract requires a Promise<void>; this handler is synchronous.
     'experimental.chat.system.transform': async (_input, output) => {
       if (options.defaults) {
         output.system.push(systemDirective(options))
@@ -159,6 +147,28 @@ const Directives: Plugin = async ({ client }, rawOptions) => {
         output.system.push(line)
       }
     },
+  }
+}
+
+export const MECHANISMS = [
+  'goal',
+  'orchestrator',
+  'throttle',
+  'skillbox',
+  'toolbox',
+  'providers',
+  'configurator',
+] as const
+export const resolveOptions = (raw: Record<string, unknown> | undefined): Resolved => {
+  const source = raw ?? {}
+  const mechanisms = stringList(source.mechanisms).filter((entry): entry is string =>
+    (MECHANISMS as readonly string[]).includes(entry),
+  )
+  return {
+    defaults: booleanOption(source.defaults, true),
+    system: stringList(source.system),
+    tools: stringMap(source.tools),
+    mechanisms,
   }
 }
 

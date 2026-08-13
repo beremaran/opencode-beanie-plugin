@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveClassesPerFile: SkillNotFoundError and RegistryAuthError model distinct registry failure modes that must remain instanceof-distinguishable in skillbox/index.ts.
 export interface SkillSummary {
   id: string
   name: string

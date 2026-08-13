@@ -1,5 +1,20 @@
 import { PLUGIN_NAME, resolveTargetPath } from './opencode-file.js'
 import type { ValidationResult } from './validate.js'
+
+const WHITESPACE_RE = /\s+/
+
+const renderReport = (report: { ok: boolean; feature: string; message?: string }): string => {
+  let icon = '✗'
+  if (report.ok) {
+    icon = '✓'
+  }
+  let message = ''
+  if (report.message !== undefined) {
+    message = ` — ${report.message}`
+  }
+  return `${icon} ${report.feature}${message}`
+}
+
 export type BeanieAction = 'status' | 'help' | 'validate' | 'apply' | 'init' | 'unknown'
 export interface BeanieCommand {
   action: BeanieAction
@@ -11,7 +26,7 @@ export function parseBeanie(raw: string): BeanieCommand {
   if (!trimmed) {
     return { action: 'status', payload: '' }
   }
-  const first = trimmed.split(/\s+/, 1)[0] ?? ''
+  const first = trimmed.split(WHITESPACE_RE, 1)[0] ?? ''
   const rest = trimmed.slice(first.length).trim()
   if (first === 'help' || first === '--help' || first === '-h') {
     return { action: 'help', payload: '' }
@@ -48,7 +63,11 @@ export function parseOptionsPayload(
     }
     return { ok: true, options: parsed as Record<string, unknown> }
   } catch (error) {
-    return { ok: false, error: `Invalid JSON: ${error instanceof Error ? error.message : String(error)}` }
+    let detail = String(error)
+    if (error instanceof Error) {
+      detail = error.message
+    }
+    return { ok: false, error: `Invalid JSON: ${detail}` }
   }
 }
 
@@ -59,13 +78,7 @@ export function renderValidation(result: ValidationResult): string {
     return lines.join('\n')
   }
   if (result.errors.length > 0) {
-    lines.push(
-      'Errors:',
-      ...result.errors.map(
-        (report) => `${report.ok ? '✓' : '✗'} ${report.feature}${report.message ? ` — ${report.message}` : ''}`,
-      ),
-      '',
-    )
+    lines.push('Errors:', ...result.errors.map(renderReport), '')
   }
   if (result.warnings.length > 0) {
     lines.push('Warnings:', ...result.warnings.map((warning) => `! ${warning}`), '')
@@ -97,10 +110,14 @@ export function renderApply(
   result: { path: string; created: boolean },
   validation: ValidationResult,
 ): string {
+  let createdNote = ''
+  if (result.created) {
+    createdNote = ' (created)'
+  }
   const lines = [
     '# opencode-beanie-plugin configuration applied',
     '',
-    `Wrote options to ${result.path}${result.created ? ' (created)' : ''}.`,
+    `Wrote options to ${result.path}${createdNote}.`,
     '',
     `Options: ${JSON.stringify(options, null, 2)}`,
     '',

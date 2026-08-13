@@ -8,10 +8,10 @@ export class TtlCache<K, V> {
       if (entry) {
         this.store.delete(key)
       }
-      this.missCount++
+      this.missCount += 1
       return undefined
     }
-    this.hitCount++
+    this.hitCount += 1
     return entry.value
   }
   set(key: K, value: V, ttlMs: number): void {

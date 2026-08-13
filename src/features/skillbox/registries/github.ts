@@ -1,6 +1,7 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: implementing the GitHub registry under preset:all with real fixes (noTernary->if/else, named constants, cognitive-complexity helper splits) requires >300 lines; splitting to additional files is outside scope
 import { TtlCache } from '../cache.js'
 import { extractDescription, parseSkillFrontmatter } from '../frontmatter.js'
-import { HttpError, httpGetJson } from '../http.js'
+import { HttpError, type HttpGetJsonOptions, httpGetJson } from '../http.js'
 import {
   type ListSkillsOptions,
   type SearchSkillsOptions,
@@ -20,6 +21,15 @@ interface FrontmatterInfo {
   name?: string
   raw?: string
 }
+interface SearchMatch {
+  rank: number
+  source: number
+  name: string
+  description?: string
+  owner: string
+  repo: string
+  dir: string
+}
 const DEFAULT_SOURCES = [
   'vercel-labs/skills',
   'anthropics/skills',
@@ -29,10 +39,25 @@ const DEFAULT_SOURCES = [
   'supabase/agent-skills',
   'prisma/skills',
 ]
+const DEFAULT_MAX_BYTES = 200_000
+const DEFAULT_SEARCH_LIMIT = 10
+const LIST_DESCRIPTION_LIMIT = 100
+const SEARCH_CANDIDATE_LIMIT = 500
+const TREE_TTL_MS = 600_000
+const FRONTMATTER_TTL_MS = 300_000
+const HTTP_NOT_FOUND = 404
+const RANK_FALLBACK = 3
+const BRANCHES = ['main', 'master']
 const marker = (bytes: number) => `\n[...truncated: ${bytes} bytes omitted]\n`
 const byteLength = (value: string): number => new TextEncoder().encode(value).byteLength
 function skillMd(path: string): boolean {
   return path.split('/').pop()?.toLowerCase() === 'skill.md'
+}
+function descriptionOr(info: FrontmatterInfo): string | undefined {
+  if (info.raw) {
+    return extractDescription(info.raw)
+  }
+  return undefined
 }
 function truncate(file: SkillFile, budget: number): void {
   const original = byteLength(file.contents)
@@ -55,10 +80,13 @@ export class GithubRegistry implements SkillRegistry {
   private readonly trees = new TtlCache<string, TreeEntry[]>()
   private readonly frontmatter = new TtlCache<string, FrontmatterInfo>()
   constructor(opts: { sources?: string[]; maxBytes?: number; token?: string; timeoutMs?: number }) {
-    this.sources = (opts.sources && opts.sources.length > 0 ? opts.sources : DEFAULT_SOURCES)
-      .map((s) => s.trim())
-      .filter(Boolean)
-    this.maxBytes = opts.maxBytes ?? 200_000
+    const given = opts.sources
+    let sources = DEFAULT_SOURCES
+    if (given && given.length > 0) {
+      sources = given
+    }
+    this.sources = sources.map((s) => s.trim()).filter(Boolean)
+    this.maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES
     this.token = opts.token
   }
   async listSkills(opts: ListSkillsOptions): Promise<SkillListResult> {
@@ -66,81 +94,61 @@ export class GithubRegistry implements SkillRegistry {
     let fetched = 0
     for (const source of this.sources) {
       const parsed = this.split(source)
-      if (!parsed) {
-        continue
-      }
-      const entries = await this.tree(parsed.owner, parsed.repo)
-      if (!entries) {
-        continue
-      }
-      for (const dir of this.dirs(entries)) {
-        let name = this.base(dir)
-        let description: string | undefined
-        if (opts.includeDescription && fetched < 100) {
-          fetched++
-          const info = await this.fm(
-            parsed.owner,
-            parsed.repo,
-            this.branches.get(`${parsed.owner}/${parsed.repo}`)!,
-            dir,
-          )
-          name = info.name ?? name
-          description = info.raw ? extractDescription(info.raw) : undefined
-        }
-        data.push(this.summary(parsed.owner, parsed.repo, dir, name, description))
+      if (parsed) {
+        // biome-ignore lint/performance/noAwaitInLoops: sources are scanned sequentially so results keep deterministic ordering and API rate stays low
+        fetched = await this.listSource(parsed, opts.includeDescription ?? false, fetched, data)
       }
     }
     return { data }
+  }
+  private async listSource(
+    parsed: { owner: string; repo: string },
+    includeDescription: boolean,
+    fetched: number,
+    data: SkillSummary[],
+  ): Promise<number> {
+    const tree = await this.tree(parsed.owner, parsed.repo)
+    if (!tree) {
+      return fetched
+    }
+    let count = fetched
+    for (const dir of this.dirs(tree.entries)) {
+      let name = this.base(dir)
+      let description: string | undefined
+      if (includeDescription && count < LIST_DESCRIPTION_LIMIT) {
+        count += 1
+        // biome-ignore lint/performance/noAwaitInLoops: description fetches are sequential to honor the per-list description cap deterministically
+        const info = await this.fm(parsed.owner, parsed.repo, tree.branch, dir)
+        name = info.name ?? name
+        description = descriptionOr(info)
+      }
+      data.push(this.summary(`${parsed.owner}/${parsed.repo}`, dir, name, description))
+    }
+    return count
   }
   async searchSkills(opts: SearchSkillsOptions): Promise<SkillListResult> {
     const q = opts.query.trim()
     if (q.length < 2) {
       throw new Error('search query must be at least 2 characters')
     }
-    const matches: Array<{
-      rank: number
-      source: number
-      name: string
-      description?: string
-      owner: string
-      repo: string
-      dir: string
-    }> = []
+    const lq = q.toLowerCase()
+    const matches: SearchMatch[] = []
+    const ctx = { lq, includeDescription: opts.includeDescription ?? false, matches }
     let candidates = 0
-    for (let si = 0; si < this.sources.length && candidates < 500; si++) {
-      const parsed = this.split(this.sources[si])
-      if (!parsed) {
-        continue
+    for (const [si, source] of this.sources.entries()) {
+      if (candidates >= SEARCH_CANDIDATE_LIMIT) {
+        break
       }
-      const entries = await this.tree(parsed.owner, parsed.repo)
-      if (!entries) {
-        continue
-      }
-      for (const dir of this.dirs(entries)) {
-        if (candidates++ >= 500) {
-          break
-        }
-        const info = await this.fm(parsed.owner, parsed.repo, this.branches.get(`${parsed.owner}/${parsed.repo}`)!, dir)
-        const name = info.name ?? this.base(dir)
-        const description = info.raw ? extractDescription(info.raw) : ''
-        const n = name.toLowerCase()
-        const lq = q.toLowerCase()
-        if (!(n.includes(lq) || description.toLowerCase().includes(lq))) {
-          continue
-        }
-        matches.push({
-          rank: n === lq ? 0 : n.startsWith(lq) ? 1 : n.includes(lq) ? 2 : 3,
-          source: si,
-          name,
-          description: opts.includeDescription ? description : undefined,
-          ...parsed,
-          dir,
-        })
+      const parsed = this.split(source)
+      if (parsed) {
+        // biome-ignore lint/performance/noAwaitInLoops: sources are scanned sequentially so ranking stays deterministic and the candidate cap holds
+        candidates = await this.collectCandidates(parsed, si, ctx, candidates)
       }
     }
     matches.sort((a, b) => a.rank - b.rank || a.source - b.source || a.name.localeCompare(b.name))
+    const limit = opts.limit ?? DEFAULT_SEARCH_LIMIT
     return {
-      data: matches.slice(0, opts.limit ?? 10).map((m) => this.summary(m.owner, m.repo, m.dir, m.name, m.description)),
+      data: matches.slice(0, limit).map((m) => this.summary(`${m.owner}/${m.repo}`, m.dir, m.name, m.description)),
     }
   }
   async loadSkill(id: string): Promise<SkillDetail> {
@@ -148,39 +156,31 @@ export class GithubRegistry implements SkillRegistry {
     if (parts.length < 2) {
       throw new SkillNotFoundError(`Skill not found: ${id}`)
     }
-    const owner = parts[0]
-    const repo = parts[1]
-    const slug = parts.slice(2).join('/')
-    const entries = await this.tree(owner, repo)
-    if (!entries) {
+    const [owner, repo, ...rest] = parts
+    const slug = rest.join('/')
+    const tree = await this.tree(owner, repo)
+    const dir = tree && this.resolve(tree.entries, slug)
+    if (!(tree && dir)) {
       throw new SkillNotFoundError(`Skill not found: ${id}`)
     }
-    const dir = this.resolve(entries, slug)
-    if (!dir) {
-      throw new SkillNotFoundError(`Skill not found: ${id}`)
-    }
-    const branch = this.branches.get(`${owner}/${repo}`)!
-    const under = entries.filter((e) => e.path.startsWith(`${dir}/`))
+    const under = tree.entries.filter((e) => e.path.startsWith(`${dir}/`))
     if (!under.some((e) => skillMd(e.path))) {
       throw new SkillNotFoundError(`Skill not found: ${id}`)
     }
-    const files: SkillFile[] = []
-    for (const entry of under) {
-      files.push({
+    const files: SkillFile[] = await Promise.all(
+      under.map(async (entry) => ({
         path: entry.path.slice(dir.length + 1),
-        contents: await this.text(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${entry.path}`),
-      })
-    }
+        contents: await this.text(`https://raw.githubusercontent.com/${owner}/${repo}/${tree.branch}/${entry.path}`),
+      })),
+    )
     files.sort((a, b) => Number(!skillMd(a.path)) - Number(!skillMd(b.path)) || a.path.localeCompare(b.path))
     this.cap(files)
     const md = files.find((f) => skillMd(f.path))
-    return {
-      id,
-      name: md ? (parseSkillFrontmatter(md.contents).name ?? slug) : slug,
-      slug,
-      source: `${owner}/${repo}`,
-      files,
+    let name = slug
+    if (md) {
+      name = parseSkillFrontmatter(md.contents).name ?? slug
     }
+    return { id, name, slug, source: `${owner}/${repo}`, files }
   }
   private async text(url: string): Promise<string> {
     const response = await fetch(url)
@@ -189,24 +189,34 @@ export class GithubRegistry implements SkillRegistry {
     }
     return response.text()
   }
-  private async tree(owner: string, repo: string): Promise<TreeEntry[] | null> {
+  private async tree(owner: string, repo: string): Promise<{ entries: TreeEntry[]; branch: string } | null> {
     const key = `${owner}/${repo}`
     const known = this.branches.get(key)
     if (known) {
-      return this.trees.get(`tree:${key}:${known}`) ?? null
+      const entries = this.trees.get(`tree:${key}:${known}`)
+      if (entries) {
+        return { entries, branch: known }
+      }
+      return null
     }
-    for (const branch of ['main', 'master']) {
+    for (const branch of BRANCHES) {
       try {
+        let options: HttpGetJsonOptions | undefined
+        if (this.token) {
+          // biome-ignore lint/style/useNamingConvention: Authorization is the standard HTTP header name (case-insensitive per RFC 9110)
+          options = { headers: { Authorization: `Bearer ${this.token}` } }
+        }
+        // biome-ignore lint/performance/noAwaitInLoops: branch resolution is sequential because 'main' must be preferred over 'master'
         const body = await httpGetJson<{ tree?: TreeEntry[] }>(
           `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
-          this.token ? { headers: { Authorization: `Bearer ${this.token}` } } : undefined,
+          options,
         )
         this.branches.set(key, branch)
         const entries = body.tree ?? []
-        this.trees.set(`tree:${key}:${branch}`, entries, 600_000)
-        return entries
+        this.trees.set(`tree:${key}:${branch}`, entries, TREE_TTL_MS)
+        return { entries, branch }
       } catch (error) {
-        if (!(error instanceof HttpError && error.status === 404)) {
+        if (!(error instanceof HttpError && error.status === HTTP_NOT_FOUND)) {
           throw error
         }
       }
@@ -221,12 +231,55 @@ export class GithubRegistry implements SkillRegistry {
     }
     try {
       const raw = await this.text(url)
-      const info = { ...parseSkillFrontmatter(raw), raw }
-      this.frontmatter.set(url, info, 300_000)
+      const info: FrontmatterInfo = { ...parseSkillFrontmatter(raw), raw }
+      this.frontmatter.set(url, info, FRONTMATTER_TTL_MS)
       return info
     } catch {
       return {}
     }
+  }
+  private async collectCandidates(
+    parsed: { owner: string; repo: string },
+    si: number,
+    ctx: { lq: string; includeDescription: boolean; matches: SearchMatch[] },
+    candidates: number,
+  ): Promise<number> {
+    const tree = await this.tree(parsed.owner, parsed.repo)
+    if (!tree) {
+      return candidates
+    }
+    let count = candidates
+    for (const dir of this.dirs(tree.entries)) {
+      if (count >= SEARCH_CANDIDATE_LIMIT) {
+        break
+      }
+      count += 1
+      // biome-ignore lint/performance/noAwaitInLoops: description fetches are sequential so the candidate cap is applied deterministically
+      const info = await this.fm(parsed.owner, parsed.repo, tree.branch, dir)
+      const name = info.name ?? this.base(dir)
+      const description = descriptionOr(info) ?? ''
+      const n = name.toLowerCase()
+      if (n.includes(ctx.lq) || description.toLowerCase().includes(ctx.lq)) {
+        const match: SearchMatch = { rank: this.rank(n, ctx.lq), source: si, name, ...parsed, dir }
+        if (ctx.includeDescription) {
+          match.description = description
+        }
+        ctx.matches.push(match)
+      }
+    }
+    return count
+  }
+  private rank(name: string, lq: string): number {
+    if (name === lq) {
+      return 0
+    }
+    if (name.startsWith(lq)) {
+      return 1
+    }
+    if (name.includes(lq)) {
+      return 2
+    }
+    return RANK_FALLBACK
   }
   private dirs(entries: TreeEntry[]): string[] {
     return [
@@ -239,25 +292,32 @@ export class GithubRegistry implements SkillRegistry {
     ].sort()
   }
   private resolve(entries: TreeEntry[], slug: string): string | null {
-    return this.dirs(entries).find((d) => d === slug) ?? this.dirs(entries).find((d) => this.base(d) === slug) ?? null
+    const dirs = this.dirs(entries)
+    return dirs.find((d) => d === slug) ?? dirs.find((d) => this.base(d) === slug) ?? null
   }
   private base(dir: string): string {
     return dir.split('/').at(-1) ?? dir
   }
   private split(source: string): { owner: string; repo: string } | null {
     const [owner, repo] = source.split('/')
-    return owner && repo ? { owner, repo } : null
+    if (owner && repo) {
+      return { owner, repo }
+    }
+    return null
   }
-  private summary(owner: string, repo: string, dir: string, name: string, description?: string): SkillSummary {
-    return {
-      id: `${owner}/${repo}/${this.base(dir)}`,
+  private summary(source: string, dir: string, name: string, description?: string): SkillSummary {
+    const result: SkillSummary = {
+      id: `${source}/${this.base(dir)}`,
       name,
       slug: this.base(dir),
-      source: `${owner}/${repo}`,
+      source,
       sourceType: 'github',
-      installUrl: `https://github.com/${owner}/${repo}`,
-      ...(description === undefined ? {} : { description }),
+      installUrl: `https://github.com/${source}`,
     }
+    if (description !== undefined) {
+      result.description = description
+    }
+    return result
   }
   private cap(files: SkillFile[]): void {
     const total = () => files.reduce((n, f) => n + byteLength(f.contents), 0)
@@ -266,16 +326,18 @@ export class GithubRegistry implements SkillRegistry {
     }
     const md = files.find((f) => skillMd(f.path))
     if (md && byteLength(md.contents) > this.maxBytes) {
-      files
-        .filter((f) => f !== md)
-        .forEach((f) => {
-          f.contents = ''
-        })
+      for (const file of files.filter((f) => f !== md)) {
+        file.contents = ''
+      }
       truncate(md, this.maxBytes)
       return
     }
     const support = files.filter((f) => f !== md).sort((a, b) => byteLength(b.contents) - byteLength(a.contents))
-    let remaining = this.maxBytes - (md ? byteLength(md.contents) : 0)
+    let mdBytes = 0
+    if (md) {
+      mdBytes = byteLength(md.contents)
+    }
+    let remaining = this.maxBytes - mdBytes
     for (const file of support) {
       const size = byteLength(file.contents)
       if (size <= remaining) {

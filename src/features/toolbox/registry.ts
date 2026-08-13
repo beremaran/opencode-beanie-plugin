@@ -1,12 +1,6 @@
-import type { Config, ServerConfig } from './config.js'
-export const TOOL_NAME_RE = /^[A-Za-z0-9._-]{1,128}$/
-export interface UpstreamTool {
-  name: string
-  title?: string
-  description?: string
-  inputSchema: unknown
-  outputSchema?: unknown
-}
+// biome-ignore lint/style/noExcessiveClassesPerFile: UpstreamRegistry and ToolRegistry are tightly coupled (the registry owns entries, ToolRegistry adds validation/search on top) and are only meaningful together.
+import { type Config, SERVER_NAME_RE, type ServerConfig } from './config.js'
+
 interface Entry {
   config: ServerConfig
   connState: 'idle' | 'connected' | 'error' | 'disabled'
@@ -19,6 +13,60 @@ interface Entry {
   failCount: number
   nextRetryAt: number
 }
+interface SearchRow {
+  server: string
+  tool: string
+  qualifiedName: string
+  summary: string
+  title?: string
+  stale?: boolean
+}
+const TOOL_NAME_RE = /^[A-Za-z0-9._-]{1,128}$/
+const WHITESPACE_RE = /\s+/g
+const MAX_ERROR_MESSAGE_LENGTH = 300
+const SUMMARY_MAX_LENGTH = 120
+const MAX_SEARCH_LIMIT = 500
+const BASE_RETRY_MS = 1000
+const MAX_RETRY_MS = 30_000
+const RETRY_BACKOFF_EXPONENT = 2
+const RETRY_CAP_FACTOR = 6
+const initialConnState = (disabled: boolean): Entry['connState'] => {
+  if (disabled) {
+    return 'disabled'
+  }
+  return 'idle'
+}
+const retryDelay = (failCount: number): number => {
+  if (failCount <= 1) {
+    return BASE_RETRY_MS
+  }
+  if (failCount > RETRY_CAP_FACTOR) {
+    return MAX_RETRY_MS
+  }
+  return BASE_RETRY_MS * RETRY_BACKOFF_EXPONENT ** (failCount - 1)
+}
+const rowFor = (name: string, tool: UpstreamTool, entry: Entry): SearchRow => {
+  const row: SearchRow = {
+    server: name,
+    tool: tool.name,
+    qualifiedName: qualifiedName(name, tool.name),
+    summary: String(tool.description || tool.name).slice(0, SUMMARY_MAX_LENGTH),
+  }
+  if (tool.title) {
+    row.title = tool.title
+  }
+  if (entry.metadataStale) {
+    row.stale = true
+  }
+  return row
+}
+export interface UpstreamTool {
+  name: string
+  title?: string
+  description?: string
+  inputSchema: unknown
+  outputSchema?: unknown
+}
 export class UpstreamRegistry {
   readonly config: Config
   readonly entries = new Map<string, Entry>()
@@ -27,7 +75,7 @@ export class UpstreamRegistry {
     for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
       this.entries.set(name, {
         config: serverConfig,
-        connState: serverConfig.disabled ? 'disabled' : 'idle',
+        connState: initialConnState(serverConfig.disabled),
         session: null,
         metadataCache: null,
         metadataStale: false,
@@ -52,7 +100,10 @@ export class UpstreamRegistry {
     return [...this.entries].filter(([, entry]) => !entry.config.disabled).map(([name]) => name)
   }
   setSession(name: string, session: unknown) {
-    this.get(name)!.session = session
+    const entry = this.get(name)
+    if (entry) {
+      entry.session = session
+    }
   }
   clearSession(name: string) {
     const entry = this.get(name)
@@ -78,10 +129,9 @@ export class UpstreamRegistry {
       return
     }
     entry.connState = 'error'
-    entry.lastError = message.replace(/\s+/g, ' ').trim().slice(0, 300)
-    entry.failCount++
-    entry.nextRetryAt =
-      Date.now() + (entry.failCount <= 1 ? 1000 : entry.failCount > 6 ? 30_000 : 1000 * 2 ** (entry.failCount - 1))
+    entry.lastError = message.replace(WHITESPACE_RE, ' ').trim().slice(0, MAX_ERROR_MESSAGE_LENGTH)
+    entry.failCount += 1
+    entry.nextRetryAt = Date.now() + retryDelay(entry.failCount)
     entry.session = null
   }
   clearError(name: string) {
@@ -123,15 +173,21 @@ export function splitQualified(name: string) {
   }
   const server = name.slice(0, index)
   const tool = name.slice(index + 2)
-  return /^[A-Za-z0-9._-]{1,128}$/.test(server) && TOOL_NAME_RE.test(tool) ? { server, tool } : null
+  if (SERVER_NAME_RE.test(server) && TOOL_NAME_RE.test(tool)) {
+    return { server, tool }
+  }
+  return null
 }
 export class ToolRegistry {
-  constructor(readonly upstream: UpstreamRegistry) {}
+  readonly upstream: UpstreamRegistry
+  constructor(upstream: UpstreamRegistry) {
+    this.upstream = upstream
+  }
   validateToolName(name: string) {
     return TOOL_NAME_RE.test(name)
   }
   validateServerName(name: string) {
-    return /^[A-Za-z0-9._-]{1,128}$/.test(name)
+    return SERVER_NAME_RE.test(name)
   }
   getTool(server: string, name: string) {
     return this.upstream.get(server)?.metadataCache?.find((tool) => tool.name === name) ?? null
@@ -143,24 +199,29 @@ export class ToolRegistry {
     this.upstream.evict(server)
   }
   search(input: { query?: string | null; server?: string | null; limit?: number; refresh: boolean }) {
-    const names = input.server ? (this.upstream.has(input.server) ? [input.server] : []) : this.upstream.enabledNames()
+    let names = this.upstream.enabledNames()
+    if (input.server) {
+      if (this.upstream.has(input.server)) {
+        names = [input.server]
+      } else {
+        names = []
+      }
+    }
     const query = (input.query ?? '').toLowerCase()
-    const limit = Number.isInteger(input.limit) ? Math.min(input.limit!, 500) : this.upstream.config.searchTopK
-    const servers = names.map((name) => {
-      const entry = this.upstream.get(name)!
-      const tools = entry.metadataCache ?? []
-      return { entry, name, tools }
-    })
+    let limit = this.upstream.config.searchTopK
+    if (typeof input.limit === 'number' && Number.isInteger(input.limit)) {
+      limit = Math.min(input.limit, MAX_SEARCH_LIMIT)
+    }
+    const servers: Array<{ entry: Entry; name: string; tools: UpstreamTool[] }> = []
+    for (const name of names) {
+      const entry = this.upstream.get(name)
+      if (entry) {
+        servers.push({ entry, name, tools: entry.metadataCache ?? [] })
+      }
+    }
     const rows = servers.flatMap(({ entry, name, tools }) =>
       tools
-        .map((tool) => ({
-          server: name,
-          tool: tool.name,
-          qualifiedName: qualifiedName(name, tool.name),
-          summary: String(tool.description || tool.name).slice(0, 120),
-          ...(tool.title ? { title: tool.title } : {}),
-          ...(entry.metadataStale ? { stale: true } : {}),
-        }))
+        .map((tool) => rowFor(name, tool, entry))
         .filter(
           (row) =>
             !query ||
@@ -186,3 +247,4 @@ export class ToolRegistry {
     }
   }
 }
+export { TOOL_NAME_RE }

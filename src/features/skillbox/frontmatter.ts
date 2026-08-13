@@ -1,4 +1,7 @@
 const KEY_RE = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/
+const NEWLINE_RE = /\r?\n/
+const HEADING_RE = /^#+\s*/
+const MAX_DESC_CHARS = 300
 function stripQuotes(value: string): string {
   const trimmed = value.trim()
   if (
@@ -10,7 +13,7 @@ function stripQuotes(value: string): string {
   return trimmed
 }
 export function parseSkillFrontmatter(content: string): { name?: string; description?: string } {
-  const lines = content.split(/\r?\n/)
+  const lines = content.split(NEWLINE_RE)
   if (lines[0]?.trim() !== '---') {
     return {}
   }
@@ -20,41 +23,41 @@ export function parseSkillFrontmatter(content: string): { name?: string; descrip
       break
     }
     const match = line.match(KEY_RE)
-    if (!match) {
-      continue
-    }
-    if (match[1] === 'name') {
-      result.name = stripQuotes(match[2])
-    }
-    if (match[1] === 'description') {
-      result.description = stripQuotes(match[2])
+    if (match) {
+      if (match[1] === 'name') {
+        result.name = stripQuotes(match[2])
+      }
+      if (match[1] === 'description') {
+        result.description = stripQuotes(match[2])
+      }
     }
   }
   return result
 }
 export function extractDescription(content: string): string {
-  const lines = content.split(/\r?\n/)
+  const lines = content.split(NEWLINE_RE)
   const parsed = parseSkillFrontmatter(content)
   if (parsed.description) {
-    return parsed.description.slice(0, 300)
+    return parsed.description.slice(0, MAX_DESC_CHARS)
   }
-  let frontmatter = lines[0]?.trim() === '---'
-  for (let i = frontmatter ? 1 : 0; i < lines.length; i++) {
+  let inFrontmatter = lines[0]?.trim() === '---'
+  let start = 0
+  if (inFrontmatter) {
+    start = 1
+  }
+  for (let i = start; i < lines.length; i += 1) {
     const line = lines[i]
-    if (frontmatter) {
+    if (inFrontmatter) {
       if (line.trim() === '---') {
-        frontmatter = false
+        inFrontmatter = false
       }
-      continue
-    }
-    if (line.startsWith('#')) {
-      return line
-        .replace(/^#+\s*/, '')
-        .trim()
-        .slice(0, 300)
-    }
-    if (line.trim()) {
-      return line.trim().slice(0, 300)
+    } else {
+      if (line.startsWith('#')) {
+        return line.replace(HEADING_RE, '').trim().slice(0, MAX_DESC_CHARS)
+      }
+      if (line.trim()) {
+        return line.trim().slice(0, MAX_DESC_CHARS)
+      }
     }
   }
   return ''

@@ -13,10 +13,10 @@ export class Semaphore {
     this.max = max
   }
 
-  async acquire(): Promise<Release> {
+  acquire(): Promise<Release> {
     if (this.active < this.max) {
       this.active += 1
-      return this.createRelease()
+      return Promise.resolve(this.createRelease())
     }
 
     return new Promise<Release>((resolve) => {

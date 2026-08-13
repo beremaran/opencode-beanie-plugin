@@ -13,9 +13,69 @@ import {
   type SkillSummary,
 } from '../types.js'
 
+const DEFAULT_BASE_URL = 'https://skills.sh'
+const DEFAULT_MAX_BYTES = 200_000
+const DEFAULT_PAGE_SIZE = 20
+const DEFAULT_SEARCH_LIMIT = 10
+const LIST_TTL_MS = 60_000
+const SEARCH_TTL_MS = 60_000
+const DETAIL_TTL_MS = 300_000
+const ENRICH_LIMIT = 20
+const ID_PARTS_FOR_SOURCE = 3
+const HTTP_UNAUTHORIZED = 401
+const HTTP_NOT_FOUND = 404
+const TRAILING_SLASHES_RE = /\/+$/
+interface Pagination {
+  page: number
+  perPage: number
+  total?: number
+  hasMore: boolean
+}
 const md = (path: string) => path.toLowerCase() === 'skill.md'
 const marker = (bytes: number) => `\n[...truncated: ${bytes} bytes omitted]\n`
 const byteLength = (value: string): number => new TextEncoder().encode(value).byteLength
+function pickString(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key]
+  if (typeof value === 'string') {
+    return value
+  }
+  return undefined
+}
+function pickNumber(record: Record<string, unknown>, key: string): number | undefined {
+  const value = record[key]
+  if (typeof value === 'number') {
+    return value
+  }
+  return undefined
+}
+function pickBoolean(record: Record<string, unknown>, key: string, fallback: boolean): boolean {
+  const value = record[key]
+  if (value === undefined) {
+    return fallback
+  }
+  return Boolean(value)
+}
+function pickArray(record: Record<string, unknown>, key: string): unknown[] | undefined {
+  const value = record[key]
+  if (Array.isArray(value)) {
+    return value
+  }
+  return undefined
+}
+function sourceTypeOf(x: Record<string, unknown>): 'github' | 'well-known' {
+  if (x.sourceType === 'well-known') {
+    return 'well-known'
+  }
+  return 'github'
+}
+function fitInBudget(contents: string, budget: number): string {
+  const size = byteLength(contents)
+  let text = contents.slice(0, budget)
+  while (byteLength(text + marker(size - byteLength(text))) > budget && text.length > 0) {
+    text = text.slice(0, -1)
+  }
+  return text + marker(size - byteLength(text))
+}
 function cap(files: SkillFile[], max: number): void {
   const total = () => files.reduce((n, f) => n + byteLength(f.contents), 0)
   if (total() <= max) {
@@ -23,29 +83,26 @@ function cap(files: SkillFile[], max: number): void {
   }
   const main = files.find((f) => md(f.path))
   if (main && byteLength(main.contents) > max) {
-    files
-      .filter((f) => f !== main)
-      .forEach((f) => {
-        f.contents = ''
-      })
-    let text = main.contents.slice(0, max)
-    while (byteLength(text + marker(byteLength(main.contents) - byteLength(text))) > max && text.length > 0) {
-      text = text.slice(0, -1)
+    for (const file of files.filter((f) => f !== main)) {
+      file.contents = ''
     }
-    main.contents = text + marker(byteLength(main.contents) - byteLength(text))
+    main.contents = fitInBudget(main.contents, max)
     return
   }
-  let remaining = max - (main ? byteLength(main.contents) : 0)
+  fitSupport(files, main, max)
+}
+function fitSupport(files: SkillFile[], main: SkillFile | undefined, max: number): void {
+  let mainBytes = 0
+  if (main) {
+    mainBytes = byteLength(main.contents)
+  }
+  let remaining = max - mainBytes
   for (const file of files.filter((f) => f !== main).sort((a, b) => byteLength(b.contents) - byteLength(a.contents))) {
     const size = byteLength(file.contents)
     if (size <= remaining) {
       remaining -= size
     } else {
-      let text = file.contents.slice(0, Math.max(0, remaining))
-      while (byteLength(text + marker(size - byteLength(text))) > remaining && text.length > 0) {
-        text = text.slice(0, -1)
-      }
-      file.contents = text + marker(size - byteLength(text))
+      file.contents = fitInBudget(file.contents, remaining)
       remaining = 0
     }
   }
@@ -62,14 +119,14 @@ export class SkillsShRegistry implements SkillRegistry {
       throw new RegistryAuthError('skills.sh registry requires an API token')
     }
     this.token = opts.token
-    this.baseUrl = (opts.baseUrl ?? 'https://skills.sh').replace(/\/+$/, '')
-    this.maxBytes = opts.maxBytes ?? 200_000
+    this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(TRAILING_SLASHES_RE, '')
+    this.maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES
   }
   async listSkills(opts: ListSkillsOptions): Promise<SkillListResult> {
     const view = opts.view ?? 'all-time'
     const page = opts.page ?? 1
-    const perPage = opts.perPage ?? 20
-    const key = `list:${view}:${page}:${perPage}:${opts.includeDescription ? 'desc' : 'plain'}`
+    const perPage = opts.perPage ?? DEFAULT_PAGE_SIZE
+    const key = `list:${view}:${page}:${perPage}:${opts.includeDescription}`
     const cached = this.listCache.get(key)
     if (cached) {
       return cached as SkillListResult
@@ -81,7 +138,7 @@ export class SkillsShRegistry implements SkillRegistry {
     if (opts.includeDescription) {
       await this.enrich(result.data)
     }
-    this.listCache.set(key, result, 60_000)
+    this.listCache.set(key, result, LIST_TTL_MS)
     return result
   }
   async searchSkills(opts: SearchSkillsOptions): Promise<SkillListResult> {
@@ -89,9 +146,9 @@ export class SkillsShRegistry implements SkillRegistry {
     if (query.length < 2) {
       throw new Error('search query must be at least 2 characters')
     }
-    const limit = opts.limit ?? 10
+    const limit = opts.limit ?? DEFAULT_SEARCH_LIMIT
     const owner = opts.owner?.trim()
-    const key = `search:${query}:${limit}:${owner ?? ''}:${opts.includeDescription ? 'desc' : 'plain'}`
+    const key = `search:${query}:${limit}:${owner ?? ''}:${opts.includeDescription}`
     const cached = this.searchCache.get(key)
     if (cached) {
       return cached as SkillListResult
@@ -104,13 +161,18 @@ export class SkillsShRegistry implements SkillRegistry {
     if (opts.includeDescription) {
       await this.enrich(result.data)
     }
-    this.searchCache.set(key, result, 60_000)
+    this.searchCache.set(key, result, SEARCH_TTL_MS)
     return result
   }
   async loadSkill(id: string): Promise<SkillDetail> {
     const parts = id.split('/')
-    const source = parts.length >= 3 ? `${parts[0]}/${parts[1]}` : (parts[0] ?? '')
-    const slug = parts.length >= 3 ? parts.slice(2).join('/') : parts.slice(1).join('/')
+    const [first, second, ...rest] = parts
+    let source = first ?? ''
+    let slug = second ?? ''
+    if (parts.length >= ID_PARTS_FOR_SOURCE) {
+      source = `${first}/${second}`
+      slug = rest.join('/')
+    }
     const key = `detail:${source}:${slug}`
     const cached = this.detailCache.get(key)
     if (cached) {
@@ -119,39 +181,49 @@ export class SkillsShRegistry implements SkillRegistry {
     const raw = (await this.request(
       `${this.baseUrl}/api/v1/skills/${encodeURIComponent(source)}/${encodeURIComponent(slug)}`,
     )) as Record<string, unknown>
-    const files: SkillFile[] = Array.isArray(raw.files)
-      ? raw.files.flatMap((entry) => {
-          const f = entry as Record<string, unknown>
-          return typeof f.path === 'string' && typeof f.contents === 'string'
-            ? [{ path: f.path, contents: f.contents }]
-            : []
-        })
-      : []
+    let files: SkillFile[] = []
+    if (Array.isArray(raw.files)) {
+      files = raw.files.flatMap((entry) => {
+        const f = entry as Record<string, unknown>
+        if (typeof f.path === 'string' && typeof f.contents === 'string') {
+          return [{ path: f.path, contents: f.contents }]
+        }
+        return []
+      })
+    }
     files.sort((a, b) => Number(!md(a.path)) - Number(!md(b.path)) || a.path.localeCompare(b.path))
     if (!files.some((f) => md(f.path))) {
       throw new SkillNotFoundError(`SKILL.md not found in ${id}`)
     }
     cap(files, this.maxBytes)
-    const detail = {
-      id: typeof raw.id === 'string' ? raw.id : id,
-      name: typeof raw.name === 'string' ? raw.name : slug,
-      slug: typeof raw.slug === 'string' ? raw.slug : slug,
-      source: typeof raw.source === 'string' ? raw.source : source,
-      ...(typeof raw.installs === 'number' ? { installs: raw.installs } : {}),
-      ...(typeof raw.hash === 'string' || raw.hash === null ? { hash: raw.hash } : {}),
+    const detail: SkillDetail = {
+      id: pickString(raw, 'id') ?? id,
+      name: pickString(raw, 'name') ?? slug,
+      slug: pickString(raw, 'slug') ?? slug,
+      source: pickString(raw, 'source') ?? source,
       files,
     }
-    this.detailCache.set(key, detail, 300_000)
+    const installs = pickNumber(raw, 'installs')
+    if (installs !== undefined) {
+      detail.installs = installs
+    }
+    if (typeof raw.hash === 'string' || raw.hash === null) {
+      detail.hash = raw.hash
+    }
+    this.detailCache.set(key, detail, DETAIL_TTL_MS)
     return detail
   }
   private async request(url: string): Promise<unknown> {
     try {
+      // biome-ignore lint/style/useNamingConvention: Authorization is the standard HTTP header name (case-insensitive per RFC 9110)
       return await httpGetJson(url, { headers: { Authorization: `Bearer ${this.token}` } })
     } catch (error) {
-      if (error instanceof HttpError && error.status === 401) {
+      if (error instanceof HttpError && error.status === HTTP_UNAUTHORIZED) {
+        // biome-ignore lint/style/useErrorCause: RegistryAuthError takes only a message; cause support would require changing types.ts
         throw new RegistryAuthError(`skills.sh registry authentication failed for ${url}`)
       }
-      if (error instanceof HttpError && error.status === 404) {
+      if (error instanceof HttpError && error.status === HTTP_NOT_FOUND) {
+        // biome-ignore lint/style/useErrorCause: SkillNotFoundError takes only a message; cause support would require changing types.ts
         throw new SkillNotFoundError(`skill not found: ${url}`)
       }
       throw error
@@ -159,61 +231,69 @@ export class SkillsShRegistry implements SkillRegistry {
   }
   private map(body: unknown, page: number, perPage: number): SkillListResult {
     const raw = body as Record<string, unknown>
-    const data = (Array.isArray(raw.data) ? raw.data : Array.isArray(raw.skills) ? raw.skills : []).map((x) =>
-      this.item(x as Record<string, unknown>),
-    )
+    const rows = pickArray(raw, 'data') ?? pickArray(raw, 'skills') ?? []
+    const data = rows.map((x) => this.item(x as Record<string, unknown>))
     const p = (raw.pagination ?? {}) as Record<string, unknown>
-    return {
-      data,
-      pagination: {
-        page: typeof p.page === 'number' ? p.page : page,
-        perPage: typeof p.perPage === 'number' ? p.perPage : perPage,
-        ...(typeof p.total === 'number' ? { total: p.total } : {}),
-        hasMore: p.hasMore === undefined ? data.length >= perPage : Boolean(p.hasMore),
-      },
+    const pagination: Pagination = {
+      page: pickNumber(p, 'page') ?? page,
+      perPage: pickNumber(p, 'perPage') ?? perPage,
+      hasMore: pickBoolean(p, 'hasMore', data.length >= perPage),
     }
+    const total = pickNumber(p, 'total')
+    if (total !== undefined) {
+      pagination.total = total
+    }
+    return { data, pagination }
   }
   private mapSearch(body: unknown, limit: number): SkillListResult {
     const raw = body as Record<string, unknown>
-    const data = (Array.isArray(raw.data) ? raw.data : Array.isArray(raw.results) ? raw.results : []).map((x) =>
-      this.item(x as Record<string, unknown>),
-    )
+    const rows = pickArray(raw, 'data') ?? pickArray(raw, 'results') ?? []
+    const data = rows.map((x) => this.item(x as Record<string, unknown>))
     const p = (raw.pagination ?? {}) as Record<string, unknown>
-    const total = typeof raw.count === 'number' ? raw.count : typeof p.total === 'number' ? p.total : undefined
-    return {
-      data,
-      pagination: {
-        page: typeof p.page === 'number' ? p.page : 1,
-        perPage: typeof p.perPage === 'number' ? p.perPage : limit,
-        ...(total === undefined ? {} : { total }),
-        hasMore: p.hasMore === undefined ? data.length >= limit : Boolean(p.hasMore),
-      },
+    const pagination: Pagination = {
+      page: pickNumber(p, 'page') ?? 1,
+      perPage: pickNumber(p, 'perPage') ?? limit,
+      hasMore: pickBoolean(p, 'hasMore', data.length >= limit),
     }
+    const total = pickNumber(raw, 'count') ?? pickNumber(p, 'total')
+    if (total !== undefined) {
+      pagination.total = total
+    }
+    return { data, pagination }
   }
   private item(x: Record<string, unknown>): SkillSummary {
-    const source = typeof x.source === 'string' ? x.source : ''
-    const slug = typeof x.slug === 'string' ? x.slug : ''
-    return {
-      id: typeof x.id === 'string' ? x.id : `${source}/${slug}`,
-      name: typeof x.name === 'string' ? x.name : slug,
+    const source = pickString(x, 'source') ?? ''
+    const slug = pickString(x, 'slug') ?? ''
+    const summary: SkillSummary = {
+      id: pickString(x, 'id') ?? `${source}/${slug}`,
+      name: pickString(x, 'name') ?? slug,
       slug,
       source,
-      sourceType: x.sourceType === 'well-known' ? 'well-known' : 'github',
-      ...(typeof x.installs === 'number' ? { installs: x.installs } : {}),
-      ...(typeof x.installUrl === 'string' ? { installUrl: x.installUrl } : {}),
-      ...(typeof x.url === 'string' ? { url: x.url } : {}),
+      sourceType: sourceTypeOf(x),
     }
+    if (typeof x.installs === 'number') {
+      summary.installs = x.installs
+    }
+    if (typeof x.installUrl === 'string') {
+      summary.installUrl = x.installUrl
+    }
+    if (typeof x.url === 'string') {
+      summary.url = x.url
+    }
+    return summary
   }
   private async enrich(items: SkillSummary[]): Promise<void> {
     await Promise.all(
-      items.slice(0, 20).map(async (item) => {
+      items.slice(0, ENRICH_LIMIT).map(async (item) => {
         try {
           const detail = await this.loadSkill(`${item.source}/${item.slug}`)
           const file = detail.files.find((f) => md(f.path))
           if (file) {
             item.description = extractDescription(file.contents)
           }
-        } catch {}
+        } catch {
+          // best-effort enrichment: a failing detail fetch must not fail the whole listing
+        }
       }),
     )
   }

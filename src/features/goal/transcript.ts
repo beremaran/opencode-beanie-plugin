@@ -1,5 +1,7 @@
 import type { ModelRef, TranscriptMessage, TranscriptPart } from './types.js'
 
+const TOOL_DETAIL_LIMIT = 4000
+
 function partText(part: TranscriptPart): string | undefined {
   if (part.type === 'text' && part.text?.trim()) {
     return part.text.trim()
@@ -7,8 +9,14 @@ function partText(part: TranscriptPart): string | undefined {
   if (part.type === 'tool' && part.tool) {
     const status = part.state?.status ?? 'unknown'
     const detail = part.state?.output?.trim() || part.state?.error?.trim() || part.state?.title?.trim() || ''
-    const truncated = detail.length > 4000 ? `${detail.slice(0, 4000)}…` : detail
-    return `[tool ${part.tool} ${status}]${truncated ? `\n${truncated}` : ''}`
+    let truncated = detail
+    if (detail.length > TOOL_DETAIL_LIMIT) {
+      truncated = `${detail.slice(0, TOOL_DETAIL_LIMIT)}…`
+    }
+    if (truncated) {
+      return `[tool ${part.tool} ${status}]\n${truncated}`
+    }
+    return `[tool ${part.tool} ${status}]`
   }
   if (part.type === 'patch' && part.files && part.files.length > 0) {
     return `[patch]\n${part.files.join('\n')}`
@@ -22,11 +30,13 @@ export function goalMessages(messages: TranscriptMessage[], startedAt: number): 
 }
 export function buildTranscript(messages: TranscriptMessage[], startedAt: number, maxCharacters: number): string {
   const rendered = goalMessages(messages, startedAt)
-    .map((message) => {
+    .flatMap((message) => {
       const parts = message.parts.map(partText).filter((value): value is string => Boolean(value))
-      return parts.length === 0 ? undefined : `[${message.info.role}]\n${parts.join('\n')}`
+      if (parts.length === 0) {
+        return []
+      }
+      return [`[${message.info.role}]\n${parts.join('\n')}`]
     })
-    .filter((value): value is string => Boolean(value))
     .join('\n\n')
   if (rendered.length <= maxCharacters) {
     return rendered
@@ -57,7 +67,10 @@ export function totalGoalTokens(messages: TranscriptMessage[], startedAt: number
   return goalMessages(messages, startedAt)
     .filter((message) => message.info.role === 'assistant')
     .reduce((total, message) => {
-      const tokens = message.info.tokens
-      return tokens ? total + tokens.input + tokens.output + tokens.reasoning : total
+      const { tokens } = message.info
+      if (tokens) {
+        return total + tokens.input + tokens.output + tokens.reasoning
+      }
+      return total
     }, 0)
 }

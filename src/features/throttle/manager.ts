@@ -3,11 +3,25 @@ import { Semaphore } from './queue.js'
 
 const RECENT_IDLE_TTL_MS = 10_000
 
+const noop = (): void => {
+  // Intentional no-op default callback.
+}
+
+type SlotKind = 'foreground' | 'background'
+
+interface Slot {
+  release: Release
+  kind: SlotKind
+  released: boolean
+  timer: unknown
+  watchedChildSessionId?: string
+}
+
 export type ThrottleMode = 'session' | 'global'
 
 export interface QueueEventInfo {
-  sessionID: string
-  callID: string
+  sessionId: string
+  callId: string
   description?: string
   position?: number
   running: number
@@ -24,16 +38,6 @@ export interface ThrottleManagerOptions {
   onStarted?: (info: QueueEventInfo) => void
   setTimer?: (fn: () => void, ms: number) => unknown
   clearTimer?: (handle: unknown) => void
-}
-
-type SlotKind = 'foreground' | 'background'
-
-interface Slot {
-  release: Release
-  kind: SlotKind
-  released: boolean
-  timer: unknown
-  watchedChildSessionID?: string
 }
 
 export class ThrottleManager {
@@ -56,9 +60,9 @@ export class ThrottleManager {
     this.maxParallel = options.maxParallel
     this.mode = options.mode
     this.maxWaitMs = options.maxWaitMs
-    this.onWarn = options.onWarn ?? (() => {})
-    this.onQueued = options.onQueued ?? (() => {})
-    this.onStarted = options.onStarted ?? (() => {})
+    this.onWarn = options.onWarn ?? noop
+    this.onQueued = options.onQueued ?? noop
+    this.onStarted = options.onStarted ?? noop
     this.setTimer = options.setTimer ?? ((fn, ms) => globalThis.setTimeout(fn, ms))
     this.clearTimer =
       options.clearTimer ??
@@ -67,15 +71,14 @@ export class ThrottleManager {
 
   async startTask(sessionId: string, callId: string, isBackground: boolean, description?: string): Promise<void> {
     const semaphore = this.getSemaphore(sessionId)
-    const running = semaphore.running
-    const queued = semaphore.queued
+    const { running, queued } = semaphore
     const position = queued + 1
     const immediate = running < this.maxParallel
 
     if (!(immediate || this.disposed)) {
       this.onQueued({
-        sessionID: sessionId,
-        callID: callId,
+        sessionId,
+        callId,
         description,
         position,
         running,
@@ -86,6 +89,7 @@ export class ThrottleManager {
 
     const release = await semaphore.acquire()
 
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: dispose() may run while the acquire() above is pending; the guard is required.
     if (this.disposed) {
       release()
       return
@@ -93,8 +97,8 @@ export class ThrottleManager {
 
     if (!immediate) {
       this.onStarted({
-        sessionID: sessionId,
-        callID: callId,
+        sessionId,
+        callId,
         description,
         position,
         running: semaphore.running,
@@ -104,7 +108,11 @@ export class ThrottleManager {
     }
 
     const key = this.key(sessionId, callId)
-    const slot: Slot = { release, kind: isBackground ? 'background' : 'foreground', released: false, timer: undefined }
+    let kind: SlotKind = 'foreground'
+    if (isBackground) {
+      kind = 'background'
+    }
+    const slot: Slot = { release, kind, released: false, timer: undefined }
 
     this.slots.set(key, slot)
     const timer = this.setTimer(() => {
@@ -137,7 +145,7 @@ export class ThrottleManager {
       return
     }
 
-    slot.watchedChildSessionID = childSessionId
+    slot.watchedChildSessionId = childSessionId
     this.watchers.set(childSessionId, key)
   }
 
@@ -172,6 +180,7 @@ export class ThrottleManager {
   }
 
   dispose(): void {
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: guards against re-entrant dispose() calls.
     if (this.disposed) {
       return
     }
@@ -215,10 +224,10 @@ export class ThrottleManager {
     this.clearTimer(slot.timer)
     this.slots.delete(key)
 
-    if (slot.watchedChildSessionID !== undefined) {
-      const watchedKey = this.watchers.get(slot.watchedChildSessionID)
+    if (slot.watchedChildSessionId !== undefined) {
+      const watchedKey = this.watchers.get(slot.watchedChildSessionId)
       if (watchedKey === key) {
-        this.watchers.delete(slot.watchedChildSessionID)
+        this.watchers.delete(slot.watchedChildSessionId)
       }
     }
 

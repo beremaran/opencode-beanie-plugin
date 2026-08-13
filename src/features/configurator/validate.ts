@@ -8,15 +8,7 @@ import { createRegistry } from '../skillbox/registries/factory.js'
 import { loadConfig } from '../toolbox/config.js'
 import { PLUGIN_OPTIONS_SCHEMA } from './schema.js'
 
-export interface FeatureReport {
-  feature: string
-  ok: boolean
-  message?: string
-}
-export interface ValidationResult {
-  errors: FeatureReport[]
-  warnings: string[]
-}
+const TOOL_KEY_RE = /^[a-z0-9_-]+$/
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -25,241 +17,217 @@ const isPositiveInteger = (value: unknown): boolean =>
   typeof value === 'number' && Number.isSafeInteger(value) && value > 0
 const isNonNegativeInteger = (value: unknown): boolean =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+const isBoolean = (value: unknown): boolean => typeof value === 'boolean'
+const messageOf = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  return String(error)
+}
+const failure = (feature: string, message: string): FeatureReport => ({ feature, ok: false, message })
+const asRecord = (raw: unknown): Record<string, unknown> | null => {
+  let value = raw
+  if (value === undefined) {
+    value = {}
+  }
+  if (!isRecord(value)) {
+    return null
+  }
+  return value
+}
+
+type OptionSpec = [string, (value: unknown) => boolean, string]
+const checkSpecs = (feature: string, o: Record<string, unknown>, specs: OptionSpec[]): FeatureReport | null => {
+  for (const [key, valid, expected] of specs) {
+    if (o[key] !== undefined && !valid(o[key])) {
+      return failure(feature, `The \`${key}\` option must be ${expected}.`)
+    }
+  }
+  return null
+}
 
 const featureSchema = (name: string): { properties?: Record<string, unknown> } | undefined =>
   (PLUGIN_OPTIONS_SCHEMA.properties as Record<string, { properties?: Record<string, unknown> }>)[name]
 
-const unknownKeys = (value: unknown, known: Set<string>, prefix: string): string[] =>
-  isRecord(value)
-    ? Object.keys(value)
-        .filter((key) => !known.has(key))
-        .map((key) => `${prefix}.${key}`)
-    : []
+const unknownKeys = (value: unknown, known: Set<string>, prefix: string): string[] => {
+  if (!isRecord(value)) {
+    return []
+  }
+  return Object.keys(value)
+    .filter((key) => !known.has(key))
+    .map((key) => `${prefix}.${key}`)
+}
 
 function checkOrchestrator(raw: unknown): FeatureReport {
   try {
     normalizeOrchestrator(raw)
     return { feature: 'orchestrator', ok: true }
   } catch (error) {
-    return { feature: 'orchestrator', ok: false, message: error instanceof Error ? error.message : String(error) }
+    return failure('orchestrator', messageOf(error))
   }
 }
 
 function checkThrottle(raw: unknown): FeatureReport {
-  const o = raw === undefined ? {} : raw
-  if (!isRecord(o)) {
-    return { feature: 'throttle', ok: false, message: 'The throttle options must be an object.' }
+  const o = asRecord(raw)
+  if (o === null) {
+    return failure('throttle', 'The throttle options must be an object.')
   }
-  const fail = (key: string, expected: string): FeatureReport => ({
-    feature: 'throttle',
-    ok: false,
-    message: `The \`${key}\` option must be ${expected}.`,
-  })
-  if (o.maxParallel !== undefined && !isPositiveInteger(o.maxParallel)) {
-    return fail('maxParallel', 'a positive integer')
-  }
-  if (o.mode !== undefined && o.mode !== 'session' && o.mode !== 'global') {
-    return fail('mode', 'one of "session" or "global"')
-  }
-  if (o.maxWaitMs !== undefined && (typeof o.maxWaitMs !== 'number' || o.maxWaitMs <= 0)) {
-    return fail('maxWaitMs', 'a number greater than 0')
-  }
-  if (o.notifyQueue !== undefined && typeof o.notifyQueue !== 'boolean') {
-    return fail('notifyQueue', 'a boolean')
-  }
-  return { feature: 'throttle', ok: true }
+  const issue = checkSpecs('throttle', o, [
+    ['maxParallel', isPositiveInteger, 'a positive integer'],
+    ['mode', (value) => value === 'session' || value === 'global', 'one of "session" or "global"'],
+    ['maxWaitMs', (value) => typeof value === 'number' && value > 0, 'a number greater than 0'],
+    ['notifyQueue', isBoolean, 'a boolean'],
+  ])
+  return issue ?? { feature: 'throttle', ok: true }
 }
 
 function checkGoal(raw: unknown): FeatureReport {
-  const o = raw === undefined ? {} : raw
-  if (!isRecord(o)) {
-    return { feature: 'goal', ok: false, message: 'The goal options must be an object.' }
+  const o = asRecord(raw)
+  if (o === null) {
+    return failure('goal', 'The goal options must be an object.')
   }
   resolveGoal(o)
-  const fail = (key: string, expected: string): FeatureReport => ({
-    feature: 'goal',
-    ok: false,
-    message: `The \`${key}\` option must be ${expected}.`,
-  })
-  if (o.evaluatorModel !== undefined && !isNonEmptyString(o.evaluatorModel)) {
-    return fail('evaluatorModel', 'a non-empty string')
+  const issue = checkSpecs('goal', o, [
+    ['evaluatorModel', isNonEmptyString, 'a non-empty string'],
+    ['evaluatorAgent', isNonEmptyString, 'a non-empty string'],
+    ['stateDirectory', isNonEmptyString, 'a non-empty string'],
+    ['maxTranscriptChars', isPositiveInteger, 'a positive integer'],
+    ['defaultTokenBudget', isPositiveInteger, 'a positive integer'],
+    ['defaultMaxTurns', isPositiveInteger, 'a positive integer'],
+    ['continuationDelayMs', isNonNegativeInteger, 'a non-negative integer'],
+    ['deleteEvaluatorSessions', isBoolean, 'a boolean'],
+  ])
+  return issue ?? { feature: 'goal', ok: true }
+}
+
+const checkProviderArray = (providers: unknown): FeatureReport | null => {
+  if (!Array.isArray(providers)) {
+    return failure('providers', 'The `providers` option must be an array.')
   }
-  if (o.evaluatorAgent !== undefined && !isNonEmptyString(o.evaluatorAgent)) {
-    return fail('evaluatorAgent', 'a non-empty string')
+  for (let i = 0; i < providers.length; i += 1) {
+    if (!validateProviderSource(providers[i])) {
+      return failure(
+        'providers',
+        `providers[${i}]: each provider needs a non-empty id and a baseURL starting with http:// or https://.`,
+      )
+    }
   }
-  if (o.stateDirectory !== undefined && !isNonEmptyString(o.stateDirectory)) {
-    return fail('stateDirectory', 'a non-empty string')
-  }
-  if (o.maxTranscriptChars !== undefined && !isPositiveInteger(o.maxTranscriptChars)) {
-    return fail('maxTranscriptChars', 'a positive integer')
-  }
-  if (o.defaultTokenBudget !== undefined && !isPositiveInteger(o.defaultTokenBudget)) {
-    return fail('defaultTokenBudget', 'a positive integer')
-  }
-  if (o.defaultMaxTurns !== undefined && !isPositiveInteger(o.defaultMaxTurns)) {
-    return fail('defaultMaxTurns', 'a positive integer')
-  }
-  if (o.continuationDelayMs !== undefined && !isNonNegativeInteger(o.continuationDelayMs)) {
-    return fail('continuationDelayMs', 'a non-negative integer')
-  }
-  if (o.deleteEvaluatorSessions !== undefined && typeof o.deleteEvaluatorSessions !== 'boolean') {
-    return fail('deleteEvaluatorSessions', 'a boolean')
-  }
-  return { feature: 'goal', ok: true }
+  return null
 }
 
 function checkProviders(raw: unknown): FeatureReport {
-  const o = raw === undefined ? {} : raw
-  if (!isRecord(o)) {
-    return { feature: 'providers', ok: false, message: 'The providers options must be an object.' }
+  const o = asRecord(raw)
+  if (o === null) {
+    return failure('providers', 'The providers options must be an object.')
   }
   if (o.providers !== undefined) {
-    if (!Array.isArray(o.providers)) {
-      return { feature: 'providers', ok: false, message: 'The `providers` option must be an array.' }
-    }
-    for (let i = 0; i < o.providers.length; i += 1) {
-      const entry = o.providers[i]
-      if (!validateProviderSource(entry)) {
-        return {
-          feature: 'providers',
-          ok: false,
-          message: `providers[${i}]: each provider needs a non-empty id and a baseURL starting with http:// or https://.`,
-        }
-      }
+    const providersIssue = checkProviderArray(o.providers)
+    if (providersIssue !== null) {
+      return providersIssue
     }
   }
-  const fail = (key: string, expected: string): FeatureReport => ({
-    feature: 'providers',
-    ok: false,
-    message: `The \`${key}\` option must be ${expected}.`,
-  })
-  if (o.model !== undefined && !isNonEmptyString(o.model)) {
-    return fail('model', 'a non-empty string')
-  }
-  if (o.smallModel !== undefined && !isNonEmptyString(o.smallModel)) {
-    return fail('smallModel', 'a non-empty string')
-  }
-  if (o.timeout !== undefined && !isPositiveInteger(o.timeout)) {
-    return fail('timeout', 'a positive integer')
-  }
-  if (o.npm !== undefined && !isNonEmptyString(o.npm)) {
-    return fail('npm', 'a non-empty string')
-  }
-  if (o.env !== undefined && typeof o.env !== 'boolean') {
-    return fail('env', 'a boolean')
+  const issue = checkSpecs('providers', o, [
+    ['model', isNonEmptyString, 'a non-empty string'],
+    ['smallModel', isNonEmptyString, 'a non-empty string'],
+    ['timeout', isPositiveInteger, 'a positive integer'],
+    ['npm', isNonEmptyString, 'a non-empty string'],
+    ['env', isBoolean, 'a boolean'],
+  ])
+  if (issue !== null) {
+    return issue
   }
   try {
     normalizeProviders(o, () => undefined)
     return { feature: 'providers', ok: true }
   } catch (error) {
-    return { feature: 'providers', ok: false, message: error instanceof Error ? error.message : String(error) }
+    return failure('providers', messageOf(error))
   }
 }
 
+const isRegistryMode = (value: unknown): boolean => value === 'auto' || value === 'skills-sh' || value === 'github'
+const isStringArray = (value: unknown): boolean => Array.isArray(value) && value.every(isNonEmptyString)
+const isMechanismArray = (value: unknown): boolean =>
+  Array.isArray(value) && value.every((entry) => (MECHANISMS as readonly string[]).includes(entry))
+
 function checkSkillbox(raw: unknown): FeatureReport {
-  const o = raw === undefined ? {} : raw
-  if (!isRecord(o)) {
-    return { feature: 'skillbox', ok: false, message: 'The skillbox options must be an object.' }
+  const o = asRecord(raw)
+  if (o === null) {
+    return failure('skillbox', 'The skillbox options must be an object.')
   }
-  if (o.registry !== undefined && o.registry !== 'auto' && o.registry !== 'skills-sh' && o.registry !== 'github') {
-    return {
-      feature: 'skillbox',
-      ok: false,
-      message: 'The `registry` option must be one of "auto", "skills-sh", or "github".',
-    }
-  }
-  if (o.skillsShToken !== undefined && !isNonEmptyString(o.skillsShToken)) {
-    return { feature: 'skillbox', ok: false, message: 'The `skillsShToken` option must be a non-empty string.' }
-  }
-  if (o.githubToken !== undefined && !isNonEmptyString(o.githubToken)) {
-    return { feature: 'skillbox', ok: false, message: 'The `githubToken` option must be a non-empty string.' }
-  }
-  if (o.maxBytes !== undefined && !isPositiveInteger(o.maxBytes)) {
-    return { feature: 'skillbox', ok: false, message: 'The `maxBytes` option must be a positive integer.' }
-  }
-  if (o.debug !== undefined && typeof o.debug !== 'boolean') {
-    return { feature: 'skillbox', ok: false, message: 'The `debug` option must be a boolean.' }
-  }
-  if (
-    o.githubSources !== undefined &&
-    (!Array.isArray(o.githubSources) || o.githubSources.some((entry) => !isNonEmptyString(entry)))
-  ) {
-    return {
-      feature: 'skillbox',
-      ok: false,
-      message: 'The `githubSources` option must be an array of non-empty strings.',
-    }
+  const issue = checkSpecs('skillbox', o, [
+    ['registry', isRegistryMode, 'one of "auto", "skills-sh", or "github"'],
+    ['skillsShToken', isNonEmptyString, 'a non-empty string'],
+    ['githubToken', isNonEmptyString, 'a non-empty string'],
+    ['maxBytes', isPositiveInteger, 'a positive integer'],
+    ['debug', isBoolean, 'a boolean'],
+    ['githubSources', isStringArray, 'an array of non-empty strings'],
+  ])
+  if (issue !== null) {
+    return issue
   }
   try {
     createRegistry(resolveSkillbox(o))
     return { feature: 'skillbox', ok: true }
   } catch (error) {
-    return { feature: 'skillbox', ok: false, message: error instanceof Error ? error.message : String(error) }
+    return failure('skillbox', messageOf(error))
   }
 }
 
 function checkToolbox(raw: unknown): FeatureReport {
-  const o = raw === undefined ? {} : raw
-  if (!isRecord(o)) {
-    return { feature: 'toolbox', ok: false, message: 'The toolbox options must be an object.' }
+  const o = asRecord(raw)
+  if (o === null) {
+    return failure('toolbox', 'The toolbox options must be an object.')
   }
   if (o.config === undefined && o.servers === undefined) {
     return { feature: 'toolbox', ok: true }
   }
   if (typeof o.config === 'string') {
-    return {
-      feature: 'toolbox',
-      ok: false,
-      message:
-        'The `config` option must be an inline object with mcpServers; external JSON config files are not supported.',
-    }
+    return failure(
+      'toolbox',
+      'The `config` option must be an inline object with mcpServers; external JSON config files are not supported.',
+    )
   }
   const silent = { info: () => undefined, warn: () => undefined }
   try {
     loadConfig({ config: o.config, servers: o.servers, logger: silent })
     return { feature: 'toolbox', ok: true }
   } catch (error) {
-    return { feature: 'toolbox', ok: false, message: error instanceof Error ? error.message : String(error) }
+    return failure('toolbox', messageOf(error))
   }
 }
 
+const checkTools = (tools: unknown): FeatureReport | null => {
+  if (!isRecord(tools)) {
+    return failure('directives', 'The `tools` option must be an object with non-empty string values.')
+  }
+  for (const [key, value] of Object.entries(tools)) {
+    if (!TOOL_KEY_RE.test(key)) {
+      return failure('directives', `The \`tools\` keys must match /^[a-z0-9_-]+$/ (got "${key}").`)
+    }
+    if (!isNonEmptyString(value)) {
+      return failure('directives', 'The `tools` option must be an object with non-empty string values.')
+    }
+  }
+  return null
+}
+
 function checkDirectives(raw: unknown): FeatureReport {
-  const o = raw === undefined ? {} : raw
-  if (!isRecord(o)) {
-    return { feature: 'directives', ok: false, message: 'The directives options must be an object.' }
+  const o = asRecord(raw)
+  if (o === null) {
+    return failure('directives', 'The directives options must be an object.')
   }
-  const fail = (key: string, expected: string): FeatureReport => ({
-    feature: 'directives',
-    ok: false,
-    message: `The \`${key}\` option must be ${expected}.`,
-  })
-  if (o.defaults !== undefined && typeof o.defaults !== 'boolean') {
-    return fail('defaults', 'a boolean')
-  }
-  if (o.system !== undefined && (!Array.isArray(o.system) || o.system.some((entry) => !isNonEmptyString(entry)))) {
-    return fail('system', 'an array of non-empty strings')
-  }
-  if (
-    o.mechanisms !== undefined &&
-    (!Array.isArray(o.mechanisms) || o.mechanisms.some((entry) => !(MECHANISMS as readonly string[]).includes(entry)))
-  ) {
-    return fail('mechanisms', `an array of values from ${MECHANISMS.join(', ')}`)
+  const issue = checkSpecs('directives', o, [
+    ['defaults', isBoolean, 'a boolean'],
+    ['system', isStringArray, 'an array of non-empty strings'],
+    ['mechanisms', isMechanismArray, `an array of values from ${MECHANISMS.join(', ')}`],
+  ])
+  if (issue !== null) {
+    return issue
   }
   if (o.tools !== undefined) {
-    if (!isRecord(o.tools)) {
-      return fail('tools', 'an object with non-empty string values')
-    }
-    for (const [key, value] of Object.entries(o.tools)) {
-      if (!/^[a-z0-9_-]+$/.test(key)) {
-        return {
-          feature: 'directives',
-          ok: false,
-          message: `The \`tools\` keys must match /^[a-z0-9_-]+$/ (got "${key}").`,
-        }
-      }
-      if (!isNonEmptyString(value)) {
-        return fail('tools', 'an object with non-empty string values')
-      }
+    const toolsIssue = checkTools(o.tools)
+    if (toolsIssue !== null) {
+      return toolsIssue
     }
   }
   resolveDirectives(o)
@@ -282,7 +250,7 @@ export function validateFullOptions(fullOptions: unknown): ValidationResult {
   }
   if (!isRecord(fullOptions)) {
     return {
-      errors: [{ feature: 'plugin', ok: false, message: 'The plugin options must be an object.' }],
+      errors: [failure('plugin', 'The plugin options must be an object.')],
       warnings: [],
     }
   }
@@ -305,4 +273,14 @@ export function validateFullOptions(fullOptions: unknown): ValidationResult {
     }
   }
   return { errors, warnings }
+}
+
+export interface FeatureReport {
+  feature: string
+  ok: boolean
+  message?: string
+}
+export interface ValidationResult {
+  errors: FeatureReport[]
+  warnings: string[]
 }

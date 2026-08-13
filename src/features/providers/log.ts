@@ -10,10 +10,14 @@ export function createLogger(client: PluginInput['client']): Logger {
     return () => undefined
   }
   return (level, message, extra) => {
+    const body: Record<string, unknown> = { service: SERVICE, level, message }
+    if (extra !== undefined) {
+      body.extra = extra
+    }
     try {
-      ;(log as (args: object) => Promise<unknown>)({
-        body: { service: SERVICE, level, message, ...(extra === undefined ? {} : { extra }) },
-      }).catch(() => undefined)
-    } catch {}
+      ;(log as (args: object) => Promise<unknown>)({ body }).catch(() => undefined)
+    } catch {
+      // The host logger must never take the plugin down; swallow all errors.
+    }
   }
 }

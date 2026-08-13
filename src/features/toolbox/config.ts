@@ -1,5 +1,228 @@
-export const SERVER_NAME_RE = /^[A-Za-z0-9._-]{1,128}$/
+// biome-ignore lint/style/noExcessiveLinesPerFile: cohesive config normalization/validation module; its helpers (fail, plain, typeName, primitive, string, bool, int, num, strings, stringMap) are interdependent and shared across every normalizer, so splitting would fragment tightly-coupled logic.
 const GLOB_RE = /^[A-Za-z0-9._*-]+$/
+const HTTP_URL_RE = /^https?:\/\//i
+const envRe = /\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g
+const DEFAULT_SEARCH_TOP_K = 20
+const MIN_SEARCH_TOP_K = 1
+const MAX_SEARCH_TOP_K = 500
+const DEFAULT_PROCESS_POOL_SIZE = 8
+const MIN_PROCESS_POOL_SIZE = 1
+const MAX_PROCESS_POOL_SIZE = 64
+const DEFAULT_TIMEOUT_SECONDS = 30
+const MIN_TIMEOUT_SECONDS = 1
+const MAX_TIMEOUT_SECONDS = 600
+const DEFAULT_IDLE_TIMEOUT_MS = 300_000
+const MIN_IDLE_TIMEOUT_MS = 0
+const MAX_IDLE_TIMEOUT_MS = 3_600_000
+const typeName = (value: unknown): string => {
+  if (value === null) {
+    return 'null'
+  }
+  return typeof value
+}
+const fail = (where: string, message: string): never => {
+  throw new ConfigError(`config error: ${where}: ${message}`)
+}
+const plain = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+const primitive = (where: string, value: unknown, expected: 'string' | 'boolean'): void => {
+  if (typeof value !== expected) {
+    fail(where, `expected a ${expected}, got ${typeName(value)}`)
+  }
+}
+const string = (where: string, value: unknown): void => primitive(where, value, 'string')
+const bool = (where: string, value: unknown): void => primitive(where, value, 'boolean')
+const int = (where: string, value: unknown, min: number, max: number): void => {
+  const n = value as number
+  if (!Number.isInteger(n) || n < min || n > max) {
+    fail(where, `expected an integer in range ${min}..${max}`)
+  }
+}
+const num = (where: string, value: unknown, min: number, max: number): void => {
+  if (typeof value !== 'number' || Number.isNaN(value) || value < min || value > max) {
+    fail(where, `expected a number in range ${min}..${max}`)
+  }
+}
+const strings = (where: string, value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    fail(where, 'expected an array of strings')
+  }
+  const list = value as unknown[]
+  for (const [index, item] of list.entries()) {
+    string(`${where}[${index}]`, item)
+  }
+  return value as string[]
+}
+const stringMap = (where: string, value: unknown): Record<string, string> => {
+  if (!plain(value)) {
+    fail(where, 'expected an object of strings')
+  }
+  const map = value as Record<string, unknown>
+  for (const [key, item] of Object.entries(map)) {
+    string(`${where}.${key}`, item)
+  }
+  return value as Record<string, string>
+}
+interface ServerCommon {
+  disabled: boolean
+  timeout: number | undefined
+  toolFilter: string[]
+  tags: string[]
+}
+const validateKeys = (input: Record<string, unknown>): void => {
+  const allowed = new Set([
+    'mcpServers',
+    'searchTopK',
+    'cacheToolMetadata',
+    'processPoolSize',
+    'timeoutSeconds',
+    'idleTimeoutMs',
+  ])
+  for (const key of Object.keys(input)) {
+    if (!allowed.has(key)) {
+      fail(key, 'unknown key')
+    }
+  }
+}
+const buildCommon = (at: string, value: Record<string, unknown>): ServerCommon => {
+  let toolFilter: string[] = []
+  if (value.toolFilter) {
+    toolFilter = strings(`${at}.toolFilter`, value.toolFilter)
+  }
+  for (const pattern of toolFilter) {
+    if (!(pattern && GLOB_RE.test(pattern))) {
+      fail(`${at}.toolFilter`, 'invalid glob pattern')
+    }
+  }
+  let tags: string[] = []
+  if (value.tags) {
+    tags = strings(`${at}.tags`, value.tags)
+  }
+  const timeout = value.timeout as number | undefined
+  if (timeout !== undefined) {
+    num(`${at}.timeout`, timeout, Number.EPSILON, Number.MAX_SAFE_INTEGER)
+  }
+  if (value.disabled !== undefined) {
+    bool(`${at}.disabled`, value.disabled)
+  }
+  return { disabled: value.disabled === true, timeout, toolFilter, tags }
+}
+const buildStdioServer = (at: string, value: Record<string, unknown>, common: ServerCommon): ServerConfig => {
+  const command = value.command as string
+  string(`${at}.command`, command)
+  if (!command) {
+    fail(`${at}.command`, 'must not be empty')
+  }
+  let args: string[] = []
+  if (value.args) {
+    args = strings(`${at}.args`, value.args)
+  }
+  let env: Record<string, string> = {}
+  if (value.env) {
+    env = stringMap(`${at}.env`, value.env)
+  }
+  const config: ServerConfig = {
+    ...common,
+    type: 'stdio',
+    command,
+    args,
+    env,
+  }
+  if (value.cwd === undefined) {
+    return config
+  }
+  const cwd = value.cwd as string
+  string(`${at}.cwd`, cwd)
+  return { ...config, cwd }
+}
+const buildHttpServer = (at: string, value: Record<string, unknown>, common: ServerCommon): ServerConfig => {
+  const url = value.url as string
+  string(`${at}.url`, url)
+  if (!HTTP_URL_RE.test(url)) {
+    fail(`${at}.url`, 'must start with http:// or https://')
+  }
+  const rawTransportType = value.transportType ?? 'streamable-http'
+  if (rawTransportType !== 'streamable-http' && rawTransportType !== 'sse') {
+    fail(`${at}.transportType`, 'must be streamable-http or sse')
+  }
+  const transportType = rawTransportType as 'streamable-http' | 'sse'
+  let headers: Record<string, string> = {}
+  if (value.headers) {
+    headers = stringMap(`${at}.headers`, value.headers)
+  }
+  return {
+    ...common,
+    type: 'http',
+    url,
+    headers,
+    transportType,
+  }
+}
+const normalizeServerConfig = (at: string, value: unknown): ServerConfig => {
+  if (!plain(value)) {
+    fail(at, 'expected an object')
+  }
+  const input = value as Record<string, unknown>
+  const hasCommand = 'command' in input
+  const hasUrl = 'url' in input
+  if (hasCommand === hasUrl) {
+    fail(at, 'server must have exactly one of command or url')
+  }
+  const common = buildCommon(at, input)
+  if (hasCommand) {
+    return buildStdioServer(at, input, common)
+  }
+  return buildHttpServer(at, input, common)
+}
+const normalizeServers = (input: Record<string, unknown>): Record<string, ServerConfig> => {
+  const { mcpServers } = input
+  if (!plain(mcpServers)) {
+    fail('mcpServers', 'required key missing or expected an object')
+  }
+  const map = mcpServers as Record<string, unknown>
+  const servers: Record<string, ServerConfig> = {}
+  for (const [name, value] of Object.entries(map)) {
+    const at = `mcpServers.${name}`
+    if (!SERVER_NAME_RE.test(name)) {
+      fail(at, 'invalid server name')
+    }
+    servers[name] = normalizeServerConfig(at, value)
+  }
+  return servers
+}
+const normalizeScalars = (
+  input: Record<string, unknown>,
+): Pick<Config, 'searchTopK' | 'processPoolSize' | 'timeoutSeconds' | 'idleTimeoutMs' | 'cacheToolMetadata'> => {
+  const searchTopK = (input.searchTopK ?? DEFAULT_SEARCH_TOP_K) as number
+  int('searchTopK', searchTopK, MIN_SEARCH_TOP_K, MAX_SEARCH_TOP_K)
+  const processPoolSize = (input.processPoolSize ?? DEFAULT_PROCESS_POOL_SIZE) as number
+  int('processPoolSize', processPoolSize, MIN_PROCESS_POOL_SIZE, MAX_PROCESS_POOL_SIZE)
+  const timeoutSeconds = (input.timeoutSeconds ?? DEFAULT_TIMEOUT_SECONDS) as number
+  num('timeoutSeconds', timeoutSeconds, MIN_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS)
+  const idleTimeoutMs = (input.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS) as number
+  int('idleTimeoutMs', idleTimeoutMs, MIN_IDLE_TIMEOUT_MS, MAX_IDLE_TIMEOUT_MS)
+  const cacheToolMetadata = (input.cacheToolMetadata ?? true) as boolean
+  bool('cacheToolMetadata', cacheToolMetadata)
+  return { searchTopK, processPoolSize, timeoutSeconds, idleTimeoutMs, cacheToolMetadata }
+}
+const normalize = (raw: unknown): Config => {
+  if (!plain(raw)) {
+    fail('config', 'expected an object')
+  }
+  const input = raw as Record<string, unknown>
+  validateKeys(input)
+  const mcpServers = normalizeServers(input)
+  const scalars = normalizeScalars(input)
+  return Object.freeze({
+    mcpServers,
+    searchTopK: scalars.searchTopK,
+    processPoolSize: scalars.processPoolSize,
+    timeoutSeconds: scalars.timeoutSeconds,
+    idleTimeoutMs: scalars.idleTimeoutMs,
+    cacheToolMetadata: scalars.cacheToolMetadata,
+  })
+}
+export const SERVER_NAME_RE = /^[A-Za-z0-9._-]{1,128}$/
 export type ServerConfig =
   | {
       type: 'stdio'
@@ -33,50 +256,6 @@ export interface Config {
 export class ConfigError extends Error {
   name = 'ConfigError'
 }
-const fail = (where: string, message: string): never => {
-  throw new ConfigError(`config error: ${where}: ${message}`)
-}
-const plain = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-const string = (where: string, value: unknown): void => {
-  if (typeof value !== 'string') {
-    fail(where, `expected a string, got ${value === null ? 'null' : typeof value}`)
-  }
-}
-const bool = (where: string, value: unknown): void => {
-  if (typeof value !== 'boolean') {
-    fail(where, `expected a boolean, got ${value === null ? 'null' : typeof value}`)
-  }
-}
-const int = (where: string, value: any, min: number, max: number): void => {
-  if (!Number.isInteger(value) || value < min || value > max) {
-    fail(where, `expected an integer in range ${min}..${max}`)
-  }
-}
-const num = (where: string, value: any, min: number, max: number): void => {
-  if (typeof value !== 'number' || Number.isNaN(value) || value < min || value > max) {
-    fail(where, `expected a number in range ${min}..${max}`)
-  }
-}
-const strings = (where: string, value: unknown): string[] => {
-  if (!Array.isArray(value)) {
-    fail(where, 'expected an array of strings')
-  }
-  ;(value as unknown[]).forEach((v: unknown, i: number) => {
-    string(`${where}[${i}]`, v)
-  })
-  return value as string[]
-}
-const stringMap = (where: string, value: unknown): Record<string, string> => {
-  if (!plain(value)) {
-    fail(where, 'expected an object of strings')
-  }
-  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-    string(`${where}.${key}`, item)
-  }
-  return value as Record<string, string>
-}
-const envRe = /\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g
 export function substituteEnv(value: unknown, env: Record<string, string | undefined>): unknown {
   if (typeof value === 'string') {
     return value.replace(envRe, (match, name: string, fallback?: string) => {
@@ -97,108 +276,6 @@ export function substituteEnv(value: unknown, env: Record<string, string | undef
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, substituteEnv(item, env)]))
   }
   return value
-}
-function normalize(raw: unknown): Config {
-  if (!plain(raw)) {
-    fail('config', 'expected an object')
-  }
-  const input = raw as Record<string, any>
-  const allowed = new Set([
-    'mcpServers',
-    'searchTopK',
-    'cacheToolMetadata',
-    'processPoolSize',
-    'timeoutSeconds',
-    'idleTimeoutMs',
-  ])
-  for (const key of Object.keys(input)) {
-    if (!allowed.has(key)) {
-      fail(key, 'unknown key')
-    }
-  }
-  if (!plain(input.mcpServers)) {
-    fail('mcpServers', 'required key missing or expected an object')
-  }
-  const servers: Record<string, ServerConfig> = {}
-  for (const [name, value] of Object.entries(input.mcpServers as Record<string, any>)) {
-    const at = `mcpServers.${name}`
-    if (!SERVER_NAME_RE.test(name)) {
-      fail(at, 'invalid server name')
-    }
-    if (!plain(value)) {
-      fail(at, 'expected an object')
-    }
-    const hasCommand = 'command' in value
-    const hasUrl = 'url' in value
-    if (hasCommand === hasUrl) {
-      fail(at, 'server must have exactly one of command or url')
-    }
-    const common = {
-      disabled: value.disabled === true,
-      timeout: value.timeout as number | undefined,
-      toolFilter: value.toolFilter ? strings(`${at}.toolFilter`, value.toolFilter) : [],
-      tags: value.tags ? strings(`${at}.tags`, value.tags) : [],
-    }
-    if (common.timeout !== undefined) {
-      num(`${at}.timeout`, common.timeout, Number.EPSILON, Number.MAX_SAFE_INTEGER)
-    }
-    if (value.disabled !== undefined) {
-      bool(`${at}.disabled`, value.disabled)
-    }
-    for (const pattern of common.toolFilter) {
-      if (!(pattern && GLOB_RE.test(pattern))) {
-        fail(`${at}.toolFilter`, 'invalid glob pattern')
-      }
-    }
-    if (hasCommand) {
-      string(`${at}.command`, value.command)
-      if (!value.command) {
-        fail(`${at}.command`, 'must not be empty')
-      }
-      servers[name] = {
-        ...common,
-        type: 'stdio',
-        command: value.command,
-        args: value.args ? strings(`${at}.args`, value.args) : [],
-        env: value.env ? stringMap(`${at}.env`, value.env) : {},
-        ...(value.cwd === undefined ? {} : (string(`${at}.cwd`, value.cwd), { cwd: value.cwd })),
-      }
-    } else {
-      string(`${at}.url`, value.url)
-      if (!/^https?:\/\//i.test(value.url)) {
-        fail(`${at}.url`, 'must start with http:// or https://')
-      }
-      const transportType = value.transportType ?? 'streamable-http'
-      if (transportType !== 'streamable-http' && transportType !== 'sse') {
-        fail(`${at}.transportType`, 'must be streamable-http or sse')
-      }
-      servers[name] = {
-        ...common,
-        type: 'http',
-        url: value.url,
-        headers: value.headers ? stringMap(`${at}.headers`, value.headers) : {},
-        transportType,
-      }
-    }
-  }
-  const searchTopK = input.searchTopK ?? 20
-  int('searchTopK', searchTopK, 1, 500)
-  const processPoolSize = input.processPoolSize ?? 8
-  int('processPoolSize', processPoolSize, 1, 64)
-  const timeoutSeconds = input.timeoutSeconds ?? 30
-  num('timeoutSeconds', timeoutSeconds, 1, 600)
-  const idleTimeoutMs = input.idleTimeoutMs ?? 300_000
-  int('idleTimeoutMs', idleTimeoutMs, 0, 3_600_000)
-  const cacheToolMetadata = input.cacheToolMetadata ?? true
-  bool('cacheToolMetadata', cacheToolMetadata)
-  return Object.freeze({
-    mcpServers: servers,
-    searchTopK,
-    cacheToolMetadata,
-    processPoolSize,
-    timeoutSeconds,
-    idleTimeoutMs,
-  })
 }
 export function loadConfig(options: {
   config?: unknown

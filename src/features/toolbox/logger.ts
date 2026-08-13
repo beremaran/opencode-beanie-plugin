@@ -7,7 +7,12 @@ export function redact(value: unknown): unknown {
   }
   if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, secretKey.test(key) ? '[REDACTED]' : redact(item)]),
+      Object.entries(value).map(([key, item]) => {
+        if (secretKey.test(key)) {
+          return [key, '[REDACTED]']
+        }
+        return [key, redact(item)]
+      }),
     )
   }
   return value
@@ -20,16 +25,16 @@ export interface Logger {
 }
 export function createLogger(client: PluginInput['client']): Logger {
   const write = (level: 'info' | 'warn' | 'error', message: string, data?: unknown) => {
-    void client.app
-      .log({
-        body: {
-          service: 'opencode-beanie-plugin',
-          level,
-          message,
-          ...(data === undefined ? {} : { extra: redact(data) as Record<string, unknown> }),
-        },
-      })
-      .catch(() => undefined)
+    const body: {
+      service: string
+      level: 'info' | 'warn' | 'error'
+      message: string
+      extra?: Record<string, unknown>
+    } = { service: 'opencode-beanie-plugin', level, message }
+    if (data !== undefined) {
+      body.extra = redact(data) as Record<string, unknown>
+    }
+    void client.app.log({ body }).catch(() => undefined)
   }
   return {
     info: (message, data) => write('info', message, data),

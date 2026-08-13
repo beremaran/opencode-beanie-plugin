@@ -5,6 +5,7 @@ import { createLogger } from './logger.js'
 import { ToolRegistry, UpstreamRegistry } from './registry.js'
 import { createTools } from './tools.js'
 
+// biome-ignore lint/suspicious/useAwait: The Plugin type requires Promise<Hooks>, so the async modifier is needed even though no await occurs at this level.
 const Toolbox: Plugin = async (input, options) => {
   const logger = createLogger(input.client)
   const config = loadConfig({ config: options?.config, servers: options?.servers, logger })
