@@ -4,6 +4,7 @@ import type { Logger, PluginOptions, ProviderSource, ResolvedProvider } from './
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+const KINDS = new Set(['auto', 'openai', 'ollama', 'unsloth', 'lmstudio'])
 const optionalString = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined
 const positive = (value: unknown): number | undefined =>
@@ -33,6 +34,9 @@ function sanitize(value: ProviderSource): ProviderSource {
     if (v) {
       out[key] = v
     }
+  }
+  if (typeof raw.kind === 'string' && KINDS.has(raw.kind)) {
+    out.kind = raw.kind as ProviderSource['kind']
   }
   if (isRecord(raw.headers)) {
     out.headers = Object.fromEntries(Object.entries(raw.headers).filter(([, v]) => typeof v === 'string')) as Record<

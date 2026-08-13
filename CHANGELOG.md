@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Providers: new `kind` option (`auto` | `openai` | `ollama` | `unsloth` | `lmstudio`) selects how model context windows are discovered. `unsloth` reads the real GGUF `context_length` from Unsloth Studio's `/api/models/gguf-variants` per model; `ollama` reads `/api/tags`; `lmstudio` reads LM Studio's native `/api/v0/models` (`max_context_length`, embedding models filtered out). This covers the common self-hosted servers whose OpenAI-compatible `/v1/models` listings expose no context at all.
+- Providers: name-based context inference as a last-resort fallback for servers that report nothing (curated family table: Qwen, DeepSeek, Llama, Mistral, GLM, Kimi, Claude, GPT, …). Precedence is detected API value > `defaultLimit` > name inference.
+
+### Fixed
+
+- Providers: always write a complete model `limit` so OpenCode knows the context window and runs auto-compaction. Model listings frequently report only context (not max output); the plugin previously dropped the entire `limit` in that case, leaving OpenCode with `context = 0` and compaction disabled. A missing output now defaults to half the context (capped at 32000, OpenCode's `OUTPUT_TOKEN_MAX`), and a missing context to 128000.
+
 ## [0.1.2] - 2026-08-13
 
 ### Fixed

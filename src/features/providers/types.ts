@@ -10,6 +10,8 @@ export interface ModelOverride {
   headers?: Record<string, string>
 }
 
+export type ProviderKind = 'auto' | 'openai' | 'ollama' | 'unsloth' | 'lmstudio'
+
 export interface ProviderSource {
   id: string
   name?: string
@@ -17,6 +19,7 @@ export interface ProviderSource {
   apiKey?: string
   headers?: Record<string, string>
   npm?: string
+  kind?: ProviderKind
   modelsURL?: string
   fetchModels?: boolean
   staticModels?: Record<string, ModelOverride>
@@ -41,7 +44,7 @@ export type ResolvedProvider = ProviderSource & { fetchModels: boolean; timeoutM
 export interface DiscoveredModel {
   id: string
   name?: string
-  limit?: { context: number; output: number }
+  limit?: { context?: number; output?: number }
   vendor?: Record<string, unknown>
 }
 export type Logger = (level: 'info' | 'warn' | 'error' | 'debug', message: string, extra?: unknown) => void

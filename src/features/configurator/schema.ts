@@ -19,6 +19,7 @@ const providerSource = {
     apiKey: nonEmptyString,
     headers: { type: 'object', additionalProperties: { type: 'string' } },
     npm: nonEmptyString,
+    kind: { type: 'string', enum: ['auto', 'openai', 'ollama', 'unsloth', 'lmstudio'], default: 'auto' },
     modelsURL: nonEmptyString,
     fetchModels: { type: 'boolean' },
     staticModels: { type: 'object', additionalProperties: { $ref: '#/$defs/modelOverride' } },

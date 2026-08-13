@@ -3,8 +3,9 @@ import { fetchModels } from './models.js'
 import type { Logger, ProviderSource, ResolvedProvider } from './types.js'
 
 const ID_PATTERN = /^[A-Za-z0-9._-]+$/
+const KINDS = new Set(['auto', 'openai', 'ollama', 'unsloth', 'lmstudio'])
 const USAGE =
-  'Usage: /add-provider <id> <baseURL> [apiKey] [--name "Display Name"] [--context N] [--output N] [--no-fetch]'
+  'Usage: /add-provider <id> <baseURL> [apiKey] [--name "Display Name"] [--kind auto|openai|ollama|unsloth|lmstudio] [--context N] [--output N] [--no-fetch]'
 type ParseResult = { ok: true; source: ProviderSource } | { ok: false; error: string }
 function tokenize(raw: string): string[] {
   const tokens: string[] = []
@@ -47,6 +48,12 @@ export function parseAddProviderArgs(raw: string): ParseResult {
         return { ok: false, error: `${flag} must be a positive integer.` }
       }
       limit[flag.slice(2) as 'context' | 'output'] = value
+    } else if (flag === '--kind') {
+      const kind = tokens[++i]
+      if (!KINDS.has(kind)) {
+        return { ok: false, error: `--kind must be one of: ${[...KINDS].join(', ')}.\n${USAGE}` }
+      }
+      source.kind = kind as ProviderSource['kind']
     } else if (flag === '--no-fetch') {
       source.fetchModels = false
     } else {

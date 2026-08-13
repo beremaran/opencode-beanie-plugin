@@ -30,6 +30,64 @@ export function detectLimit(item: Record<string, unknown>): { context?: number; 
     ...((first(outputKeys) ?? positive(nested.output)) ? { output: first(outputKeys) ?? positive(nested.output) } : {}),
   }
 }
+const FAMILY_CONTEXT: Array<[RegExp, number]> = [
+  [/qwen-agentworld/, 262_144],
+  [/qwen3\.6/, 262_144],
+  [/qwen3\.5/, 262_144],
+  [/qwen3/, 131_072],
+  [/qwen2\.5/, 131_072],
+  [/qwen2\b/, 32_768],
+  [/qwen/, 32_768],
+  [/deepseek/, 131_072],
+  [/llama-?4\b/, 131_072],
+  [/(?:llama[- ]?3)\.(?:[123])(?:\.|$|-)/, 131_072],
+  [/llama-?3\b/, 8_192],
+  [/mistral-(?:large|small|medium)/, 131_072],
+  [/mistral|mixtral|codestral|mathstral|devstral/, 32_768],
+  [/gemma-?3\b/, 131_072],
+  [/gemma/, 8_192],
+  [/phi-?4\b/, 16_384],
+  [/phi-?3\b/, 131_072],
+  [/glm-4\.6/, 200_000],
+  [/glm/, 131_072],
+  [/kimi-k2/, 262_144],
+  [/kimi|moonshot/, 131_072],
+  [/command-r/, 131_072],
+  [/gpt-4\.1/, 131_072],
+  [/gpt-4o/, 131_072],
+  [/gpt-4-turbo/, 131_072],
+  [/gpt-3\.5/, 16_385],
+  [/gpt-4\b/, 8_192],
+  [/claude/, 200_000],
+]
+export function inferContext(id: string): number | undefined {
+  const lower = id.toLowerCase()
+  return FAMILY_CONTEXT.find(([pattern]) => pattern.test(lower))?.[1]
+}
+const OUTPUT_CAP = 32_000
+const CONTEXT_DEFAULT = 128_000
+export function resolveLimit(context?: number, output?: number): { context: number; output: number } | undefined {
+  if (context === undefined && output === undefined) {
+    return undefined
+  }
+  return {
+    context: context ?? CONTEXT_DEFAULT,
+    output: output ?? Math.min(OUTPUT_CAP, Math.floor((context ?? CONTEXT_DEFAULT) / 2)),
+  }
+}
+const entry = (
+  id: string,
+  item: Record<string, unknown>,
+  vendor: Record<string, unknown> | undefined,
+): DiscoveredModel => {
+  const limit = detectLimit(item)
+  return {
+    id,
+    ...(typeof item.name === 'string' ? { name: item.name } : {}),
+    ...(vendor ? { vendor } : {}),
+    ...(limit.context || limit.output ? { limit } : {}),
+  }
+}
 export function parseModelResponse(text: string): DiscoveredModel[] | null {
   let json: unknown
   try {
@@ -37,67 +95,108 @@ export function parseModelResponse(text: string): DiscoveredModel[] | null {
   } catch {
     return null
   }
+  return parseModelJson(json)
+}
+function parseModelJson(json: unknown): DiscoveredModel[] | null {
   if (!isRecord(json)) {
     return null
   }
   const items = Array.isArray(json.data) ? json.data : Array.isArray(json.models) ? json.models : undefined
   if (items) {
     return items
-      .flatMap((x) =>
-        isRecord(x) && typeof x.id === 'string'
-          ? [
-              {
-                id: x.id.trim(),
-                ...(typeof x.name === 'string' ? { name: x.name } : {}),
-                vendor: x,
-                ...(() => {
-                  const l = detectLimit(x)
-                  return l.context && l.output ? { limit: { context: l.context, output: l.output } } : {}
-                })(),
-              },
-            ]
-          : [],
-      )
+      .flatMap((x) => (isRecord(x) && typeof x.id === 'string' ? [entry(x.id.trim(), x, x)] : []))
       .slice(0, MAX)
   }
   return Object.entries(json)
-    .map(([id, x]) => {
-      const item = isRecord(x) ? x : {}
-      const l = detectLimit(item)
-      return {
-        id,
-        vendor: isRecord(x) ? x : undefined,
-        ...(typeof item.name === 'string' ? { name: item.name } : {}),
-        ...(l.context && l.output ? { limit: { context: l.context, output: l.output } } : {}),
-      }
-    })
+    .map(([id, x]) => entry(id, isRecord(x) ? x : {}, isRecord(x) ? x : undefined))
     .slice(0, MAX)
 }
-export async function fetchModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
-  const url = source.modelsURL ?? `${source.baseURL.replace(/\/+$/, '')}/models`
+const apiRoot = (source: ResolvedProvider): string => source.baseURL.replace(/\/+$/, '').replace(/\/v1\/?$/i, '')
+async function getJson(source: ResolvedProvider, url: string, logger: Logger): Promise<unknown | null> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), source.timeoutMs)
   try {
-    const headers = {
-      Accept: 'application/json',
-      ...(source.headers ?? {}),
-      ...(source.apiKey ? { Authorization: `Bearer ${source.apiKey}` } : {}),
-    }
-    const response = await fetch(url, { headers, signal: controller.signal })
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        ...(source.headers ?? {}),
+        ...(source.apiKey ? { Authorization: `Bearer ${source.apiKey}` } : {}),
+      },
+      signal: controller.signal,
+    })
     if (!response.ok) {
       logger('warn', `Model fetch for provider "${source.id}" returned HTTP ${response.status} from "${url}"`)
       return null
     }
-    const models = parseModelResponse(await response.text())
-    if (!models) {
-      logger('warn', `Could not parse model list from "${url}" for provider "${source.id}"`)
-    }
-    return models
+    return await response.json()
   } catch (error) {
     logger('warn', `Failed to fetch models from "${url}" for provider "${source.id}": ${String(error)}`)
     return null
   } finally {
     clearTimeout(timer)
+  }
+}
+async function fetchOpenaiModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
+  const url = source.modelsURL ?? `${source.baseURL.replace(/\/+$/, '')}/models`
+  const models = parseModelJson(await getJson(source, url, logger))
+  if (!models) {
+    logger('warn', `Could not parse model list from "${url}" for provider "${source.id}"`)
+  }
+  return models
+}
+async function fetchOllamaModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
+  const url = `${apiRoot(source)}/api/tags`
+  const json = await getJson(source, url, logger)
+  if (!isRecord(json) || !Array.isArray(json.models)) {
+    return null
+  }
+  const models = json.models
+    .flatMap((x) => (isRecord(x) && typeof x.name === 'string' ? [entry(x.name, x, x)] : []))
+    .slice(0, MAX)
+  return models.length > 0 ? models : null
+}
+const UNSULOTH_ENRICH = 50
+async function fetchUnslothModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
+  const root = apiRoot(source)
+  const listed = await fetchOpenaiModels(source, logger)
+  if (!listed) {
+    return null
+  }
+  const results = await Promise.allSettled(
+    listed.slice(0, UNSULOTH_ENRICH).map(async (model) => {
+      const url = `${root}/api/models/gguf-variants?repo_id=${encodeURIComponent(model.id)}`
+      const json = await getJson(source, url, logger)
+      if (!isRecord(json)) {
+        return model
+      }
+      const context = positive(json.context_length)
+      return context ? { ...model, limit: { ...model.limit, context } } : model
+    }),
+  )
+  return listed.map((model, i) =>
+    results[i]?.status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<DiscoveredModel>).value : model,
+  )
+}
+async function fetchLmStudioModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
+  const url = `${apiRoot(source)}/api/v0/models`
+  const models = parseModelJson(await getJson(source, url, logger))
+  if (!models) {
+    logger('warn', `Could not parse model list from "${url}" for provider "${source.id}"`)
+    return null
+  }
+  const chat = models.filter((model) => model.vendor?.type !== 'embeddings')
+  return chat.length > 0 ? chat : models
+}
+export async function fetchModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
+  switch (source.kind ?? 'auto') {
+    case 'ollama':
+      return fetchOllamaModels(source, logger)
+    case 'unsloth':
+      return fetchUnslothModels(source, logger)
+    case 'lmstudio':
+      return fetchLmStudioModels(source, logger)
+    default:
+      return fetchOpenaiModels(source, logger)
   }
 }
 export function globMatch(pattern: string, value: string): boolean {
@@ -130,13 +229,14 @@ export function buildModelEntries(models: DiscoveredModel[] | null, source: Reso
       const s = staticModels[id]
       const d = discovered.get(id)
       const detected = d?.limit ?? detectLimit(d?.vendor ?? {})
-      const context = detected.context ?? source.defaultLimit?.context
+      const context = detected.context ?? source.defaultLimit?.context ?? inferContext(id)
       const output = detected.output ?? source.defaultLimit?.output
+      const limit = resolveLimit(context, output)
       const base: Record<string, unknown> = {
         temperature: s?.temperature ?? true,
         tool_call: s?.tool_call ?? true,
         ...((s?.name ?? d?.name) && (s?.name ?? d?.name) !== id ? { name: s?.name ?? d?.name } : {}),
-        ...(context && output ? { limit: { context, output } } : {}),
+        ...(limit ? { limit } : {}),
         ...(s?.reasoning === undefined ? {} : { reasoning: s.reasoning }),
         ...(s?.attachment === undefined ? {} : { attachment: s.attachment }),
         ...(s?.options ? { options: s.options } : {}),
@@ -149,7 +249,10 @@ export function buildModelEntries(models: DiscoveredModel[] | null, source: Reso
       return [
         id,
         o
-          ? deep(base, { ...o, ...(overrideLimit?.context && overrideLimit.output ? { limit: overrideLimit } : {}) })
+          ? deep(base, {
+              ...o,
+              ...(overrideLimit ? { limit: resolveLimit(overrideLimit.context, overrideLimit.output) } : {}),
+            })
           : base,
       ]
     }),

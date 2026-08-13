@@ -118,13 +118,32 @@ All options are optional per feature; only `orchestrator.subagentModel` is requi
 | `npm` | `string` | `@ai-sdk/openai-compatible` | npm package used for the provider. |
 | `env` | `boolean` | `true` | Allow `${VAR}` interpolation of apiKey/headers/baseURL from environment variables. |
 
-A provider source entry:
+Per-provider source options (`providers` array entries):
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | — | Provider id (also used as the config key). |
+| `name` | `string` | — | Display name. |
+| `baseURL` | `string` | — | OpenAI-compatible base URL, e.g. `http://localhost:11434/v1`. |
+| `apiKey` | `string` | — | Bearer token (supports `${VAR}` interpolation). |
+| `headers` | `object` | — | Extra headers sent with model fetch requests. |
+| `npm` | `string` | `@ai-sdk/openai-compatible` | npm package used for this provider. |
+| `kind` | `"auto" \| "openai" \| "ollama" \| "unsloth" \| "lmstudio"` | `"auto"` | Server protocol used to discover model limits (see below). |
+| `modelsURL` | `string` | `<baseURL>/models` | Override the model list URL (OpenAI-compatible shape). |
+| `fetchModels` | `boolean` | `true` | Fetch the model list at startup. |
+| `staticModels` | `object` | — | Explicit model entries (name/limit/capabilities) merged with discovered ones. |
+| `overrides` | `object` | — | Per-model overrides, highest precedence. |
+| `include` / `exclude` | `string[]` | — | Glob filters over discovered model ids. |
+| `defaultLimit` | `object` | — | Context/output fallback for models the server/inference doesn't cover. |
+| `env` | `boolean` | `true` | Allow `${VAR}` interpolation for this source. |
+| `timeout` | `integer` | `10000` | Fetch timeout in milliseconds. |
 
 ```json
 {
   "id": "my-ollama",
   "name": "Local Ollama",
   "baseURL": "http://localhost:11434/v1",
+  "kind": "ollama",
   "apiKey": "${OLLAMA_KEY}",
   "headers": { "X-Custom": "value" },
   "fetchModels": true,
@@ -134,6 +153,17 @@ A provider source entry:
   "env": true
 }
 ```
+
+The OpenAI-compatible `/v1/models` spec has no context-window field, so the plugin discovers limits per `kind`:
+
+| `kind` | Model source | Context detection |
+| --- | --- | --- |
+| `openai` / `auto` | `<modelsURL>` or `<baseURL>/models` | Fields embedded in the listing (`context_length`, `max_context_length`, `n_ctx`, `context_window`, `input_token_limit`, …); output via `max_output_tokens`, `max_tokens`, `output_token_limit`, … |
+| `ollama` | `<baseURL>/api/tags` | Ollama's `context_length` field per model |
+| `unsloth` | `<baseURL>/models` + per-model `/api/models/gguf-variants?repo_id=…` | The GGUF's real `context_length` |
+| `lmstudio` | `<baseURL>/api/v0/models` | LM Studio's native `max_context_length` (embedding models are filtered out) |
+
+When neither the server nor `defaultLimit` provides a context window, the plugin falls back to a curated model-family table (Qwen 3.5/3.6 → 256k, Qwen 3 → 128k, DeepSeek → 128k, Llama 3.1+ → 128k, etc.). OpenCode requires both `context` and `output` per model and disables auto-compaction when the context is unknown, so the plugin always writes a complete `limit`: a missing output defaults to half the context (capped at 32000), a missing context to 128000. Precedence: detected API value > `defaultLimit` > name-based inference.
 
 ### Skillbox
 
@@ -203,7 +233,7 @@ Inline config options also accept `searchTopK` (default 20), `cacheToolMetadata`
 | `/goal <condition>` | Set a persistent goal, e.g. `/goal --tokens 100k --max-turns 20 Fix the failing checkout tests`. |
 | `/goal status` | Show the current goal's status, budgets, and latest evaluation. |
 | `/goal pause` / `/goal resume` / `/goal clear` | Pause, resume, or clear the session goal. |
-| `/add-provider <id> <baseURL> [apiKey] [--name "..." --context N --output N --no-fetch]` | Add or update an OpenAI-compatible provider by writing it into the plugin's `providers` option in `opencode.json`. |
+| `/add-provider <id> <baseURL> [apiKey] [--name "..." --kind auto\|openai\|ollama\|unsloth\|lmstudio --context N --output N --no-fetch]` | Add or update an OpenAI-compatible provider by writing it into the plugin's `providers` option in `opencode.json`. |
 | `/providers` | List configured providers with live model counts. |
 
 `/goal` supports `--tokens` (plain integers or `k`/`m` suffixes) and `--max-turns` before the objective.
