@@ -32,7 +32,7 @@ const resolve = (args: { server?: string; tool: string }, registry: ToolRegistry
   return { server: args.server, tool: args.tool }
 }
 const listDescription =
-  'Lists or searches the upstream tools this aggregator can reach. Returns one-line summaries plus per-server status. Each result includes servername__toolname; use get_tool_schema for a full schema and invoke_tool to call a tool.'
+  'Lists or searches the upstream tools this aggregator can reach. Returns one-line summaries plus per-server status; rows are marked [stale] when the counts come from a not-yet-loaded or stale cache. Each result includes servername__toolname; use get_tool_schema for a full schema and invoke_tool to call a tool. Pass refresh=true to force a reconnect and reload of tool metadata; by default servers with no loaded metadata are auto-connected, pass refresh=false to use only already-loaded metadata.'
 const schemaDescription =
   'Returns the full JSON Schema for one upstream tool. Provide server and a bare tool name, or pass servername__toolname as tool.'
 const invokeDescription =
@@ -87,8 +87,12 @@ function formatServers(servers: ReturnType<ToolRegistry['search']>['servers']) {
     if (item.error) {
       error = `  "${item.error}"`
     }
+    let stale = ''
+    if (item.stale) {
+      stale = ' [stale]'
+    }
     lines.push(
-      `  ${item.name.padEnd(SERVER_NAME_PAD)}  ${item.status.padEnd(SERVER_STATUS_PAD)}  ${item.toolCount} tools${error}`,
+      `  ${item.name.padEnd(SERVER_NAME_PAD)}  ${item.status.padEnd(SERVER_STATUS_PAD)}  ${item.toolCount} tools${stale}${error}`,
     )
   }
   return lines
@@ -114,7 +118,9 @@ function createListToolsTool(registry: ToolRegistry, connection: ConnectionManag
       refresh: tool.schema.boolean().optional(),
     },
     async execute(args) {
-      const refresh = args.refresh === true || !config.cacheToolMetadata
+      const autoRefresh =
+        args.refresh === undefined && (!config.cacheToolMetadata || registry.needsRefresh(args.server))
+      const refresh = args.refresh === true || autoRefresh
       if (refresh) {
         await refreshTools(args.server, registry, connection)
       }

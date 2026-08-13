@@ -236,6 +236,8 @@ An MCP server can be stdio or HTTP:
 
 Inline config options also accept `searchTopK` (default 20), `cacheToolMetadata` (default `true`), `processPoolSize` (default 8), `timeoutSeconds` (default 30), and `idleTimeoutMs` (default 300000).
 
+`list_tools` connects servers whose metadata is not loaded yet on the default path (rows marked `[stale]` otherwise), so it reflects reality on a cold session. Pass `refresh: true` to force a reconnect and reload of tool metadata, or `refresh: false` to use only already-loaded metadata.
+
 ### Directives
 
 | Option | Type | Default | Description |
@@ -272,7 +274,7 @@ Inline config options also accept `searchTopK` (default 20), `cacheToolMetadata`
 | `list_skills` | Skillbox | Browse skills from the registry with pagination and views (`all-time`, `trending`, `hot`). |
 | `search_skills` | Skillbox | Keyword search across the registry. |
 | `load_skill` | Skillbox | Load a skill's full `SKILL.md` and optional supporting files, byte-budgeted. |
-| `list_tools` | Toolbox | List or search aggregated MCP tools; qualified names use `servername__toolname`. |
+| `list_tools` | Toolbox | List or search aggregated MCP tools; auto-connects idle servers on the default path (`refresh: true` forces a reload, `refresh: false` uses the cache only). |
 | `get_tool_schema` | Toolbox | Fetch the full JSON Schema for one upstream tool. |
 | `invoke_tool` | Toolbox | Invoke one upstream tool and serialize the result faithfully. |
 | `configure_plugin` | Configurator | `status`/`schema`/`validate`/`apply` the plugin's options in `opencode.json`. |

@@ -55,7 +55,7 @@ const rowFor = (name: string, tool: UpstreamTool, entry: Entry): SearchRow => {
   if (tool.title) {
     row.title = tool.title
   }
-  if (entry.metadataStale) {
+  if (entry.metadataCache === null || entry.metadataStale) {
     row.stale = true
   }
   return row
@@ -198,6 +198,23 @@ export class ToolRegistry {
   evict(server: string) {
     this.upstream.evict(server)
   }
+  needsRefresh(server?: string | null): boolean {
+    let names = this.upstream.enabledNames()
+    if (server) {
+      if (this.upstream.has(server)) {
+        names = [server]
+      } else {
+        names = []
+      }
+    }
+    return names.some((name) => {
+      const entry = this.upstream.get(name)
+      if (!entry) {
+        return false
+      }
+      return entry.metadataCache === null || entry.metadataStale || entry.connState === 'idle'
+    })
+  }
   search(input: { query?: string | null; server?: string | null; limit?: number; refresh: boolean }) {
     let names = this.upstream.enabledNames()
     if (input.server) {
@@ -238,6 +255,7 @@ export class ToolRegistry {
         toolCount: tools.length,
         error: entry.lastError,
         skippedTools: [...entry.skippedTools],
+        stale: entry.metadataCache === null || entry.metadataStale,
       })),
       tools: rows.slice(0, limit),
       total: rows.length,

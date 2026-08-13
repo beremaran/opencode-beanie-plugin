@@ -195,7 +195,12 @@ export const PLUGIN_OPTIONS_SCHEMA = {
           properties: {
             mcpServers: serversMap,
             searchTopK: { type: 'integer', minimum: 1, maximum: 500, default: 20 },
-            cacheToolMetadata: { type: 'boolean', default: true },
+            cacheToolMetadata: {
+              type: 'boolean',
+              default: true,
+              description:
+                'Cache upstream tool metadata between list_tools calls. When true, list_tools auto-connects servers whose metadata is not loaded yet and marks stale rows; pass refresh=true to force a reload or refresh=false to use only the cache.',
+            },
             processPoolSize: { type: 'integer', minimum: 1, maximum: 64, default: 8 },
             timeoutSeconds: { type: 'number', minimum: 1, maximum: 600, default: 30 },
             idleTimeoutMs: { type: 'integer', minimum: 0, maximum: 3_600_000, default: 300_000 },
