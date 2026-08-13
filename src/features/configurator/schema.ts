@@ -15,12 +15,12 @@ const providerSource = {
   properties: {
     id: { type: 'string', pattern: ID_PATTERN },
     name: nonEmptyString,
-    baseURL: { type: 'string', pattern: '^https?://' },
+    baseUrl: { type: 'string', pattern: '^https?://' },
     apiKey: nonEmptyString,
     headers: { type: 'object', additionalProperties: { type: 'string' } },
     npm: nonEmptyString,
     kind: { type: 'string', enum: ['auto', 'openai', 'ollama', 'unsloth', 'lmstudio'], default: 'auto' },
-    modelsURL: nonEmptyString,
+    modelsUrl: nonEmptyString,
     fetchModels: { type: 'boolean' },
     staticModels: { type: 'object', additionalProperties: { $ref: '#/$defs/modelOverride' } },
     overrides: { type: 'object', additionalProperties: { $ref: '#/$defs/modelOverride' } },
@@ -54,7 +54,7 @@ const modelOverride = {
     temperature: { type: 'boolean' },
     reasoning: { type: 'boolean' },
     attachment: { type: 'boolean' },
-    tool_call: { type: 'boolean' },
+    toolCall: { type: 'boolean' },
     modalities: {
       type: 'object',
       additionalProperties: false,

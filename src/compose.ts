@@ -12,22 +12,26 @@ export async function composePlugins(
   const toolOwners = new Map<string, string>()
   const hooks = new Map<string, ComposableHook[]>()
 
-  for (const [featureName, feature] of Object.entries(features)) {
+    for (const [featureName, feature] of Object.entries(features)) {
     let partial: Hooks
     try {
-      partial = await feature(input, (options?.[featureName] ?? {}) as Record<string, unknown>)
+      partial = await feature(input, options[featureName] ?? {}) as Record<string, unknown>
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(`[opencode-beanie-plugin] feature "${featureName}" failed to initialize: ${message}`)
+      const message = error instanceof Error && 'cause' in error ? error.cause.message : String(error)
+      throw new Error(`[opencode-beanie-plugin] feature "${featureName}" failed to initialize: ${message}`, { cause: error })
     }
 
     for (const key of Object.keys(partial)) {
       const value = (partial as unknown as Record<string, unknown>)[key]
-      if (value === undefined) continue
+      if (value === undefined) {
+        continue
+      }
 
       if (key === 'tool') {
         const featureTools = partial.tool
-        if (!featureTools) continue
+        if (!featureTools) {
+          continue
+        }
         for (const toolName of Object.keys(featureTools)) {
           const owner = toolOwners.get(toolName)
           if (owner !== undefined) {
@@ -38,17 +42,15 @@ export async function composePlugins(
           tools[toolName] = featureTools[toolName]
           toolOwners.set(toolName, featureName)
         }
-        continue
       }
 
       if (typeof value === 'function') {
         const featureHooks = hooks.get(key) ?? []
         featureHooks.push(value as unknown as ComposableHook)
         hooks.set(key, featureHooks)
-        continue
+      } else {
+        output[key] = value
       }
-
-      output[key] = value
     }
   }
 
@@ -56,9 +58,8 @@ export async function composePlugins(
 
   for (const [key, featureHooks] of hooks) {
     output[key] = async (...args: unknown[]): Promise<void> => {
-      for (const hook of featureHooks) {
-        await Reflect.apply(hook, undefined, args)
-      }
+      const promises = featureHooks.map((hook) => Reflect.apply(hook, undefined, args))
+      await Promise.all(promises)
     }
   }
 

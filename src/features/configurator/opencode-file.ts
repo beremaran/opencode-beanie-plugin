@@ -2,9 +2,9 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-export const PLUGIN_NAME = '@beremaran/opencode-beanie-plugin'
 const PLUGIN_SEGMENT = 'opencode-beanie-plugin'
-const PLUGIN_QUOTED = `"${PLUGIN_NAME}"`
+const PLUGIN_QUOTED = `"@beremaran/opencode-beanie-plugin"`
+export const PLUGIN_NAME = '@beremaran/opencode-beanie-plugin'
 const isWhitespace = (char: string | undefined): boolean => char !== undefined && /\s/.test(char)
 
 const containsPluginSegment = (value: string): boolean =>
@@ -22,7 +22,11 @@ export function isPluginEntryName(value: unknown): boolean {
 
 const firstIndexOf = (text: string, needles: string[]): number => {
   const indexes = needles.map((needle) => text.indexOf(needle)).filter((index) => index !== -1)
-  return indexes.length > 0 ? Math.min(...indexes) : -1
+  if (indexes.length > 0) {
+    return Math.min(...indexes)
+  } else {
+    return -1
+  }
 }
 
 export function globalConfigPath(): string {
@@ -44,7 +48,11 @@ export function candidateConfigPaths(worktree: string): string[] {
 
 export function readConfigFile(path: string): string | null {
   try {
-    return existsSync(path) ? readFileSync(path, 'utf8') : null
+    if (existsSync(path)) {
+      return readFileSync(path, 'utf8')
+    } else {
+      return null
+    }
   } catch {
     return null
   }
@@ -60,12 +68,14 @@ export function writeConfigFile(path: string, text: string): void {
 export type ConfigScope = 'auto' | 'project' | 'global'
 
 export function resolveTargetPath(worktree: string, scope: ConfigScope = 'auto'): string {
-  const candidates =
-    scope === 'global'
-      ? [globalConfigPath()]
-      : scope === 'project'
-        ? projectConfigPaths(worktree)
-        : candidateConfigPaths(worktree)
+  const candidates: string[] = []
+  if (scope === 'global') {
+    candidates.push(globalConfigPath())
+  } else if (scope === 'project') {
+    candidates.push(...projectConfigPaths(worktree))
+  } else {
+    candidates.push(...candidateConfigPaths(worktree))
+  }
   for (const path of candidates) {
     const text = readConfigFile(path)
     if (text !== null && findPluginEntrySpan(text) !== null) {

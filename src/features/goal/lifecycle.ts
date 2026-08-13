@@ -1,16 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { GoalState } from './types.js'
 
-export interface CreateGoalInput {
-  sessionId: string
-  directory: string
-  objective: string
-  tokenBudget?: number
-  maxTurns?: number
-  now?: number
-  goalId?: string
-}
-
 function createGoalState(input: CreateGoalInput): GoalState {
   const now = input.now ?? Date.now()
   const state: GoalState = {
@@ -25,10 +15,23 @@ function createGoalState(input: CreateGoalInput): GoalState {
     turns: 0,
     tokensUsed: 0,
   }
-  if (input.tokenBudget) {
+  const now = input.now ?? Date.now()
+  const state: GoalState = {
+    version: 1,
+    goalId: input.goalId ?? randomUUID(),
+    sessionId: input.sessionId,
+    directory: input.directory,
+    objective: input.objective.trim(),
+    status: 'active',
+    createdAt: now,
+    updatedAt: now,
+    turns: 0,
+    tokensUsed: 0,
+  }
+  if (input.tokenBudget !== undefined) {
     state.tokenBudget = input.tokenBudget
   }
-  if (input.maxTurns) {
+  if (input.maxTurns !== undefined) {
     state.maxTurns = input.maxTurns
   }
   return state
@@ -44,6 +47,50 @@ function remainingTokens(goal: GoalState): number | undefined {
 const MILLISECONDS_PER_SECOND = 1000
 const SECONDS_PER_HOUR = 3600
 const SECONDS_PER_MINUTE = 60
+
+export function formatDuration(milliseconds: number): string {
+  const seconds = Math.max(Math.floor(milliseconds / MILLISECONDS_PER_SECOND), 0)
+  const hours = Math.floor(seconds / SECONDS_PER_HOUR)
+  const minutes = Math.floor((seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE)
+  const rest = seconds % SECONDS_PER_MINUTE
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${rest}s`
+  }
+  return `${rest}s`
+}
+
+export function goalSummary(goal: GoalState, now = Date.now()): string {
+  let budgetStr: string
+  if (goal.tokenBudget === undefined) {
+    budgetStr = `${goal.tokensUsed.toLocaleString()} tokens`
+  } else {
+    budgetStr = `${goal.tokensUsed.toLocaleString()} / ${goal.tokenBudget.toLocaleString()} tokens`
+  }
+  let turnsStr: string
+  if (goal.maxTurns === undefined) {
+    turnsStr = `${goal.turns} turns`
+  } else {
+    turnsStr = `${goal.turns} / ${goal.maxTurns} turns`
+  }
+  const budget = budgetStr
+  const turns = turnsStr
+  let reason: string
+  if (goal.lastReason) {
+    reason = `\nLast evaluation: ${goal.lastReason}`
+  } else {
+    reason = ''
+  }
+  return (
+    [
+      `Goal status: ${goal.status}`,
+      `Objective: ${goal.objective}`,
+      `Progress: ${turns}; ${budget}; ${formatDuration(now - goal.createdAt)} elapsed`,
+    ].join('\n') + reason
+  )
+}
 
 export function formatDuration(milliseconds: number): string {
   const seconds = Math.max(Math.floor(milliseconds / MILLISECONDS_PER_SECOND), 0)

@@ -24,7 +24,7 @@ declare module 'node:fs/promises' {
 
 declare const process: { env: Record<string, string | undefined> }
 
-declare namespace NodeJS {
+declare namespace nodejs {
   interface ErrnoException extends Error {
     code?: string
   }

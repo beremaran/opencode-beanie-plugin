@@ -1,6 +1,7 @@
 import type { Plugin } from '@opencode-ai/plugin'
 
 const SERVICE = 'opencode-beanie-plugin'
+
 export const MECHANISMS = [
   'goal',
   'orchestrator',
@@ -48,13 +49,23 @@ interface Resolved {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
-const booleanOption = (value: unknown, fallback: boolean): boolean => (typeof value === 'boolean' ? value : fallback)
-const stringList = (value: unknown): string[] =>
-  Array.isArray(value)
-    ? value
-        .filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
-        .map((entry) => entry.trim())
-    : []
+const booleanOption = (value: unknown, fallback: boolean): boolean => {
+  if (typeof value === 'boolean') {
+    return value
+  } else {
+    return fallback
+  }
+}
+
+const stringList = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
+      .map((entry) => entry.trim())
+  } else {
+    return []
+  }
+}
 const stringMap = (value: unknown): Record<string, string> => {
   const result: Record<string, string> = {}
   if (!isRecord(value)) {
@@ -80,7 +91,7 @@ export const resolveOptions = (raw: Record<string, unknown> | undefined): Resolv
   }
 }
 const mechanismNotes = (options: Resolved): string[] => {
-  const keys = options.mechanisms.length > 0 ? options.mechanisms : [...MECHANISMS]
+  const keys = options.mechanisms.length > 0 ? options.mechanisms : [...MECHANISMS] // eslint-disable-line biome/no-unsafe-ternary
   return keys.map((key) => DEFAULT_MECHANISM_NOTES[key])
 }
 const systemDirective = (options: Resolved): string => `# Plugin capabilities (${SERVICE})
@@ -102,7 +113,11 @@ const toolGuidance = (options: Resolved, toolId: string): string | undefined => 
   if (options.tools[toolId]) {
     parts.push(options.tools[toolId])
   }
-  return parts.length > 0 ? parts.join(' ') : undefined
+  if (parts.length > 0) {
+    return parts.join(' ')
+  } else {
+    return undefined
+  }
 }
 
 const Directives: Plugin = async ({ client }, rawOptions) => {
@@ -129,9 +144,11 @@ const Directives: Plugin = async ({ client }, rawOptions) => {
     'tool.definition': async ({ toolID }, output) => {
       const guidance = toolGuidance(options, toolID)
       if (guidance) {
-        output.description = output.description
-          ? `${output.description}\n\n[${SERVICE}] ${guidance}`
-          : `[${SERVICE}] ${guidance}`
+        if (output.description !== undefined) {
+          output.description = `${output.description}\n\n[${SERVICE}] ${guidance}`
+        } else {
+          output.description = `[${SERVICE}] ${guidance}`
+        }
       }
     },
     'experimental.chat.system.transform': async (_input, output) => {
