@@ -1,9 +1,8 @@
 import { goalSummary } from './lifecycle.js'
 import type { GoalState } from './types.js'
 
-export const activeGoalContext = (goal: GoalState): string => {
-  return `<active-goal>\n<objective>${escapeXmlText(goal.objective)}</objective>\n<progress>${budgetContext(goal)}</progress>\n</active-goal>\n\nKeep working toward this objective while it is active. Do not claim completion without concrete evidence. Use update_goal with status "complete" when the objective is genuinely achieved, or "blocked" only after the same external blocker has recurred for at least three goal turns.`
-}
+export const activeGoalContext = (goal: GoalState): string =>
+  `<active-goal>\n<objective>${escapeXmlText(goal.objective)}</objective>\n<progress>${budgetContext(goal)}</progress>\n</active-goal>\n\nKeep working toward this objective while it is active. Do not claim completion without concrete evidence. Use update_goal with status "complete" when the objective is genuinely achieved, or "blocked" only after the same external blocker has recurred for at least three goal turns.`
 
 export function startingPrompt(goal: GoalState): string {
   return `<goal>\n<objective>${escapeXmlText(goal.objective)}</objective>\n<progress>${budgetContext(goal)}</progress>\n</goal>\n\nWork toward this completion condition now. Continue making concrete progress until it is genuinely satisfied. Verify the result with the strongest practical evidence available, and surface that evidence in your response so an independent evaluator can judge it.\n\nDo not stop merely because the work is difficult, lengthy, or would benefit from another turn. If you believe the objective is complete, call update_goal with status "complete" and a concise evidence-based reason before ending your turn. Mark it "blocked" only after the same external blocker has prevented progress for at least three goal turns.`

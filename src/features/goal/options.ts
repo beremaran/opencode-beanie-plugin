@@ -31,7 +31,10 @@ function optionalString(value: unknown): string | undefined {
 export function resolveOptions(raw: Record<string, unknown> | undefined): ResolvedGoalPluginOptions {
   const input = (raw ?? {}) as GoalPluginOptions
   const resolved: ResolvedGoalPluginOptions = {
-    maxTranscriptChars: Math.max(positiveInteger(input.maxTranscriptChars) ?? DEFAULT_MAX_TRANSCRIPT_CHARS, MIN_TRANSCRIPT_CHARS),
+    maxTranscriptChars: Math.max(
+      positiveInteger(input.maxTranscriptChars) ?? DEFAULT_MAX_TRANSCRIPT_CHARS,
+      MIN_TRANSCRIPT_CHARS,
+    ),
     continuationDelayMs: nonNegativeInteger(input.continuationDelayMs) ?? 0,
     deleteEvaluatorSessions: input.deleteEvaluatorSessions !== false,
   }
@@ -150,7 +153,7 @@ export function parseGoalCommand(rawArguments: string, defaults: SetDefaults): G
       rest = rest.slice(turnsMatch.index!).trim()
     }
 
-    if (!tokenMatch && !turnsMatch) {
+    if (!(tokenMatch || turnsMatch)) {
       const firstToken = rest.split(spaceSplit, 1)[0] ?? rest
       return { action: 'invalid', message: `Unknown goal option: ${firstToken}` }
     }

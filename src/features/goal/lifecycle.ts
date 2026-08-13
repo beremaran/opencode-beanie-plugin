@@ -80,11 +80,13 @@ export function goalSummary(goal: GoalState, now = Date.now()): string {
   } else {
     reason = ''
   }
-  return [
-    `Goal status: ${goal.status}`,
-    `Objective: ${goal.objective}`,
-    `Progress: ${turns}; ${budget}; ${formatDuration(now - goal.createdAt)} elapsed`,
-  ].join('\n') + reason
+  return (
+    [
+      `Goal status: ${goal.status}`,
+      `Objective: ${goal.objective}`,
+      `Progress: ${turns}; ${budget}; ${formatDuration(now - goal.createdAt)} elapsed`,
+    ].join('\n') + reason
+  )
 }
 
 export { createGoalState, remainingTokens }

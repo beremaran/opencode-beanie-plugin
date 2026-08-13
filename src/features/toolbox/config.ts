@@ -212,11 +212,11 @@ export function loadConfig(options: {
     raw = { mcpServers: options.servers }
   } else if (plain(options.config)) {
     raw = options.config
-  } else if (options.config !== undefined) {
-    fail('config', 'config must be an inline object with mcpServers; external JSON config files are not supported')
-  } else {
+  } else if (options.config === undefined) {
     options.logger.info('toolbox disabled: no inline mcpServers configured')
     return null
+  } else {
+    fail('config', 'config must be an inline object with mcpServers; external JSON config files are not supported')
   }
   const result = normalize(substituteEnv(raw, env))
   if (!Object.values(result.mcpServers).some((server) => !server.disabled)) {

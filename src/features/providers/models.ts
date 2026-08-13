@@ -70,11 +70,11 @@ const FAMILY_CONTEXT: Array<[RegExp, number]> = [
   [/deepseek/, 131_072],
   [/llama-?4\b/, 131_072],
   [/(?:llama[- ]?3)\.(?:[123])(?:\.|$|-)/, 131_072],
-  [/llama-?3\b/, 8_192],
+  [/llama-?3\b/, 8192],
   [/mistral-(?:large|small|medium)/, 131_072],
   [/mistral|mixtral|codestral|mathstral|devstral/, 32_768],
   [/gemma-?3\b/, 131_072],
-  [/gemma/, 8_192],
+  [/gemma/, 8192],
   [/phi-?4\b/, 16_384],
   [/phi-?3\b/, 131_072],
   [/glm-4\.6/, 200_000],
@@ -86,7 +86,7 @@ const FAMILY_CONTEXT: Array<[RegExp, number]> = [
   [/gpt-4o/, 131_072],
   [/gpt-4-turbo/, 131_072],
   [/gpt-3\.5/, 16_385],
-  [/gpt-4\b/, 8_192],
+  [/gpt-4\b/, 8192],
   [/claude/, 200_000],
 ]
 export function inferContext(id: string): number | undefined {
@@ -180,7 +180,7 @@ async function fetchOpenaiModels(source: ResolvedProvider, logger: Logger): Prom
 async function fetchOllamaModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
   const url = `${apiRoot(source)}/api/tags`
   const json = await getJson(source, url, logger)
-  if (!isRecord(json) || !Array.isArray(json.models)) {
+  if (!(isRecord(json) && Array.isArray(json.models))) {
     return null
   }
   const models = json.models
@@ -204,7 +204,7 @@ async function fetchUnslothModels(source: ResolvedProvider, logger: Logger): Pro
       }
       const context = positive(json.context_length)
       const vision = json.has_vision === true
-      if (!context && !vision) {
+      if (!(context || vision)) {
         return model
       }
       return {
