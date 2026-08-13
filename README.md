@@ -259,7 +259,13 @@ Releases are published to npm automatically by the [Publish to npm](.github/work
 2. Commit the change and push it to `main`.
 3. Tag the release with the same version, e.g. `git tag v0.2.0 && git push origin v0.2.0`.
 
-The workflow type-checks, builds, verifies the tag matches the `package.json` version, then runs `npm publish --provenance --access public`. It needs an `NPM_TOKEN` secret in the repository settings with publish rights for the `@beremaran/opencode-beanie-plugin` scope. It can also be triggered manually from the Actions tab.
+The workflow type-checks, builds, verifies the tag matches the `package.json` version, then runs `npm publish --provenance --access public` using npm's trusted publishing (OIDC), so no token secret is needed. Set it up once in your npm account:
+
+1. Go to [npmjs.com](https://www.npmjs.com) → *Account Settings* → *Access Tokens* → *Add Publisher* (or under the package's *Access* tab).
+2. Enter the GitHub repo (`beremaran/opencode-beanie-plugin`) and the environment name `npm-publish` (this must match the `environment` in the workflow).
+3. Create the `npm-publish` environment in GitHub: *Settings* → *Environments*, optionally with a protection rule so publishing is gated.
+
+The workflow can also be triggered manually from the Actions tab.
 
 ## License
 
