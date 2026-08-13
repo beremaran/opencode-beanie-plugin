@@ -1,6 +1,6 @@
 {
   "name": "@beremaran/opencode-beanie-plugin",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Combined OpenCode plugin: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-configuration, MCP tool aggregation, and skill discovery.",
   "license": "MIT",
   "author": "Berke Arslan <berke@beremaran.com>",
@@ -42,6 +42,10 @@
     "./server": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./tui": {
+      "types": "./dist/tui.d.ts",
+      "import": "./dist/tui.js"
     }
   },
   "files": [
@@ -61,7 +65,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.0.0",
-    "@opencode-ai/plugin": "latest"
+    "@opencode-ai/plugin": "1.18.16",
+    "@opentui/solid": "0.4.5",
+    "solid-js": "1.9.12"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.8",

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-13
+
+### Added
+
+- Optional TUI companion at `@beremaran/opencode-beanie-plugin/tui`, registered separately in `tui.json`. Adds the Beanie dashboard route, palette commands and `<leader>d` shortcut, session status strip, confirmed goal controls, and attention notifications for unhealthy MCP/LSP services, session errors, and completed child sessions. Goal state is not shown live without a public OpenCode bridge; use `/goal status` instead.
+
 ## [0.1.5] - 2026-08-13
 
 ### Changed

@@ -1,6 +1,6 @@
 # opencode-beanie-plugin
 
-A batteries-included plugin for [OpenCode](https://opencode.ai) that merges eight productivity features into a single package: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-configuration, MCP tool aggregation, skill discovery, tool-usage directives, and self-configuration.
+A batteries-included plugin for [OpenCode](https://opencode.ai) that merges eight productivity features into a single package: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-configuration, MCP tool aggregation, skill discovery, tool-usage directives, and self-configuration. It also includes an optional TUI companion.
 
 This plugin consolidates six previously separate projects — [mcp-skillbox](https://github.com/beremaran/mcp-skillbox), [agent-toolbox](https://github.com/beremaran/agent-toolbox), [opencode-subagent-throttle](https://github.com/beremaran/opencode-subagent-throttle), [opencode-agent-tree](https://github.com/beremaran/opencode-agent-tree), [opencode-openai-compatible-auto-configure](https://github.com/beremaran/opencode-openai-compatible-auto-configure), and [opencode-goal](https://github.com/beremaran/opencode-goal) — into one composable, configurable plugin.
 
@@ -16,6 +16,7 @@ This plugin consolidates six previously separate projects — [mcp-skillbox](htt
 | **Skillbox** | Discovers agent skills from the skills.sh API or public GitHub repositories and exposes `list_skills`, `search_skills`, and `load_skill`. |
 | **Directives** | Injects system-prompt guidance about the plugin's own tools and mechanisms, and appends "when to use" notes to their descriptions. |
 | **Configurator** | Self-configuration: `/beanie status\|validate\|apply\|init` plus the `configure_plugin` tool inspect, validate, and write the plugin's options directly into `opencode.json`. |
+| **TUI companion** | Adds a Beanie dashboard route, command-palette actions (`/beanie-dashboard` and `/beanie-dashboard-refresh`), a `<leader>d` shortcut, a session status strip, goal controls with confirmation before clearing, and attention notifications for unhealthy MCP/LSP services, session errors, and completed child sessions. |
 
 ## Requirements
 
@@ -33,12 +34,32 @@ Build and register the plugin in your project's `opencode.json`:
 }
 ```
 
-When developing locally, reference the built output directly:
+The server plugin and TUI companion are registered separately. The current OpenCode TUI configuration uses a separate `tui.json` (or `tui.jsonc`) file with the same top-level `plugin` key; do not add a `tui.plugin` key to `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": ["@beremaran/opencode-beanie-plugin/tui"]
+}
+```
+
+When developing locally, register both built exports separately:
+
+`opencode.json`:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": ["file:/path/to/opencode-beanie-plugin/dist/index.js"]
+}
+```
+
+`tui.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": ["file:/path/to/opencode-beanie-plugin/dist/tui.js"]
 }
 ```
 
@@ -65,6 +86,8 @@ The only option that is strictly required is the orchestrator's subagent model. 
 Configuration is read from the plugin tuple's options object. Feature names are **camelCase** (matching the schema); the JSON schema itself uses kebab-case for property names like `per_page`.
 
 > Restart OpenCode after changing plugin options for changes to take effect.
+
+Restart OpenCode after changing either plugin registration or options. TUI plugin changes are loaded when the TUI starts; close and reopen the TUI to reload them. The companion reads server state through the public TUI APIs, so the current goal is not shown live in the dashboard or status strip when OpenCode does not expose a public goal-state bridge; use `/goal status` for the authoritative goal state.
 
 ## Configuration reference
 
@@ -276,7 +299,7 @@ npm run build   # tsc emitting to dist/ (required before loading the plugin)
 - Relative imports must use explicit `.js` extensions (NodeNext).
 - There is no `@types/node`; each feature ships a hand-written `node-shims.d.ts` for the Node APIs it uses. Extend the local shim if more APIs are needed — do not add `@types/node`.
 - To add a feature, create `src/features/<name>/index.ts` exporting a `Plugin`, and register it in the `features` record in `src/index.ts` (feature options are read from `options.<featureName>`).
-- `@opencode-ai/plugin` is pinned to `latest` and its API surface can drift; reconcile features when hooks/types change upstream.
+- `@opencode-ai/plugin` is pinned to `1.18.16`; reconcile features when hooks/types change upstream.
 
 ## Contributing
 
@@ -296,7 +319,7 @@ The workflow type-checks, builds, verifies the tag matches the `package.json` ve
 2. Enter the GitHub repo (`beremaran/opencode-beanie-plugin`) and the environment name `npm-publish` (this must match the `environment` in the workflow).
 3. Create the `npm-publish` environment in GitHub: *Settings* → *Environments*, optionally with a protection rule so publishing is gated.
 
-The workflow can also be triggered manually from the Actions tab.
+The workflow must be run from a matching release tag; manually dispatching it from a branch fails tag verification.
 
 ## License
 
