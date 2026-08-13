@@ -165,6 +165,8 @@ The OpenAI-compatible `/v1/models` spec has no context-window field, so the plug
 
 When neither the server nor `defaultLimit` provides a context window, the plugin falls back to a curated model-family table (Qwen 3.5/3.6 → 256k, Qwen 3 → 128k, DeepSeek → 128k, Llama 3.1+ → 128k, etc.). OpenCode requires both `context` and `output` per model and disables auto-compaction when the context is unknown, so the plugin always writes a complete `limit`: a missing output defaults to half the context (capped at 32000), a missing context to 128000. Precedence: detected API value > `defaultLimit` > name-based inference.
 
+Vision-capable models are marked automatically so OpenCode accepts image attachments: `attachment: true` plus `modalities: { "input": ["text", "image"] }` (this is what actually enables sending images). Sources: Unsloth's `has_vision`, LM Studio's `type: "vlm"`, Ollama's `capabilities`, or embedded `has_vision`/`modalities`/`input_modalities` fields. Set `attachment: false` in `overrides` to force a text-only model, or `modalities` to fine-tune input support.
+
 ### Skillbox
 
 | Option | Type | Default | Description |

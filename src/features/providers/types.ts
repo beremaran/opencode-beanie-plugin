@@ -6,6 +6,7 @@ export interface ModelOverride {
   reasoning?: boolean
   attachment?: boolean
   tool_call?: boolean
+  modalities?: { input?: string[]; output?: string[] }
   options?: Record<string, unknown>
   headers?: Record<string, string>
 }
@@ -45,6 +46,7 @@ export interface DiscoveredModel {
   id: string
   name?: string
   limit?: { context?: number; output?: number }
+  attachment?: boolean
   vendor?: Record<string, unknown>
 }
 export type Logger = (level: 'info' | 'warn' | 'error' | 'debug', message: string, extra?: unknown) => void

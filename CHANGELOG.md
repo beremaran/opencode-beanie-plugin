@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Providers: new `kind` option (`auto` | `openai` | `ollama` | `unsloth` | `lmstudio`) selects how model context windows are discovered. `unsloth` reads the real GGUF `context_length` from Unsloth Studio's `/api/models/gguf-variants` per model; `ollama` reads `/api/tags`; `lmstudio` reads LM Studio's native `/api/v0/models` (`max_context_length`, embedding models filtered out). This covers the common self-hosted servers whose OpenAI-compatible `/v1/models` listings expose no context at all.
 - Providers: name-based context inference as a last-resort fallback for servers that report nothing (curated family table: Qwen, DeepSeek, Llama, Mistral, GLM, Kimi, Claude, GPT, …). Precedence is detected API value > `defaultLimit` > name inference.
+- Providers: vision-capable models are auto-marked so OpenCode accepts image attachments — `attachment: true` plus `modalities: { input: ["text", "image"] }` (the field that actually gates image sending). Detected from Unsloth's `has_vision`, LM Studio's `type: "vlm"`, Ollama's `capabilities`, or embedded `has_vision`/`modalities`/`input_modalities`. `overrides` can set `attachment`/`modalities` to override. `modelOverride` options gain a `modalities` field.
 
 ### Fixed
 

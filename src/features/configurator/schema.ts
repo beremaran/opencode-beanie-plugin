@@ -55,6 +55,14 @@ const modelOverride = {
     reasoning: { type: 'boolean' },
     attachment: { type: 'boolean' },
     tool_call: { type: 'boolean' },
+    modalities: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        input: { type: 'array', items: { type: 'string', enum: ['text', 'audio', 'image', 'video', 'pdf'] } },
+        output: { type: 'array', items: { type: 'string', enum: ['text', 'audio', 'image', 'video', 'pdf'] } },
+      },
+    },
     options: { type: 'object' },
     headers: { type: 'object', additionalProperties: { type: 'string' } },
   },

@@ -30,6 +30,35 @@ export function detectLimit(item: Record<string, unknown>): { context?: number; 
     ...((first(outputKeys) ?? positive(nested.output)) ? { output: first(outputKeys) ?? positive(nested.output) } : {}),
   }
 }
+const VISION_MARKERS = ['vision', 'image', 'image_input', 'vision_input', 'multimodal']
+export function detectVision(item: Record<string, unknown>): boolean | undefined {
+  if (typeof item.has_vision === 'boolean') {
+    return item.has_vision
+  }
+  if (typeof item.vision === 'boolean') {
+    return item.vision
+  }
+  if (typeof item.multimodal === 'boolean') {
+    return item.multimodal
+  }
+  if (item.type === 'vlm') {
+    return true
+  }
+  if (
+    Array.isArray(item.capabilities) &&
+    item.capabilities.some((c) => typeof c === 'string' && VISION_MARKERS.includes(c.toLowerCase()))
+  ) {
+    return true
+  }
+  const modalities = isRecord(item.modalities) ? item.modalities : {}
+  if (Array.isArray(modalities.input) && modalities.input.some((m) => m === 'image')) {
+    return true
+  }
+  if (Array.isArray(item.input_modalities) && item.input_modalities.some((m) => m === 'image')) {
+    return true
+  }
+  return undefined
+}
 const FAMILY_CONTEXT: Array<[RegExp, number]> = [
   [/qwen-agentworld/, 262_144],
   [/qwen3\.6/, 262_144],
@@ -86,6 +115,7 @@ const entry = (
     ...(typeof item.name === 'string' ? { name: item.name } : {}),
     ...(vendor ? { vendor } : {}),
     ...(limit.context || limit.output ? { limit } : {}),
+    ...(detectVision(item) ? { attachment: true } : {}),
   }
 }
 export function parseModelResponse(text: string): DiscoveredModel[] | null {
@@ -111,7 +141,10 @@ function parseModelJson(json: unknown): DiscoveredModel[] | null {
     .map(([id, x]) => entry(id, isRecord(x) ? x : {}, isRecord(x) ? x : undefined))
     .slice(0, MAX)
 }
-const apiRoot = (source: ResolvedProvider): string => source.baseURL.replace(/\/+$/, '').replace(/\/v1\/?$/i, '')
+const TRAILING_SLASH = /\/+$/
+const TRAILING_V1 = /\/v1\/?$/i
+const apiRoot = (source: ResolvedProvider): string =>
+  source.baseURL.replace(TRAILING_SLASH, '').replace(TRAILING_V1, '')
 async function getJson(source: ResolvedProvider, url: string, logger: Logger): Promise<unknown | null> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), source.timeoutMs)
@@ -137,7 +170,7 @@ async function getJson(source: ResolvedProvider, url: string, logger: Logger): P
   }
 }
 async function fetchOpenaiModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
-  const url = source.modelsURL ?? `${source.baseURL.replace(/\/+$/, '')}/models`
+  const url = source.modelsURL ?? `${source.baseURL.replace(TRAILING_SLASH, '')}/models`
   const models = parseModelJson(await getJson(source, url, logger))
   if (!models) {
     logger('warn', `Could not parse model list from "${url}" for provider "${source.id}"`)
@@ -170,7 +203,15 @@ async function fetchUnslothModels(source: ResolvedProvider, logger: Logger): Pro
         return model
       }
       const context = positive(json.context_length)
-      return context ? { ...model, limit: { ...model.limit, context } } : model
+      const vision = json.has_vision === true
+      if (!context && !vision) {
+        return model
+      }
+      return {
+        ...model,
+        ...(context ? { limit: { ...model.limit, context } } : {}),
+        ...(vision ? { attachment: true } : {}),
+      }
     }),
   )
   return listed.map((model, i) =>
@@ -187,7 +228,7 @@ async function fetchLmStudioModels(source: ResolvedProvider, logger: Logger): Pr
   const chat = models.filter((model) => model.vendor?.type !== 'embeddings')
   return chat.length > 0 ? chat : models
 }
-export async function fetchModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
+export function fetchModels(source: ResolvedProvider, logger: Logger): Promise<DiscoveredModel[] | null> {
   switch (source.kind ?? 'auto') {
     case 'ollama':
       return fetchOllamaModels(source, logger)
@@ -232,20 +273,23 @@ export function buildModelEntries(models: DiscoveredModel[] | null, source: Reso
       const context = detected.context ?? source.defaultLimit?.context ?? inferContext(id)
       const output = detected.output ?? source.defaultLimit?.output
       const limit = resolveLimit(context, output)
+      const o = source.overrides?.[id]
+      const attachment = o?.attachment ?? s?.attachment ?? d?.attachment
+      const overrideLimit = o?.limit
+        ? { context: o.limit.context ?? context, output: o.limit.output ?? output }
+        : undefined
       const base: Record<string, unknown> = {
         temperature: s?.temperature ?? true,
         tool_call: s?.tool_call ?? true,
         ...((s?.name ?? d?.name) && (s?.name ?? d?.name) !== id ? { name: s?.name ?? d?.name } : {}),
         ...(limit ? { limit } : {}),
+        ...(attachment === undefined ? {} : { attachment }),
+        ...(attachment === true ? { modalities: { input: ['text', 'image'] } } : {}),
+        ...(s?.modalities ? { modalities: s.modalities } : {}),
         ...(s?.reasoning === undefined ? {} : { reasoning: s.reasoning }),
-        ...(s?.attachment === undefined ? {} : { attachment: s.attachment }),
         ...(s?.options ? { options: s.options } : {}),
         ...(s?.headers ? { headers: s.headers } : {}),
       }
-      const o = source.overrides?.[id]
-      const overrideLimit = o?.limit
-        ? { context: o.limit.context ?? context, output: o.limit.output ?? output }
-        : undefined
       return [
         id,
         o
