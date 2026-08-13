@@ -29,7 +29,7 @@ Build and register the plugin in your project's `opencode.json`:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-beanie-plugin"]
+  "plugin": ["@beremaran/opencode-beanie-plugin"]
 }
 ```
 
@@ -51,7 +51,7 @@ The only option that is strictly required is the orchestrator's subagent model. 
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
     [
-      "opencode-beanie-plugin",
+      "@beremaran/opencode-beanie-plugin",
       {
         "orchestrator": { "subagentModel": "anthropic/claude-sonnet-4-6" },
         "throttle": { "maxParallel": 3 },
@@ -250,6 +250,16 @@ npm run build   # tsc emitting to dist/ (required before loading the plugin)
 ## Contributing
 
 Bug reports, feature ideas, and pull requests are welcome. Please open an issue first for non-trivial changes so the direction is agreed before the work begins. Ensure `npm run check` and `npm run lint` pass on your changes.
+
+## Releasing
+
+Releases are published to npm automatically by the [Publish to npm](.github/workflows/publish.yml) GitHub Actions workflow:
+
+1. Bump the `version` in `package.json` (keep [SemVer](https://semver.org) and add a matching entry to `CHANGELOG.md`).
+2. Commit the change and push it to `main`.
+3. Tag the release with the same version, e.g. `git tag v0.2.0 && git push origin v0.2.0`.
+
+The workflow type-checks, builds, verifies the tag matches the `package.json` version, then runs `npm publish --provenance --access public`. It needs an `NPM_TOKEN` secret in the repository settings with publish rights for the `@beremaran/opencode-beanie-plugin` scope. It can also be triggered manually from the Actions tab.
 
 ## License
 

@@ -97,9 +97,9 @@ const serversMap = { type: 'object', additionalProperties: serverConfig }
 export const PLUGIN_OPTIONS_SCHEMA = {
   $id: 'https://opencode.ai/plugins/opencode-beanie-plugin.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
-  title: 'opencode-beanie-plugin options',
+  title: '@beremaran/opencode-beanie-plugin options',
   description:
-    'Options for the opencode-beanie-plugin. Set them on the plugin tuple in opencode.json: ["opencode-beanie-plugin", { ... }]. Feature names are camelCase.',
+    'Options for @beremaran/opencode-beanie-plugin. Set them on the plugin tuple in opencode.json: ["@beremaran/opencode-beanie-plugin", { ... }]. Feature names are camelCase.',
   type: 'object',
   additionalProperties: false,
   properties: {

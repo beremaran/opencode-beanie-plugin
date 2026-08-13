@@ -1,5 +1,5 @@
 {
-  "name": "opencode-beanie-plugin",
+  "name": "@beremaran/opencode-beanie-plugin",
   "version": "0.1.0",
   "description": "Combined OpenCode plugin: agent orchestration, subagent throttling, persistent goals, OpenAI-compatible provider auto-configuration, MCP tool aggregation, and skill discovery.",
   "license": "MIT",
@@ -27,6 +27,10 @@
   "engines": {
     "node": ">=18"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -35,7 +39,10 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",

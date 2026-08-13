@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-export const PLUGIN_NAME = 'opencode-beanie-plugin'
+export const PLUGIN_NAME = '@beremaran/opencode-beanie-plugin'
+const PLUGIN_SEGMENT = 'opencode-beanie-plugin'
 const PLUGIN_QUOTED = `"${PLUGIN_NAME}"`
 const isWhitespace = (char: string | undefined): boolean => char !== undefined && /\s/.test(char)
 
@@ -10,13 +11,18 @@ const containsPluginSegment = (value: string): boolean =>
   value
     .replace(/[/\\]+$/, '')
     .split(/[/\\]/)
-    .includes(PLUGIN_NAME)
+    .includes(PLUGIN_SEGMENT)
 
 export function isPluginEntryName(value: unknown): boolean {
   if (typeof value !== 'string') {
     return false
   }
-  return value === PLUGIN_NAME || containsPluginSegment(value)
+  return value === PLUGIN_NAME || value === PLUGIN_SEGMENT || containsPluginSegment(value)
+}
+
+const firstIndexOf = (text: string, needles: string[]): number => {
+  const indexes = needles.map((needle) => text.indexOf(needle)).filter((index) => index !== -1)
+  return indexes.length > 0 ? Math.min(...indexes) : -1
 }
 
 export function globalConfigPath(): string {
@@ -111,7 +117,7 @@ function findMatching(text: string, open: number, openChar: string, closeChar: s
 }
 
 export function findPluginNameSpan(text: string): [number, number] | null {
-  const nameIndex = text.indexOf(PLUGIN_NAME)
+  const nameIndex = firstIndexOf(text, [PLUGIN_NAME, PLUGIN_SEGMENT])
   if (nameIndex === -1) {
     return null
   }
