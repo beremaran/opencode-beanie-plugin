@@ -1,5 +1,29 @@
 # Agent Guidance
 
+## Basics
+
+- We use semantic versioning.
+- Everything must be reproducible/reusable when it involves multiple commands. Write scripts under `scripts/` when
+  needed or something may be needed again in the future.
+
+## Punishable by Law
+
+> Current number of death penalties since January: 332
+
+- Editing linting configuration or smashing ignore comments is strictly forbidden.
+- Not running linting & formatting before each commit is strictly forbidden.
+    - No matter if a linting/formatting issue is pre-existing or not, all must be handled.
+- Creating "god" files or "god" methods is strictly forbidden. No method should be longer than 20 lines, no file should
+  be longer than 200 lines.
+- Not having at least 80% test coverage is punishable by death.
+- Skipping linting, fast-running unit tests, not ensuring if project builds; all punishable by death.
+- Having lots of files under `src/` is punishable by death. Organize everything into topic/domain-specific folders.
+- Chasing backward-compatibility is punishable by death. All breaking changes can be simply addressed by bumping the
+  version according to the semantic versioning rules.
+- Installing stuff globally on the host machine with no trace of what happened and how it can be reproduced later is
+  punishable by death. Use a ephemeral Docker container if you need something.
+- Running tests/linting etc for non-code changes is punishable for death due to time-wasting.
+
 ## Useful documentation
 
 ### About plugin development
