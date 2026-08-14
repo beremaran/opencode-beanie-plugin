@@ -2,7 +2,7 @@ OPENCODE_BIN ?= opencode
 COMMIT_MODEL ?= opencode/deepseek-v4-flash-free
 COMMIT_FLAGS ?= --pure
 COMMIT_TITLE ?= committing changes
-COMMIT_PROMPT ?= Commit changes.
+COMMIT_PROMPT ?= @docs/prompts/commit.md
 
 .PHONY: commit
 
