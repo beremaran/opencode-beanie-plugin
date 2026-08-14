@@ -5,6 +5,9 @@
 ### About plugin development
 
 - https://opencode.ai/docs/plugins/
+- `docs/opencode-plugin-development-bible.md` - comprehensive local plugin development guide
+- `docs/opencode-plugin-development-patterns.md` - recurring implementation patterns and techniques
+- `docs/opencode-plugin-development-checklist.md` - development, review, and release checklist
 
 ### Other OpenCode Documentation
 
