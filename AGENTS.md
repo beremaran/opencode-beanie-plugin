@@ -1,3 +1,18 @@
+# Agent Guidance
+
+## Useful documentation
+
+### About plugin development
+
+- https://opencode.ai/docs/plugins/
+
+### Other OpenCode Documentation
+
+- https://opencode.ai/docs/sdk
+- https://opencode.ai/docs/server/
+- https://opencode.ai/docs/ecosystem/
+
+## Bun and stuff
 
 Default to using Bun instead of Node.js.
 
@@ -9,7 +24,7 @@ Default to using Bun instead of Node.js.
 - Use `bunx <package> <command>` instead of `npx <package> <command>`
 - Bun automatically loads .env, so don't use dotenv.
 
-## APIs
+### APIs
 
 - `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
 - `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
@@ -19,7 +34,7 @@ Default to using Bun instead of Node.js.
 - Prefer `Bun.file` over `node:fs`'s readFile/writeFile
 - Bun.$`ls` instead of execa.
 
-## Testing
+### Testing
 
 Use `bun test` to run tests.
 
