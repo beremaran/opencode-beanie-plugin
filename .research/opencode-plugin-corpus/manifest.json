@@ -1,0 +1,1932 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-14T01:49:43.458Z",
+  "clonePolicy": "Clone repository roots only; use subdirectory when present.",
+  "sources": [
+    {
+      "id": "awesome-opencode",
+      "label": "awesome-opencode",
+      "url": "https://github.com/awesome-opencode/awesome-opencode",
+      "snapshot": "https://raw.githubusercontent.com/awesome-opencode/awesome-opencode/main/README.md",
+      "retrievedAt": "2026-08-14T01:49:43.458Z",
+      "sections": {
+        "plugins": 136
+      }
+    },
+    {
+      "id": "opencode.cafe",
+      "label": "opencode.cafe",
+      "url": "https://www.opencode.cafe/search",
+      "snapshot": "https://raw.githubusercontent.com/R44VC0RP/opencode.cafe/main/bulk/plugins.json",
+      "retrievedAt": "2026-08-14T01:49:43.458Z",
+      "catalogType": "committed bulk/plugins.json",
+      "entries": 13
+    },
+    {
+      "id": "opencode.ai",
+      "label": "opencode.ai ecosystem",
+      "url": "https://opencode.ai/docs/ecosystem/",
+      "snapshot": "https://opencode.ai/docs/ecosystem/",
+      "retrievedAt": "2026-08-14T01:49:43.458Z",
+      "entries": 37
+    }
+  ],
+  "candidates": [
+    {
+      "name": "@bluelovers/opencode-arise",
+      "description": "「⚔️ ARISE!」 A Solo Leveling themed orchestrator harness for OpenCode",
+      "url": "https://github.com/bluelovers/opencode-arise",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "aerovato/opencode-quotes-plugin",
+      "description": "Display inspirational quotes instead of tips",
+      "url": "https://github.com/aerovato/opencode-quotes-plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Agent Identity",
+      "description": "Agent self-identity and per-message attribution for multi-agent sessions",
+      "url": "https://github.com/gotgenes/opencode-agent-identity",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Agent Memory",
+      "description": "Letta-inspired memory",
+      "url": "https://github.com/joshuadavidthomas/opencode-agent-memory",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Antigravity Auth",
+      "description": "Google Antigravity models",
+      "url": "https://github.com/NoeFabris/opencode-antigravity-auth",
+      "source": "awesome-opencode,opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,plugins,Plugins"
+    },
+    {
+      "name": "Antigravity Multi-Auth",
+      "description": "Multiple Google accounts",
+      "url": "https://github.com/theblazehen/opencode-antigravity-multi-auth",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Autotitle",
+      "description": "AI-powered automatic session naming",
+      "url": "https://github.com/pawelma/opencode-autotitle",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Background",
+      "description": "Background process management",
+      "url": "https://github.com/zenobi-us/opencode-background",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Background Agents",
+      "description": "Async agent delegation",
+      "url": "https://github.com/kdcokenny/opencode-background-agents",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "Beads Plugin",
+      "description": "Beads issue tracker integration",
+      "url": "https://github.com/joshuadavidthomas/opencode-beads",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "BRHP",
+      "description": "Persistent planning state",
+      "url": "https://github.com/ZanzyTHEbar/brhp",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "CC Safety Net",
+      "description": "Safety net catching destructive commands",
+      "url": "https://github.com/kenryu42/claude-code-safety-net",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Claude Code Switch (CCS) OpenCode Sync",
+      "description": "Claude Code Switch (CCS) to OpenCode sync",
+      "url": "https://github.com/JasonLandbridge/opencode-ccs-sync",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Command Inject",
+      "description": "Auto-inject project commands into OpenCode",
+      "url": "https://github.com/shihyuho/opencode-command-inject",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Context Analysis",
+      "description": "Token usage analysis",
+      "url": "https://github.com/IgorWarzocha/Opencode-Context-Analysis-Plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Crawlberg",
+      "description": "Web crawling and scraping tools for opencode",
+      "url": "https://github.com/xberg-io/plugins",
+      "source": "awesome-opencode,awesome-opencode,awesome-opencode,awesome-opencode,awesome-opencode",
+      "sourceSection": "plugins,plugins,plugins,plugins,plugins"
+    },
+    {
+      "name": "CrewBee",
+      "description": "Task-specific Agent Teams for OpenCode",
+      "url": "https://github.com/CrewBeeLab/CrewBee",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Devcontainers",
+      "description": "Multi-branch devcontainers",
+      "url": "https://github.com/athal7/opencode-devcontainers",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "Direnv",
+      "description": "Load direnv variables",
+      "url": "https://github.com/simonwjackson/opencode-direnv",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Dodo Payments",
+      "description": "Payments, subscriptions, webhooks, and billing for OpenCode agents",
+      "url": "https://github.com/dodopayments/dodo-agent-plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Dynamic Context Pruning",
+      "description": "Optimize token usage",
+      "url": "https://github.com/Tarquinen/opencode-dynamic-context-pruning",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "Envsitter Guard",
+      "description": "Prevent .env leaks",
+      "url": "https://github.com/boxpositron/envsitter-guard",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "FlowDeck",
+      "description": "AI-powered multi-agent workflow orchestration with built-in safety intelligence",
+      "url": "https://github.com/DVNghiem/FlowDeck",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "ForLoop Planner",
+      "description": "Autopilot development. Plan with ForLoop agent. Build, Test, Deploy on cloud in one go.",
+      "url": "https://github.com/forloop-cc/forloop-opencode-plugin-planner",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Froggy",
+      "description": "Hooks and specialized agents",
+      "url": "https://github.com/smartfrog/opencode-froggy",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Gemini Auth",
+      "description": "Google account auth",
+      "url": "https://github.com/jenslys/opencode-gemini-auth",
+      "source": "awesome-opencode,opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,plugins,Plugins"
+    },
+    {
+      "name": "GitHub Release",
+      "description": "Automated GitHub releases",
+      "url": "https://github.com/amestsantim/opencode-github-release",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Google AI Search",
+      "description": "Query Google AI Mode (SGE)",
+      "url": "https://github.com/IgorWarzocha/Opencode-Google-AI-Search-Plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "GoopSpec",
+      "description": "Spec-driven development workflow",
+      "url": "https://github.com/hffmnnj/opencode-goopspec",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "GPT Imagegen",
+      "description": "gpt-image-2 in OpenCode — no API cost when using your ChatGPT subscription",
+      "url": "https://github.com/yuji-hatakeyama/opencode-gpt-imagegen",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Handoff",
+      "description": "Session handoff prompts",
+      "url": "https://github.com/joshuadavidthomas/opencode-handoff",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Harness Memory",
+      "description": "Persistent project memory - 73 percent fewer tokens than CLAUDE.md, with human review",
+      "url": "https://github.com/smc2315/harness-memory",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "hiai-opencode",
+      "description": "Canonical 12-agent model with bundled skills, MCP, LSP, and ralph-loop",
+      "url": "https://github.com/HiAi-gg/hiai-opencode",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Honcho",
+      "description": "AI-native long-term memory for OpenCode",
+      "url": "https://github.com/plastic-labs/opencode-honcho",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "kibi-opencode",
+      "description": "Repo-local, branch-scoped knowledge and traceability for OpenCode",
+      "url": "https://github.com/Looted/kibi",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Kilo Gateway Auth",
+      "description": "Kilo Gateway provider",
+      "url": "https://github.com/JungHoonGhae/opencode-kilo-auth",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Lemma",
+      "description": "Persistent memory layer for LLMs via MCP - local, zero-dependency, works on all clients",
+      "url": "https://github.com/xenitV1/lemma",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Magic Context",
+      "description": "Lossless context management with background compression",
+      "url": "https://github.com/cortexkit/opencode-magic-context",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Micode",
+      "description": "Brainstorm-Plan-Implement workflow",
+      "url": "https://github.com/vtemian/micode",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "Model Announcer",
+      "description": "Model self-awareness",
+      "url": "https://github.com/ramarivera/opencode-model-announcer",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Morph Fast Apply",
+      "description": "10,500+ tokens/sec code editing",
+      "url": "https://github.com/JRedeker/opencode-morph-fast-apply",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "oc-mnemoria",
+      "description": "Persistent shared memory (hive mind) for OpenCode agents across sessions",
+      "url": "https://github.com/one-bit/oc-mnemoria",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Oh My Opencode",
+      "description": "Agents & Pre-built tools",
+      "url": "https://github.com/code-yeongyu/oh-my-opencode",
+      "source": "awesome-opencode,opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,plugins,Plugins"
+    },
+    {
+      "name": "Oh My Opencode Slim",
+      "description": "Lightweight agent orchestration with reduced token usage",
+      "url": "https://github.com/alvinunreal/oh-my-opencode-slim",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Omniroute Auth",
+      "description": "Omniroute authentication provider",
+      "url": "https://github.com/Alph4d0g/opencode-omniroute-auth",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Open Conclave",
+      "description": "Multi-agent debates, moderated by a captain agent until they reach consensus",
+      "url": "https://github.com/martinzokov/open-conclave",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Open Dynamic Workflows",
+      "description": "Dynamic multi-agent workflows for OpenCode — plan, orchestrate, and verify with the script as the orchestrator",
+      "url": "https://github.com/Suraj1235/open-dynamic-workflows",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "open-plan-annotator",
+      "description": "Annotate LLM plans like a Google Doc!",
+      "url": "https://github.com/ndom91/open-plan-annotator",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenAI Codex Auth",
+      "description": "ChatGPT Plus/Pro OAuth",
+      "url": "https://github.com/numman-ali/opencode-openai-codex-auth",
+      "source": "awesome-opencode,opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,plugins,Plugins"
+    },
+    {
+      "name": "OpenCode Adaptive Thinking",
+      "description": "Adaptive reasoning-effort control",
+      "url": "https://github.com/ian-pascoe/opencode-adaptive-thinking",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Agent Tmux",
+      "description": "Real-time tmux panes for OpenCode agents with auto-launch, streaming, and cleanup.",
+      "url": "https://github.com/AnganSamadder/opencode-agent-tmux",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Agents Sidebar",
+      "description": "Browse configured OhMyOpenAgent agents in the TUI",
+      "url": "https://github.com/Mark1708/opencode-agents-sidebar",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Canvas",
+      "description": "Interactive terminal canvases in tmux splits",
+      "url": "https://github.com/mailshieldai/opencode-canvas",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Chromium Browser Plugin",
+      "description": "Browser automation for Chromium browsers with a readable extension and native host",
+      "url": "https://github.com/DJOCKER-FACE/opencode-chromium-browser-plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Claude Memory",
+      "description": "Claude Code-compatible memory",
+      "url": "https://github.com/kuitos/opencode-claude-memory",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Ensemble",
+      "description": "Parallel agent teams for OpenCode",
+      "url": "https://github.com/hueyexe/opencode-ensemble",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Hooks Plugin",
+      "description": "Claude code compatible hooks",
+      "url": "https://github.com/romain325/opencode-hooks-plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Host Notify Bridge",
+      "description": "Devcontainer notifications bridged back to the host",
+      "url": "https://github.com/Zaradacht/opencode-host-notify-bridge",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Ignore",
+      "description": "Ignore files based on pattern",
+      "url": "https://github.com/lgladysz/opencode-ignore",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode LiteLLM",
+      "description": "Auto-discover models from a LiteLLM proxy",
+      "url": "https://github.com/yuseferi/opencode-litellm",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Log Sanitizer",
+      "description": "Sanitizes pasted logs by redacting long strings, JWTs, bcrypt hashes, and base64 blobs",
+      "url": "https://github.com/errhythm/opencode-log-sanitizer",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Mem",
+      "description": "Persistent memory with vector database",
+      "url": "https://github.com/tickernelz/opencode-mem",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Mission Control",
+      "description": "Command center for parallel agents — worktree isolation, DAG plans, merge train, PRs",
+      "url": "https://github.com/nigel-dev/opencode-mission-control",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Models Discovery",
+      "description": "Configurable model discovery and filtering without long manual config",
+      "url": "https://github.com/yuhp/opencode-models-discovery",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Notify",
+      "description": "Native OS notifications",
+      "url": "https://github.com/kdcokenny/opencode-notify",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "OpenCode ntfy.sh",
+      "description": "Push notifications to keep you in the know, even when you're on the go.",
+      "url": "https://github.com/lannuttia/opencode-ntfy.sh",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Plan Manager",
+      "description": "AI-Native Implementation Planning for Modern Agentic Workflows",
+      "url": "https://github.com/yurihbm/opencode-plan-manager",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Provider Alias",
+      "description": "Alias and curate OpenCode providers with model metadata from models.dev.",
+      "url": "https://github.com/baranwang/opencode-provider-alias",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Quota",
+      "description": "Quota toasts and token tracking",
+      "url": "https://github.com/slkiser/opencode-quota",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Roadmap",
+      "description": "Strategic planning",
+      "url": "https://github.com/IgorWarzocha/Opencode-Roadmap",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Sessions",
+      "description": "Session management",
+      "url": "https://github.com/malhashemi/opencode-sessions",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Snippets",
+      "description": "Instant inline text expansion",
+      "url": "https://github.com/JosXa/opencode-snippets",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Swarm",
+      "description": "Verification-gated swarm with architect, review, test, and security agents",
+      "url": "https://github.com/zaxbysauce/opencode-swarm",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Synced",
+      "description": "Sync configs across machines",
+      "url": "https://github.com/iHildy/opencode-synced",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Telemetry",
+      "description": "Passive cross-session telemetry to local SQLite; cost rollups across agent orchestration chains",
+      "url": "https://github.com/agostinilabsrl/opencode-telemetry",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Throughput",
+      "description": "Real-time LLM performance monitoring",
+      "url": "https://github.com/Howardzhangdqs/opencode-throughput",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Token Tracker",
+      "description": "Real-time token usage, cost, and latency tracking for every AI request in OpenCode",
+      "url": "https://github.com/eserete/opencode-token-tracker",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode TTS",
+      "description": "Voice summaries for idle responses",
+      "url": "https://github.com/StefanoChiodino/opencode-tts",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode update notifier",
+      "description": "Notify about plugin updates.",
+      "url": "https://github.com/tim-hilde/opencode-update-notifier",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Usage Monitor",
+      "description": "Monitor OpenAI and Z.AI usage quotas in the TUI",
+      "url": "https://github.com/Mark1708/opencode-usage-monitor",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Visualizer",
+      "description": "2D pixel-art office for AI agents",
+      "url": "https://github.com/psinetron/opencode-visualiser",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Workaholic",
+      "description": "Enforce mandatory working time and prevents premature \"done\" responses",
+      "url": "https://github.com/RoderickQiu/opencode-workaholic",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Opencode Workspace",
+      "description": "Multi-agent orchestration",
+      "url": "https://github.com/kdcokenny/opencode-workspace",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "Opencode Worktree",
+      "description": "Zero-friction git worktrees",
+      "url": "https://github.com/kdcokenny/opencode-worktree",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "opencode-ascii",
+      "description": "Strip unicode characters from output and replace them by their ASCII equivalents",
+      "url": "https://github.com/d3vv3/opencode-ascii",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "opencode-bmad-workflow",
+      "description": "BMAD workflow plugin — automates epic, feature, sprint and code review workflows using specialized AI agents",
+      "url": "https://github.com/Alex-stack-cell/opencode-bmad-workflow",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "opencode-mystatus",
+      "description": "Check AI subscription quotas",
+      "url": "https://github.com/vbgate/opencode-mystatus",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "opencode-personality",
+      "description": "A configurable personality and mood system plugin for OpenCode.",
+      "url": "https://github.com/joostvanwollingen/opencode-personality",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "opencode-plugin-otel",
+      "description": "OpenTelemetry telemetry exporter for opencode sessions, mirroring Claude Code monitoring signals",
+      "url": "https://github.com/DEVtheOPS/opencode-plugin-otel",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "opencode-review",
+      "description": "Automatic structured code review with configurable dimensions and auto-fix",
+      "url": "https://github.com/sun-praise/opencode-review",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "opencode-short-term-memory",
+      "description": "Maintain user instructions and preferences throughout long sessions. No more repeating yourself.",
+      "url": "https://github.com/andrejtonev/opencode-short-term-memory",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "opencode-snip",
+      "description": "OpenCode plugin that prefixes shell commands with snip to reduce LLM token consumption by 60-90%",
+      "url": "https://github.com/VincentHardouin/opencode-snip",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCodeRAG",
+      "description": "Local-first RAG plugin for semantic code search with tree-sitter chunking and LanceDB",
+      "url": "https://github.com/MrDoe/OpenCodeRAG",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenHax Codex",
+      "description": "OAuth authentication",
+      "url": "https://github.com/open-hax/codex",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenSpec",
+      "description": "Add Architecture planning and specification agent for OpenSpec",
+      "url": "https://github.com/Octane0411/opencode-plugin-openspec",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Optimal Model Temps",
+      "description": "Optimal sampling temperatures",
+      "url": "https://github.com/Lyapsus/opencode-optimal-model-temps",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OrgX OpenCode Plugin",
+      "description": "OrgX Work Graph peer for task dispatch, receipts, deviations, and passive reconciliation",
+      "url": "https://github.com/useorgx/orgx-opencode-plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Pilot",
+      "description": "Automation daemon",
+      "url": "https://github.com/athal7/opencode-pilot",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Plannotator",
+      "description": "Interactive plan review UI",
+      "url": "https://github.com/backnotprop/plannotator",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins",
+      "subdirectory": "apps/opencode-plugin"
+    },
+    {
+      "name": "Pocket Universe",
+      "description": "A subagent driven pocket universe for your primary agent",
+      "url": "https://github.com/spoons-and-mirrors/pocket-universe",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "PR Auto-Signature",
+      "description": "Automatically adds AI model signature to PRs, Issues, and Commits",
+      "url": "https://github.com/arttttt/opencode-pr-signature",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Ralph Wiggum",
+      "description": "Self-correcting agent loops",
+      "url": "https://github.com/Th0rgal/opencode-ralph-wiggum",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Research Papers",
+      "description": "Search arXiv and OpenAlex for research papers with recency and citation filtering",
+      "url": "https://github.com/saim-x/opencode-research-papers",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Semantic Anchors",
+      "description": "Runtime contract enforcement for safe, traceable AI agents",
+      "url": "https://github.com/JensGrote/opencode-semantic-anchors",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Shell Strategy",
+      "description": "Avoid interactive shell hangs",
+      "url": "https://github.com/JRedeker/opencode-shell-strategy",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "Simple Memory",
+      "description": "Git-based memory",
+      "url": "https://github.com/cnicolov/opencode-plugin-simple-memory",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Simple Notify",
+      "description": "Native desktop notifications with near-zero dependencies",
+      "url": "https://github.com/Yusuzhan/opencode-simple-notify",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Smart Title",
+      "description": "Auto-generate session titles",
+      "url": "https://github.com/Tarquinen/opencode-smart-title",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Smart Voice Notify",
+      "description": "Intelligent voice notifications",
+      "url": "https://github.com/MasuRii/opencode-smart-voice-notify",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Subagent Reporter",
+      "description": "See exactly what your subagents are up to (in the terminal) when invoked during an `opencode run _____` session.",
+      "url": "https://github.com/raisbecka/opencode-subagent-output",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Subtask2",
+      "description": "Orchestration system",
+      "url": "https://github.com/spoons-and-mirrors/subtask2",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "Swarm Plugin",
+      "description": "Swarm intelligence",
+      "url": "https://github.com/joelhooks/opencode-swarm-plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "System Prompt Logger",
+      "description": "System prompt logger",
+      "url": "https://github.com/tlinhart/opencode-system-prompt-logger",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Token Monitor",
+      "description": "Token analysis & cost tracking with budgets, trends, and per-project analytics",
+      "url": "https://github.com/Ainsley0917/opencode-token-monitor",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Tokenscope",
+      "description": "Token analysis & cost tracking",
+      "url": "https://github.com/ramtinJ95/opencode-tokenscope",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "toon-config",
+      "description": "Loads TOON based, AGENTS.toon rather than Markdown",
+      "url": "https://github.com/mmynsted/opencode-toon-config-plugin",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "ul-opencode-event",
+      "description": "Multi-channel notifications (SMTP, DingTalk, Feishu) and token usage analytics",
+      "url": "https://gitee.com/ulthon/ul-opencode-event",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "UNMOJI",
+      "description": "Strip emojis from output",
+      "url": "https://codeberg.org/bastiangx/opencode-unmoji",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Vibe Coding Slack Notifier",
+      "description": "Slack DM alerts for OpenCode task completion",
+      "url": "https://github.com/Wangmerlyn/vibe-coding-slack-notifier",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "WakaTime",
+      "description": "WakaTime integration",
+      "url": "https://github.com/angristan/opencode-wakatime",
+      "source": "awesome-opencode,opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,plugins,Plugins"
+    },
+    {
+      "name": "Warcraft Notifications",
+      "description": "Fun sound notifications",
+      "url": "https://github.com/pantheon-org/opencode-warcraft-notifications",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "With Context MCP",
+      "description": "Project-specific markdown notes",
+      "url": "https://github.com/boxpositron/with-context-mcp",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Worktree Memory Sync",
+      "description": "Auto-sync memory to git worktrees",
+      "url": "https://github.com/Edison-A-N/opencode-worktree-memory-sync",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Xquik",
+      "description": "X/Twitter data skill & MCP server",
+      "url": "https://github.com/Xquik-dev/x-twitter-scraper",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "Zellij Namer",
+      "description": "Auto-rename Zellij sessions",
+      "url": "https://github.com/24601/opencode-zellij-namer",
+      "source": "awesome-opencode,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "OpenCode Helicone Session",
+      "description": "Automatically inject Helicone session headers into LLM requests for request grouping in Helicone's dashboard",
+      "url": "https://github.com/H2Shami/opencode-helicone-session",
+      "source": "opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "OpenCode Type Inject",
+      "description": "Auto-inject TypeScript and Svelte types into file reads with lookup tools, token budget management, and import resolution",
+      "url": "https://github.com/nick-vi/opencode-type-inject",
+      "source": "opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "OpenCode Google Antigravity Auth",
+      "description": "Google Antigravity OAuth Plugin with multi-account load balancing, Google Search tool, cross-model conversations, and interleaved thinking support",
+      "url": "https://github.com/shekohex/opencode-google-antigravity-auth",
+      "source": "opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "OpenCode Dynamic Context Pruning",
+      "description": "Optimize token usage by intelligently pruning obsolete tool outputs from conversation history with deduplication, prune tool, and on-idle analysis",
+      "url": "https://github.com/Opencode-DCP/opencode-dynamic-context-pruning",
+      "source": "opencode.cafe",
+      "sourceSection": "plugins"
+    },
+    {
+      "name": "OpenCode Websearch Cited",
+      "description": "Add native websearch support with inline citations and source lists for supported providers using Google grounded style",
+      "url": "https://github.com/ghoulr/opencode-websearch-cited",
+      "source": "opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "OpenCode PTY",
+      "description": "Enable AI agents to run background processes in a PTY, send interactive input, and read output with regex filtering",
+      "url": "https://github.com/shekohex/opencode-pty",
+      "source": "opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "OpenCode Markdown Table Formatter",
+      "description": "Clean up markdown tables produced by LLMs with concealment mode support, alignment handling, and code block preservation",
+      "url": "https://github.com/franlol/opencode-md-table-formatter",
+      "source": "opencode.cafe,opencode.ai",
+      "sourceSection": "plugins,Plugins"
+    },
+    {
+      "name": "opencode-daytona",
+      "description": "Automatically run OpenCode sessions in isolated Daytona sandboxes",
+      "url": "https://github.com/daytona/integrations",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins",
+      "subdirectory": "packages/opencode-plugin"
+    },
+    {
+      "name": "opencode-vibeguard",
+      "description": "Redact secrets and PII before LLM calls",
+      "url": "https://github.com/inkdust2021/opencode-vibeguard",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-morph-plugin",
+      "description": "Fast Apply, code search, and compaction",
+      "url": "https://github.com/morphllm/opencode-morph-plugin",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-notificator",
+      "description": "Desktop notifications",
+      "url": "https://github.com/panta82/opencode-notificator",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-notifier",
+      "description": "Desktop notifications",
+      "url": "https://github.com/mohak34/opencode-notifier",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-skillful",
+      "description": "Lazy-load prompts and skills",
+      "url": "https://github.com/zenobi-us/opencode-skillful",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-supermemory",
+      "description": "Persistent memory across sessions",
+      "url": "https://github.com/supermemoryai/opencode-supermemory",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-scheduler",
+      "description": "Schedule recurring jobs",
+      "url": "https://github.com/different-ai/opencode-scheduler",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-conductor",
+      "description": "Protocol-driven workflow",
+      "url": "https://github.com/derekbar90/opencode-conductor",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "octto",
+      "description": "Interactive browser UI for brainstorming",
+      "url": "https://github.com/vtemian/octto",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-sentry-monitor",
+      "description": "Sentry AI monitoring",
+      "url": "https://github.com/stolinski/opencode-sentry-monitor",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-firecrawl",
+      "description": "Web scraping via Firecrawl CLI",
+      "url": "https://github.com/firecrawl/opencode-firecrawl",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-jfrog-plugin",
+      "description": "JFrog integration",
+      "url": "https://github.com/jfrog/opencode-jfrog-plugin",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-goal-plugin",
+      "description": "Session-scoped goal workflow",
+      "url": "https://github.com/willytop8/OpenCode-goal-plugin",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    },
+    {
+      "name": "opencode-tavily",
+      "description": "Web search and deep research",
+      "url": "https://github.com/tavily-ai/opencode-tavily",
+      "source": "opencode.ai",
+      "sourceSection": "Plugins"
+    }
+  ],
+  "excluded": [
+    {
+      "name": "Agent Skills (JDT)",
+      "description": "Dynamic skills loader",
+      "url": "https://github.com/joshuadavidthomas/opencode-agent-skills",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins",
+      "reason": "skills manager, skills collection, or prompt-only resource"
+    },
+    {
+      "name": "Ejentum",
+      "description": "MCP server with reasoning, code, anti-deception, and memory tools for AI agents",
+      "url": "https://github.com/ejentum/ejentum-mcp",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins",
+      "reason": "standalone MCP server"
+    },
+    {
+      "name": "Manage Skills",
+      "description": "Wizard-driven skills management for OpenCode.",
+      "url": "https://github.com/Randroids-Dojo/ManageSkills",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins",
+      "reason": "skills manager, skills collection, or prompt-only resource"
+    },
+    {
+      "name": "Openskills",
+      "description": "Alternative skills manager",
+      "url": "https://github.com/numman-ali/openskills",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins",
+      "reason": "skills manager, skills collection, or prompt-only resource"
+    },
+    {
+      "name": "Plugin Template",
+      "description": "CICD setup for plugins",
+      "url": "https://github.com/zenobi-us/opencode-plugin-template",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins",
+      "reason": "template or non-plugin resource"
+    },
+    {
+      "name": "Ring a Bell Example",
+      "description": "Simple terminal bell plugin",
+      "url": "https://gist.github.com/ahosker/267f375a65378bcb9a867fd9a195db1e",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins",
+      "reason": "not a cloneable repository URL"
+    },
+    {
+      "name": "TypeUI",
+      "description": "Design systems, UI prompts, and layout variation guidance",
+      "url": "https://www.typeui.sh/docs/guides/opencode",
+      "source": "awesome-opencode",
+      "sourceSection": "plugins",
+      "reason": "not a cloneable repository URL"
+    },
+    {
+      "name": "Ayu Dark",
+      "description": "Port of the popular Ayu Dark color scheme with golden yellow accent.",
+      "url": "https://github.com/postrednik/opencode-ayu-theme",
+      "source": "awesome-opencode",
+      "sourceSection": "themes",
+      "reason": "themes entry (excluded by requested scope)"
+    },
+    {
+      "name": "Charcoal",
+      "description": "Deep-black grayscale theme for OpenCode — no hues, all shades of gray",
+      "url": "https://github.com/VyomJain6904/charcoal-theme",
+      "source": "awesome-opencode",
+      "sourceSection": "themes",
+      "reason": "themes entry (excluded by requested scope)"
+    },
+    {
+      "name": "Lavi",
+      "description": "A soft and sweet colorscheme for Opencode and 15+ other apps",
+      "url": "https://github.com/b0o/lavi",
+      "source": "awesome-opencode",
+      "sourceSection": "themes",
+      "subdirectory": "contrib/opencode",
+      "reason": "themes entry (excluded by requested scope)"
+    },
+    {
+      "name": "Moonlight",
+      "description": "A moonlight color theme for OpenCode based on the popular moonlight-vscode-theme.",
+      "url": "https://github.com/brunogabriel/opencode-moonlight-theme",
+      "source": "awesome-opencode",
+      "sourceSection": "themes",
+      "reason": "themes entry (excluded by requested scope)"
+    },
+    {
+      "name": "OpenCode Light Themes",
+      "description": "A curated collection of 21 light color themes for OpenCode",
+      "url": "https://github.com/fatihtoprakk/opencode-light-themes",
+      "source": "awesome-opencode",
+      "sourceSection": "themes",
+      "reason": "themes entry (excluded by requested scope)"
+    },
+    {
+      "name": "Poimandres Theme",
+      "description": "Poimandres theme",
+      "url": "https://github.com/ajaxdude/opencode-ai-poimandres-theme",
+      "source": "awesome-opencode",
+      "sourceSection": "themes",
+      "reason": "themes entry (excluded by requested scope)"
+    },
+    {
+      "name": "VS Code Themes",
+      "description": "Ports of all built-in VS Code themes (Modern, Plus, VS, High Contrast).",
+      "url": "https://github.com/regen45t/opencode-vscode-themes",
+      "source": "awesome-opencode",
+      "sourceSection": "themes",
+      "reason": "themes entry (excluded by requested scope)"
+    },
+    {
+      "name": "Agentic",
+      "description": "Modular AI agents",
+      "url": "https://github.com/Cluster444/agentic",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "Claude Subagents",
+      "description": "Claude Code subagents",
+      "url": "https://github.com/VoltAgent/awesome-claude-code-subagents",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "deliberation",
+      "description": "Ask GPT, Gemini, Grok, or OpenRouter for a second opinion or a fix, as expert subagents over MCP",
+      "url": "https://github.com/antonbabenko/deliberation",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "Gem Team",
+      "description": "Self-Learning Multi-agent orchestration harness for spec-driven development and automated verification.",
+      "url": "https://github.com/mubaidr/gem-team",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "NERV",
+      "description": "Invisible engineering infrastructure for AI agents",
+      "url": "https://github.com/juanmanueldaza/nerv",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Agents",
+      "description": "Enhanced workflows",
+      "url": "https://github.com/darrenhinde/opencode-agents",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "Python Expert Agent for OpenCode",
+      "description": "Python Expert Agent toolkit for OpenCode with subagents and skills",
+      "url": "https://github.com/amrahman90/python-expert-agent",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "Redstone",
+      "description": "AI-built Minecraft plugins",
+      "url": "https://github.com/BackGwa/Redstone",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "server-manager",
+      "description": "Non-blocking background server management — start, track, and stop local dev servers without blocking your AI session.",
+      "url": "https://github.com/workdocyeye/server-manager",
+      "source": "awesome-opencode",
+      "sourceSection": "agents",
+      "reason": "agents entry (excluded by requested scope)"
+    },
+    {
+      "name": "Agent of Empires",
+      "description": "Multi-session TUI for OpenCode",
+      "url": "https://github.com/njbrake/agent-of-empires",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "agent-dotfiles",
+      "description": "Write AI coding rules once, sync to every agent",
+      "url": "https://github.com/saqibameen/agent-dotfiles",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "agent-harness",
+      "description": "Reusable agent asset lifecycle for OpenCode workspaces",
+      "url": "https://github.com/ar27111994/agent-harness",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "AgentDeals",
+      "description": "MCP server aggregating free tiers, credits, and referral codes across 1,500+ developer tools",
+      "url": "https://github.com/robhunter/agentdeals",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "agenttrace",
+      "description": "Local TUI for OpenCode session cost, health, and trace reports",
+      "url": "https://github.com/luoyuctl/agenttrace",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Beads",
+      "description": "Project task management",
+      "url": "https://github.com/steveyegge/beads",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "brood-box",
+      "description": "Hardware-isolated microVMs for coding agents",
+      "url": "https://github.com/stacklok/brood-box",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "bx",
+      "description": "macOS file-system sandbox for AI coding agents",
+      "url": "https://github.com/holtwick/bx-mac",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "CLI Proxy API",
+      "description": "Multi-model proxy",
+      "url": "https://github.com/router-for-me/CLIProxyAPI",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "CodeWalk",
+      "description": "Native cross-platform Flutter client for OpenCode server mode",
+      "url": "https://github.com/verseles/codewalk",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Codex Proxy Server",
+      "description": "Local API proxy",
+      "url": "https://github.com/unluckyjori/Codex-Proxy-Server",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Comfanion Workflow",
+      "description": "AI-assisted development workflow with agents, skills, and semantic search",
+      "url": "https://github.com/Comfanion/workflow",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Cupcake",
+      "description": "Policy enforcement layer",
+      "url": "https://github.com/eqtylab/cupcake",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Deck",
+      "description": "Local cockpit for OpenCode-powered autonomous agents with secure sandboxes and live desktop visibility.",
+      "url": "https://github.com/cofy-x/deck",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "eval-harness",
+      "description": "Behavior-regression testing for OpenCode skills",
+      "url": "https://github.com/nano-step/eval-harness",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Gemini CLI to API",
+      "description": "Gemini proxy",
+      "url": "https://github.com/gzzhongqi/geminicli2api",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "GolemBot",
+      "description": "Unified AI assistant framework for multiple Coding Agent CLIs",
+      "url": "https://github.com/0xranx/golembot",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Handy",
+      "description": "Speech to Text",
+      "url": "https://github.com/cjpais/Handy",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "hcom",
+      "description": "Let AI agents message, watch, and spawn each other across terminals",
+      "url": "https://github.com/aannoo/hcom",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Hipocampo",
+      "description": "Dual memory system with BIRE search for AI agents",
+      "url": "https://github.com/carrasquelalex1/hipocampo",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "jailoc",
+      "description": "Sandboxed Docker environments for OpenCode agents",
+      "url": "https://github.com/seznam/jailoc",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Kimaki",
+      "description": "Discord bot controller",
+      "url": "https://github.com/remorses/kimaki",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "MCP Voice Interface",
+      "description": "Talk to AI assistants",
+      "url": "https://github.com/shantur/mcp-voice-interface",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "NextProb",
+      "description": "Desktop notebook for vibe-coded websites, edited by your local AI coding-agent CLI (OpenCode and others)",
+      "url": "https://github.com/NextProb/nextprob",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OC Context (occtx)",
+      "description": "Switch contexts quickly",
+      "url": "https://github.com/hungthai1401/occtx",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OC Manager",
+      "description": "Metadata TUI",
+      "url": "https://github.com/kcrommett/oc-manager",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OC Monitor Share",
+      "description": "CLI monitoring tool",
+      "url": "https://github.com/Shlomob/ocmonitor-share",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Octto",
+      "description": "Interactive browser UI for AI brainstorming",
+      "url": "https://github.com/vtemian/octto",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope); same repository retained as a plugin candidate"
+    },
+    {
+      "name": "OCX",
+      "description": "OpenCode package manager",
+      "url": "https://github.com/kdcokenny/ocx",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Open Agent",
+      "description": "Self-hosted control plane",
+      "url": "https://github.com/Th0rgal/openagent",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Open Dispatch",
+      "description": "Control agents from Slack, Teams, or Discord — locally or via Fly.io Sprites",
+      "url": "https://github.com/bobum/open-dispatch",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OpenChamber",
+      "description": "GUI for OpenCode",
+      "url": "https://github.com/btriapitsyn/openchamber",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode A2A",
+      "description": "Full A2A Protocol support for OpenCode.",
+      "url": "https://github.com/Intelligent-Internet/opencode-a2a",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Actions",
+      "description": "Reusable GitHub Actions for installing and running OpenCode in CI/CD workflows",
+      "url": "https://github.com/Svtter/opencode-actions",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Chat Export",
+      "description": "MCP server to export chat history to Markdown",
+      "url": "https://github.com/jjserenity/opencode-chat-export",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode DDEV",
+      "description": "DDEV container wrapper",
+      "url": "https://github.com/JUVOJustin/opencode-ddev",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode History Search",
+      "description": "Search OpenCode conversations with keyword, regex, and fuzzy search",
+      "url": "https://github.com/joeyism/opencode-history-search",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OpenCode Mobile",
+      "description": "Android client for OpenCode — drive your self-hosted agent from your phone",
+      "url": "https://github.com/dzianisv/opencode-mobile",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Neovim",
+      "description": "Neovim plugin",
+      "url": "https://github.com/NickvanDyke/opencode.nvim",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Profile Router",
+      "description": "Profile router for auth and selective config isolation",
+      "url": "https://github.com/leolaurindo/opencode-profile-router",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Session Manager",
+      "description": "Session viewer & manager",
+      "url": "https://github.com/GNITOAHC/opencode-session",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Sessions",
+      "description": "Session tracker",
+      "url": "https://github.com/malhashemi/opencode-sessions",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope); same repository retained as a plugin candidate"
+    },
+    {
+      "name": "OpenCode Sidebar",
+      "description": "Tmux sidebar for managing OpenCode sessions",
+      "url": "https://github.com/arnavpisces/opencode-sidebar",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Skills",
+      "description": "Skills management",
+      "url": "https://github.com/malhashemi/opencode-skills",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Telegram Bot",
+      "description": "Telegram bot client for OpenCode CLI",
+      "url": "https://github.com/grinev/opencode-telegram-bot",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OpenCode Vim",
+      "description": "OpenCode fork with built-in Vim mode",
+      "url": "https://github.com/leohenon/opencode-vim",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Web",
+      "description": "Browser-based access",
+      "url": "https://github.com/kcrommett/opencode-web",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "opencode-agent for Cowork",
+      "description": "Cowork plugin that turns Claude into an intelligent orchestrator for OpenCode sessions",
+      "url": "https://github.com/MekaretEriker/opencode-agent-for-cowork",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "opencode-handoff-p2p",
+      "description": "Transfer OpenCode session share URLs P2P via private GitHub inbox repos",
+      "url": "https://github.com/Eldorado-ling/opencode-handoff-p2p",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "opencode-kanban",
+      "description": "Kanban-style task management for opencode",
+      "url": "https://github.com/qrafty-ai/opencode-kanban",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OpenSpec",
+      "description": "Spec-driven development",
+      "url": "https://github.com/Fission-AI/OpenSpec",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OpenTab",
+      "description": "Terminal UI for browsing your OpenCode spend by month, day, project, session, and model",
+      "url": "https://github.com/hamidi-dev/opentab",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "OpenWork",
+      "description": "Desktop GUI for OpenCode workflows",
+      "url": "https://github.com/different-ai/openwork",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "P4OC (Pocket for OpenCode)",
+      "description": "Android client for OpenCode",
+      "url": "https://github.com/theblazehen/P4OC",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Qwen Code OAI Proxy",
+      "description": "Qwen model proxy",
+      "url": "https://github.com/aptdnfapt/qwen-code-oai-proxy",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "RedCode",
+      "description": "TUI + GUI dual-interface AI coding assistant with MCP ecosystem",
+      "url": "https://github.com/JiaHuiRed/RedCode",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "supamem",
+      "description": "Project-agnostic dual-memory MCP CLI for OpenCode",
+      "url": "https://github.com/dzmitrys-dev/supamem",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "SwarmClaw",
+      "description": "Self-hosted multi-agent runtime with first-class OpenCode delegation",
+      "url": "https://github.com/swarmclawai/swarmclaw",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "SwarmVault",
+      "description": "Local-first RAG knowledge base compiler with bundled skill and MCP server",
+      "url": "https://github.com/swarmclawai/swarmvault",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Tokscale",
+      "description": "Token usage tracking CLI",
+      "url": "https://github.com/junhoyeo/tokscale",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Universal LLM API Proxy",
+      "description": "Universal multi-model proxy and library - made with Opencode community",
+      "url": "https://github.com/Mirrowel/LLM-API-Key-Proxy",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Unship",
+      "description": "Compare AI-made UI variants locally",
+      "url": "https://github.com/mbenhard/unship",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Vestige",
+      "description": "Local persistent memory for OpenCode agents",
+      "url": "https://github.com/samvallad33/vestige",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Vibe Kanban",
+      "description": "Manage AI in parallel",
+      "url": "https://github.com/BloopAI/vibe-kanban",
+      "source": "awesome-opencode",
+      "sourceSection": "projects",
+      "reason": "projects entry (excluded by requested scope)"
+    },
+    {
+      "name": "Akephalos",
+      "description": "Local-first markdown passport for portable agent context and memory",
+      "url": "https://github.com/sunnja69/akephalos",
+      "source": "awesome-opencode",
+      "sourceSection": "resources",
+      "reason": "resources entry (excluded by requested scope)"
+    },
+    {
+      "name": "Coding Agent Orchestration",
+      "description": "OpenCode Setup Guide / Orchestration",
+      "url": "https://github.com/evermeer/CodingAgentOrchestration",
+      "source": "awesome-opencode",
+      "sourceSection": "resources",
+      "reason": "resources entry (excluded by requested scope)"
+    },
+    {
+      "name": "Debug Log to Text File",
+      "description": "Troubleshooting guide",
+      "url": "https://github.com/awesome-opencode/awesome-opencode",
+      "source": "awesome-opencode",
+      "sourceSection": "resources",
+      "subdirectory": "discussions/19",
+      "reason": "resources entry (excluded by requested scope)"
+    },
+    {
+      "name": "GoTTY",
+      "description": "Turn CLI into Web App",
+      "url": "https://github.com/sorenisanerd/gotty",
+      "source": "awesome-opencode",
+      "sourceSection": "resources",
+      "reason": "resources entry (excluded by requested scope)"
+    },
+    {
+      "name": "kickstart.opencode",
+      "description": "A heavily commented OpenCode starter config that teaches you what everything does.",
+      "url": "https://github.com/orionpax1997/kickstart.opencode",
+      "source": "awesome-opencode",
+      "sourceSection": "resources",
+      "reason": "resources entry (excluded by requested scope)"
+    },
+    {
+      "name": "Opencode Config Starter",
+      "description": "Flexible config starting point",
+      "url": "https://github.com/jjmartres/opencode",
+      "source": "awesome-opencode",
+      "sourceSection": "resources",
+      "reason": "resources entry (excluded by requested scope)"
+    },
+    {
+      "name": "RunAPI MCP",
+      "description": "MCP server for model API jobs",
+      "url": "https://github.com/runapi-ai/mcp",
+      "source": "awesome-opencode",
+      "sourceSection": "resources",
+      "reason": "resources entry (excluded by requested scope)"
+    },
+    {
+      "name": "OpenCode Skills",
+      "description": "Bring Anthropic's Agent Skills Specification (v1.0) to OpenCode with auto-discovery, spec compliance, dynamic tools, and nested skills support",
+      "url": "https://github.com/malhashemi/opencode-skills",
+      "source": "opencode.cafe",
+      "sourceSection": "plugins",
+      "reason": "skills manager or collection"
+    },
+    {
+      "name": "kimaki",
+      "url": "https://github.com/remorses/kimaki",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "opencode.nvim",
+      "url": "https://github.com/NickvanDyke/opencode.nvim",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "portal",
+      "url": "https://github.com/hosenur/portal",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "opencode plugin template",
+      "url": "https://github.com/zenobi-us/opencode-plugin-template",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "opencode.nvim",
+      "url": "https://github.com/sudo-tee/opencode.nvim",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "ai-sdk-provider-opencode-sdk",
+      "url": "https://github.com/ben-vargas/ai-sdk-provider-opencode-sdk",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "OpenChamber",
+      "url": "https://github.com/btriapitsyn/openchamber",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "OpenCode-Obsidian",
+      "url": "https://github.com/mtymek/opencode-obsidian",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "OpenWork",
+      "url": "https://github.com/different-ai/openwork",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "ocx",
+      "url": "https://github.com/kdcokenny/ocx",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "CodeNomad",
+      "url": "https://github.com/NeuralNomadsAI/CodeNomad",
+      "source": "opencode.ai",
+      "sourceSection": "Projects",
+      "reason": "official Projects row (excluded by requested scope)"
+    },
+    {
+      "name": "Agentic",
+      "url": "https://github.com/Cluster444/agentic",
+      "source": "opencode.ai",
+      "sourceSection": "Agents",
+      "reason": "official Agents row (excluded by requested scope)"
+    },
+    {
+      "name": "opencode-agents",
+      "url": "https://github.com/darrenhinde/opencode-agents",
+      "source": "opencode.ai",
+      "sourceSection": "Agents",
+      "reason": "official Agents row (excluded by requested scope)"
+    }
+  ],
+  "counts": {
+    "candidates": 147,
+    "excluded": 108,
+    "sourceRows": {
+      "awesome": 125,
+      "cafe": 12,
+      "official": 37
+    },
+    "duplicateRepositoriesCollapsed": 23
+  }
+}
