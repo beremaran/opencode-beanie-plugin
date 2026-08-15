@@ -23,11 +23,17 @@ test("disables OpenCode title generation", async () => {
 
 test("preserves unrelated agent and title settings", async () => {
   const hooks = await PapercutsDomain(input);
-  const agent = { reviewer: { description: "Keep me" }, title: { template: "Keep me", disable: false } };
+  const agent = {
+    reviewer: { description: "Keep me" },
+    title: { template: "Keep me", disable: false },
+  };
   const config = { agent } as unknown as Config;
 
   await configHook(hooks)(config);
 
   expect(config.agent?.reviewer?.description).toBe("Keep me");
-  expect(config.agent?.title).toMatchObject({ template: "Keep me", disable: true });
+  expect(config.agent?.title).toMatchObject({
+    template: "Keep me",
+    disable: true,
+  });
 });
