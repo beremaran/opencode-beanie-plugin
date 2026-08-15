@@ -14,6 +14,11 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   {
+    rules: {
+      semi: ["error", "always"],
+    },
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     extends: [tseslint.configs.strictTypeChecked],
     languageOptions: {
@@ -21,6 +26,12 @@ export default tseslint.config(
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      curly: ["error", "all"],
     },
   },
   {

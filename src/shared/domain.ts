@@ -1,4 +1,4 @@
-import type { Hooks, PluginInput, PluginOptions } from "@opencode-ai/plugin"
+import type { Hooks, PluginInput, PluginOptions } from "@opencode-ai/plugin";
 
 export type Domain = (
   input: PluginInput,

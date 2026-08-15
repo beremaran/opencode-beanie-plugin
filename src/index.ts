@@ -1,16 +1,18 @@
-import type { Hooks, Plugin } from "@opencode-ai/plugin"
-import { GoalsDomain } from "./domains/goals"
+import type { Hooks, Plugin } from "@opencode-ai/plugin";
+import { GoalsDomain } from "./domains/goals";
 
-const domains = [GoalsDomain]
+const domains = [GoalsDomain];
 
 export const BeaniePlugin: Plugin = async (input, options) => {
-  const hooks = await Promise.all(domains.map((domain) => domain(input, options)))
+  const hooks = await Promise.all(domains.map((domain) => domain(input, options)));
 
-  const mergedHooks: Hooks = {}
+  const mergedHooks: Hooks = {};
 
-  for (const hook of hooks) Object.assign(mergedHooks, hook)
+  for (const hook of hooks) {
+    Object.assign(mergedHooks, hook);
+  }
 
-  return mergedHooks
-}
+  return mergedHooks;
+};
 
-export default BeaniePlugin
+export default BeaniePlugin;
