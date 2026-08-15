@@ -23,4 +23,28 @@ export default tseslint.config(
       },
     },
   },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "padding-line-between-statements": [
+        "error",
+        {
+          blankLine: "always",
+          prev: ["var", "let", "const"],
+          next: ["var", "let", "const"],
+        },
+        {
+          blankLine: "always",
+          prev: ["var", "let", "const"],
+          next: ["return", "if", "for", "while", "switch", "try", "throw"],
+        },
+        {
+          blankLine: "always",
+          prev: ["return", "if", "for", "while", "switch", "try", "throw"],
+          next: ["var", "let", "const"],
+        },
+      ],
+    },
+  },
 );
