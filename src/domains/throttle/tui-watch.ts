@@ -1,4 +1,4 @@
-import {watch, type FSWatcher} from "node:fs";
+import {type FSWatcher, watch} from "node:fs";
 import {basename, dirname} from "node:path";
 
 type SnapshotChange = () => void;

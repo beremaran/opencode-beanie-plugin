@@ -43,13 +43,13 @@ test("renders absent and active status with exact compact text", async () => {
 
     expect(view.renderThrottleStatus(undefined)).toEqual({type: "box", props: {height: 0}});
     const rendered: unknown = view.renderThrottleStatus(parseThrottleStatus(valid));
-    const text = (rendered as {props: {children: {props: {children: unknown}}}})
+    const text = (rendered as { props: { children: { props: { children: unknown } } } })
         .props.children.props.children;
 
     expect(text).toEqual([
         {type: "span", props: {style: {fg: "cyan"}, children: "throttle"}}, " ",
         {type: "span", props: {children: [2, "/", 2]}}, " active, ",
-         {type: "span", props: {style: {fg: "yellow"}, children: [1, " queued"]}}, " (",
+        {type: "span", props: {style: {fg: "yellow"}, children: [1, " queued"]}}, " (",
         {type: "span", props: {style: {fg: "green"}, children: ["fg ", 1]}}, ", ",
         {type: "span", props: {style: {fg: "magenta"}, children: ["bg ", 1]}}, ")",
     ]);

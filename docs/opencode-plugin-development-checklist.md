@@ -1,13 +1,16 @@
 # OpenCode Plugin Development Checklist
 
-Use this checklist for a new plugin, substantial change, review, or release. Evidence and rationale are in the [Bible](opencode-plugin-development-bible.md) and [pattern catalog](opencode-plugin-development-patterns.md).
+Use this checklist for a new plugin, substantial change, review, or release. Evidence and rationale are in
+the [Bible](opencode-plugin-development-bible.md) and [pattern catalog](opencode-plugin-development-patterns.md).
 
 ## Scope and design
 
 - [ ] Capability, user value, trust boundary, data flow, and failure policy are written down.
-- [ ] The plugin is classified as server, TUI, provider/auth, context, workflow, telemetry, or another explicit category.
+- [ ] The plugin is classified as server, TUI, provider/auth, context, workflow, telemetry, or another explicit
+  category.
 - [ ] Official host behavior is separated from community convention and experimental behavior.
-- [ ] Target OpenCode version/commit, plugin SDK range, OpenCode SDK range, Bun/Node range, and external CLI versions are recorded.
+- [ ] Target OpenCode version/commit, plugin SDK range, OpenCode SDK range, Bun/Node range, and external CLI versions
+  are recorded.
 - [ ] Security-sensitive behavior is identified before implementation.
 
 ## Entry and lifecycle
@@ -79,7 +82,8 @@ Use this checklist for a new plugin, substantial change, review, or release. Evi
 - [ ] Timeouts, retries, polling, watcher events, and lifecycle events cannot overlap incorrectly.
 - [ ] Durable output is persisted before notification.
 - [ ] Restart recovery is implemented or explicitly not promised.
-- [ ] Worktree-scoped state preserves project/worktree identity and never silently falls back when isolation is required.
+- [ ] Worktree-scoped state preserves project/worktree identity and never silently falls back when isolation is
+  required.
 - [ ] Cross-process writers use locks, optimistic versions, or a serialized queue.
 
 ## Subprocess and network safety
@@ -152,7 +156,8 @@ Use this checklist for a new plugin, substantial change, review, or release. Evi
 
 - [ ] Official behavior and version uncertainty are documented.
 - [ ] All high-risk boundaries have an owner and a test.
-- [ ] No unreviewed `any`, shell interpolation, ambient secret propagation, raw prompt logging, or unbounded collection remains.
+- [ ] No unreviewed `any`, shell interpolation, ambient secret propagation, raw prompt logging, or unbounded collection
+  remains.
 - [ ] No feature is advertised as durable, enforceable, isolated, or authoritative unless the implementation proves it.
 - [ ] Documentation examples execute against the packed artifact.
 - [ ] The final artifact was built and inspected in a clean environment.

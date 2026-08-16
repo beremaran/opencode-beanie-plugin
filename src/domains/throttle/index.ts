@@ -5,10 +5,10 @@ import {throttleSnapshotPath} from "./path";
 import {createThrottlePublisher, type ThrottleTask} from "./publisher";
 import {createSnapshotWriter} from "./storage";
 
-type TaskCall = {tool: string; sessionID: string; callID: string};
-type TaskOutput = {title: string; output: string; metadata: unknown};
-type TaskMetadata = {background?: boolean; sessionId?: string};
-type Child = {callID: string; release: () => void};
+type TaskCall = { tool: string; sessionID: string; callID: string };
+type TaskOutput = { title: string; output: string; metadata: unknown };
+type TaskMetadata = { background?: boolean; sessionId?: string };
+type Child = { callID: string; release: () => void };
 
 const MAX_TERMINAL_CHILDREN = 1024;
 
@@ -32,7 +32,7 @@ const terminalSessionID = (event: Event) => {
 };
 
 const snapshotLocation = (input: unknown) => {
-    const candidate = input as {worktree?: unknown; project?: {id?: unknown}};
+    const candidate = input as { worktree?: unknown; project?: { id?: unknown } };
 
     const worktree = typeof candidate.worktree === "string" ? candidate.worktree : undefined;
 
@@ -44,7 +44,11 @@ const snapshotLocation = (input: unknown) => {
 const createWriter = (input: unknown) => {
     const path = snapshotLocation(input);
 
-    return path ? createSnapshotWriter(path) : {publish: () => {}, flush: async () => {}};
+    return path ? createSnapshotWriter(path) : {
+        publish: () => {
+        }, flush: async () => {
+        }
+    };
 };
 
 export const ThrottleDomain: Domain = (input) => {
@@ -124,7 +128,7 @@ export const ThrottleDomain: Domain = (input) => {
         return Promise.resolve();
     };
 
-    const event = ({event: received}: {event: Event}) => {
+    const event = ({event: received}: { event: Event }) => {
         const sessionID = terminalSessionID(received);
 
         if (!sessionID) {

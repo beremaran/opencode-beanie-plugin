@@ -6,7 +6,7 @@ export const renderThrottleStatus = (
     status: ThrottleStatus | undefined,
 ): JSX.Element => {
     if (!status) {
-        return <box height={0} />;
+        return <box height={0}/>;
     }
 
     return (

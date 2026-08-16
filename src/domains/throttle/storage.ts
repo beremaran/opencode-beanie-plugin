@@ -19,11 +19,11 @@ const isThrottleSnapshot = (value: unknown): value is ThrottleSnapshot => {
 
     const snapshot = value as {
         schema?: unknown
-         capacity?: unknown
-         sequence?: unknown
-         active?: unknown
-         queued?: unknown
-         inactive?: unknown
+        capacity?: unknown
+        sequence?: unknown
+        active?: unknown
+        queued?: unknown
+        inactive?: unknown
     };
 
     const active = record(snapshot.active);

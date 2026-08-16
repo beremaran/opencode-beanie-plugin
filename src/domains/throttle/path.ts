@@ -1,5 +1,5 @@
 import {createHash} from "node:crypto";
-import {resolve, relative, isAbsolute} from "node:path";
+import {isAbsolute, relative, resolve} from "node:path";
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 

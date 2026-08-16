@@ -1,6 +1,7 @@
 # How to Commit Changes
 
-Use this workflow from the repository root to create focused, verified commits. Keep changes that serve different purposes in separate commits.
+Use this workflow from the repository root to create focused, verified commits. Keep changes that serve different
+purposes in separate commits.
 
 ## Inspect the Worktree
 
@@ -15,7 +16,9 @@ git diff --check
 git log -10 --oneline
 ```
 
-Do not stage secrets, local configuration, generated files, or unrelated changes. This Bun/TypeScript repository ignores generated output such as `dist/`, `build/`, `coverage/`, and `node_modules/`. Do not stage IDE state or local research output.
+Do not stage secrets, local configuration, generated files, or unrelated changes. This Bun/TypeScript repository ignores
+generated output such as `dist/`, `build/`, `coverage/`, and `node_modules/`. Do not stage IDE state or local research
+output.
 
 ## Run the Required Checks
 
@@ -29,7 +32,9 @@ bun test --coverage
 bun run lint
 ```
 
-Run `bun install --frozen-lockfile` when dependency metadata changes, and verify that `bun.lock` remains synchronized. Require at least 80% test coverage; treat a lower result or a missing test suite as a failed check. If a check fails, fix the issue and rerun the complete applicable set.
+Run `bun install --frozen-lockfile` when dependency metadata changes, and verify that `bun.lock` remains synchronized.
+Require at least 80% test coverage; treat a lower result or a missing test suite as a failed check. If a check fails,
+fix the issue and rerun the complete applicable set.
 
 ## Stage One Logical Change
 
@@ -42,7 +47,8 @@ git diff --cached --check
 git commit -m "docs: clarify commit workflow"
 ```
 
-Never use blanket staging such as `git add -A` or `git add .` when unrelated work may be present. Do not stage changes you did not make or files outside the intended change.
+Never use blanket staging such as `git add -A` or `git add .` when unrelated work may be present. Do not stage changes
+you did not make or files outside the intended change.
 
 ## Format the Commit Message
 
@@ -52,7 +58,8 @@ Use the Conventional Commits format:
 <type>(<optional-scope>): <imperative subject>
 ```
 
-Use a concise, lowercase, imperative subject without a final period or emoji. Prefer `feat`, `fix`, `docs`, `build`, `ci`, `chore`, `refactor`, or `test`. Mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
+Use a concise, lowercase, imperative subject without a final period or emoji. Prefer `feat`, `fix`, `docs`, `build`,
+`ci`, `chore`, `refactor`, or `test`. Mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
 
 ## Verify the Commit
 
@@ -63,10 +70,13 @@ git show --stat --oneline HEAD
 git status --short
 ```
 
-Repeat the staging and verification steps for each remaining logical change. Stop when the worktree contains only intentional, uncommitted work.
+Repeat the staging and verification steps for each remaining logical change. Stop when the worktree contains only
+intentional, uncommitted work.
 
 ## Wrapper Safety
 
-You are running inside the OpenCode commit helper. Do not run `make commit`, `bun run commit`, or any equivalent commit-wrapper command. Perform the inspection, checks, staging, and `git commit` steps directly. Do not modify unrelated files or commit generated output.
+You are running inside the OpenCode commit helper. Do not run `make commit`, `bun run commit`, or any equivalent
+commit-wrapper command. Perform the inspection, checks, staging, and `git commit` steps directly. Do not modify
+unrelated files or commit generated output.
 
 Report each commit hash and subject, all checks run, and any remaining worktree changes.

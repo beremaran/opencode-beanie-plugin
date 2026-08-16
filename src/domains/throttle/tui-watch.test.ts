@@ -14,7 +14,9 @@ test("refreshes when the snapshot is atomically replaced", async () => {
     const path = join(root, "snapshot.json");
     let updates = 0;
     await writeFile(path, "old");
-    const stop = watchThrottleSnapshot(path, () => { updates++; });
+    const stop = watchThrottleSnapshot(path, () => {
+        updates++;
+    });
 
     try {
         await Bun.sleep(50);
@@ -33,7 +35,9 @@ test("disposes watcher listeners and does not retry after disposal", async () =>
     const root = await mkdtemp(join(process.env.TMPDIR ?? "/tmp", "beanie-watch-"));
     const path = join(root, "snapshot.json");
     let updates = 0;
-    const stop = watchThrottleSnapshot(path, () => { updates++; });
+    const stop = watchThrottleSnapshot(path, () => {
+        updates++;
+    });
 
     stop();
     await mkdir(join(root, "unused"));

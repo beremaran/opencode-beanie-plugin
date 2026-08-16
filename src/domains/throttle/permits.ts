@@ -12,7 +12,7 @@ export type PermitChange = Readonly<{
 export type PermitPool = {
     acquire: (label: string) => Promise<() => void>
     onChange: (listener: (change: PermitChange) => void) => void
-    state: () => Readonly<{active: number; queued: readonly string[]}>
+    state: () => Readonly<{ active: number; queued: readonly string[] }>
     dispose: () => void
 }
 
@@ -28,7 +28,9 @@ export const createPermitPool = (): PermitPool => {
     const listeners = new Set<(change: PermitChange) => void>();
 
     const notify = (change: PermitChange) => {
-        listeners.forEach((listener) => { listener(change); });
+        listeners.forEach((listener) => {
+            listener(change);
+        });
     };
 
     const release = () => {

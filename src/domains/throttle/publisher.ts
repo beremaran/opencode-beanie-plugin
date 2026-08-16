@@ -57,7 +57,9 @@ export const createThrottlePublisher = (
         }, {count: permits.state().queued.length, calls}, inactive));
     };
 
-    const empty = () => { writer.publish(emptySnapshot(sequence += 1)); };
+    const empty = () => {
+        writer.publish(emptySnapshot(sequence += 1));
+    };
 
     const admitted = (label: string) => {
         const task = tasks.get(label);

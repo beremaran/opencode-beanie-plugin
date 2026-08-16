@@ -3,11 +3,11 @@ import type {Hooks, PluginInput} from "@opencode-ai/plugin";
 import type {Event} from "@opencode-ai/sdk";
 import {ThrottleDomain} from "./index";
 
-type Call = {tool: string; sessionID: string; callID: string};
-type Output = {title: string; output: string; metadata: unknown};
+type Call = { tool: string; sessionID: string; callID: string };
+type Output = { title: string; output: string; metadata: unknown };
 type Before = (input: Call) => Promise<void>;
 type After = (input: Call, output: Output) => Promise<void>;
-type EventHook = (input: {event: Event}) => Promise<void>;
+type EventHook = (input: { event: Event }) => Promise<void>;
 
 const input = {} as PluginInput;
 
@@ -51,7 +51,9 @@ test("allows two task calls concurrently and queues a third", async () => {
     const second = before(call("two"));
     await Promise.all([first, second]);
     let settled = false;
-    const third = before(call("three")).then(() => { settled = true; });
+    const third = before(call("three")).then(() => {
+        settled = true;
+    });
 
     await Bun.sleep(0);
     expect(settled).toBe(false);
@@ -68,7 +70,9 @@ test("does not consume permits for non-task tools", async () => {
     await before(call("one"));
     await before(call("two"));
     let settled = false;
-    const third = before(call("three")).then(() => { settled = true; });
+    const third = before(call("three")).then(() => {
+        settled = true;
+    });
 
     await Bun.sleep(0);
     expect(settled).toBe(false);
@@ -113,7 +117,9 @@ test("duplicate terminal events and releases cannot exceed capacity", async () =
     const second = before(call("three"));
     await Promise.all([first, second]);
     let settled = false;
-    const third = before(call("four")).then(() => { settled = true; });
+    const third = before(call("four")).then(() => {
+        settled = true;
+    });
 
     await Bun.sleep(0);
     expect(settled).toBe(false);

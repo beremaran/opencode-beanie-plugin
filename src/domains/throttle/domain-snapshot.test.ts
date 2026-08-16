@@ -8,11 +8,11 @@ import {ThrottleDomain} from "./index";
 import {throttleSnapshotPath} from "./path";
 import {readThrottleSnapshot} from "./storage";
 
-type Call = {tool: string; sessionID: string; callID: string};
-type Output = {title: string; output: string; metadata: unknown};
+type Call = { tool: string; sessionID: string; callID: string };
+type Output = { title: string; output: string; metadata: unknown };
 type Before = (input: Call) => Promise<void>;
 type After = (input: Call, output: Output) => Promise<void>;
-type EventHook = (input: {event: Event}) => Promise<void>;
+type EventHook = (input: { event: Event }) => Promise<void>;
 
 const directories: string[] = [];
 
