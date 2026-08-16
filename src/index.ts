@@ -2,6 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin";
 import { CommitCommandDomain } from "./domains/commit-command";
 import { GoalsDomain } from "./domains/goals";
 import { PapercutsDomain } from "./domains/papercuts";
+import { OrchestratorDomain } from "./domains/orchestrator";
 import { ThrottleDomain } from "./domains/throttle";
 import { mergeHooks } from "./shared/hooks";
 
@@ -9,6 +10,7 @@ const domains = [
   CommitCommandDomain,
   GoalsDomain,
   PapercutsDomain,
+  OrchestratorDomain,
   ThrottleDomain,
 ];
 
