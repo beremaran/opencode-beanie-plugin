@@ -6,6 +6,7 @@ import type {
   ToolContext,
 } from "@opencode-ai/plugin";
 import BeaniePlugin, { composeCommandHooks } from "./index";
+import { mergeHooks } from "./shared/hooks";
 
 test("aggregates registered domain hooks", async () => {
   const hooks = await BeaniePlugin({} as PluginInput);
@@ -109,6 +110,35 @@ test("runs both domain config hooks", async () => {
   expect(config.command?.commit).toBeDefined();
   expect(config.command?.goal?.template).toContain("goal tools");
   expect(config.agent?.title?.disable).toBe(true);
+});
+
+test("preserves goal compaction with another provider at the root", async () => {
+  const rootHooks = await BeaniePlugin({} as PluginInput);
+  const hooks = mergeHooks([
+    rootHooks,
+    {
+      "experimental.session.compacting": async (_input, output) => {
+        await Promise.resolve();
+        output.context.push("other provider");
+      },
+    },
+  ]);
+  const goalSet = hooks.tool?.goal_set;
+  const compacting = hooks["experimental.session.compacting"];
+
+  if (!goalSet || !compacting) {
+    throw new Error("Expected goal and compaction hooks");
+  }
+
+  await goalSet.execute(
+    { outcome: "Recover root goal" },
+    { sessionID: "root" } as ToolContext,
+  );
+  const output = { context: [] as string[] };
+  await compacting({ sessionID: "root" }, output);
+
+  expect(output.context[0]).toContain("Recover root goal");
+  expect(output.context).toContain("other provider");
 });
 
 const deletedEvent = (sessionID: string) => ({
