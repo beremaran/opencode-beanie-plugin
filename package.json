@@ -1,20 +1,37 @@
 {
   "name": "opencode-beanie-plugin",
-  "module": "src/index.ts",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./tui": {
+      "types": "./src/tui.tsx",
+      "import": "./dist/tui.js"
+    }
+  },
+  "oc-plugin": ["server", "tui"],
   "type": "module",
   "private": true,
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build src/index.ts src/tui.tsx --outdir dist --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/plugin/tui --external @opencode-ai/sdk --external @opencode-ai/sdk/v2 --external @opentui/solid --external solid-js",
     "commit": "make commit"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
+    "@opentui/solid": "0.4.5",
     "@types/bun": "latest",
     "eslint": "^9.34.0",
     "typescript-eslint": "^8.41.0"
   },
   "peerDependencies": {
+    "@opentui/solid": ">=0.4.5",
+    "solid-js": "1.9.12",
     "typescript": "^5"
   },
   "dependencies": {
