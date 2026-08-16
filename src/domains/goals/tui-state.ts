@@ -11,6 +11,11 @@ export type GoalsTuiState = Readonly<{
     goal: GoalSnapshotGoal
 }>;
 
+export type GoalsReadOutcome =
+    | Readonly<{kind: "missing"}>
+    | Readonly<{kind: "invalid"}>
+    | Readonly<{kind: "valid"; state: GoalsTuiState}>;
+
 const record = (value: unknown): Record<string, unknown> | undefined =>
     typeof value === "object" && value !== null ? value as Record<string, unknown> : undefined;
 
@@ -69,10 +74,12 @@ export const parseGoalsState = (value: unknown, identity?: GoalsIdentity): Goals
     return {projectID: value.projectID, sessionID: value.sessionID, goal};
 };
 
-export const readGoalsState = async (path: string, identity: GoalsIdentity): Promise<GoalsTuiState | undefined> => {
+export const readGoalsState = async (path: string, identity: GoalsIdentity): Promise<GoalsReadOutcome> => {
     try {
-        return parseGoalsState(await Bun.file(path).json(), identity);
-    } catch {
-        return undefined;
+        const state = parseGoalsState(await Bun.file(path).json(), identity);
+
+        return state === undefined ? {kind: "invalid"} : {kind: "valid", state};
+    } catch (error) {
+        return (error as NodeJS.ErrnoException).code === "ENOENT" ? {kind: "missing"} : {kind: "invalid"};
     }
 };

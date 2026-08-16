@@ -1,6 +1,11 @@
+import {afterEach} from "bun:test";
 import type {Hooks, PluginInput, ToolContext, ToolResult} from "@opencode-ai/plugin";
 import type {Event} from "@opencode-ai/sdk";
-import {GoalsDomain} from "./index";
+import {mkdtemp, rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+import {createGoalsDomain} from "./index";
+import {FileGoalStore} from "./store";
 
 export type Goal = {
     id: string
@@ -19,7 +24,7 @@ export type Goal = {
     blocker?: string
 }
 
-const input = {} as PluginInput;
+const roots: string[] = [];
 
 export const context = (sessionID: string) => ({sessionID} as ToolContext);
 
@@ -39,8 +44,22 @@ export const event = (sessionID: string): {event: Event} => ({
 });
 
 export async function createDomain() {
-    return GoalsDomain(input);
+    const stateRoot = await mkdtemp(join(tmpdir(), "beanie-goals-test-"));
+    roots.push(stateRoot);
+    return createDomainAt(stateRoot);
 }
+
+export async function createDomainAt(stateRoot: string) {
+    const input = {worktree: "/tmp/worktree", project: {id: "project"}} as PluginInput;
+
+    return createGoalsDomain(input, (options) => new FileGoalStore({...options, stateRoot}));
+}
+
+export async function cleanupDomains() {
+    await Promise.all(roots.splice(0).map((root) => rm(root, {recursive: true, force: true})));
+}
+
+afterEach(cleanupDomains);
 
 export function tools(hooks: Hooks) {
     const registered = hooks.tool;
@@ -48,6 +67,7 @@ export function tools(hooks: Hooks) {
     if (!registered) {
         throw new Error("Goals tools were not registered");
     }
+
     return registered;
 }
 

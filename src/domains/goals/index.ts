@@ -1,16 +1,29 @@
 import type {Domain} from "../../shared/domain";
 import {createGoalHooks} from "./hooks";
-import {createGoalPublisher} from "./publisher";
+import {FileGoalStore, type FileGoalStoreOptions, type GoalStore} from "./store";
 import {createGoalTools} from "./tools";
 
 export type {Goal, GoalStatus} from "./model";
 
-export const GoalsDomain: Domain = (input) => {
-    const goals = new Map<string, import("./model").Goal>();
+export type GoalStoreFactory = (options: FileGoalStoreOptions) => GoalStore;
 
-    const publisher = createGoalPublisher(input);
+const defaultStore: GoalStoreFactory = (options) => new FileGoalStore(options);
 
-    const tools = createGoalTools(goals, publisher);
+export const createGoalsDomain = (input: Parameters<Domain>[0], createStore = defaultStore) => {
+    const stores = new Map<string, GoalStore>();
 
-    return Promise.resolve(createGoalHooks(goals, publisher, tools));
+    const storeFor = (sessionID: string) => {
+        const existing = stores.get(sessionID);
+
+        if (existing) {return existing;}
+
+        const store = createStore({projectID: input.project.id, worktree: input.worktree, sessionID});
+
+        stores.set(sessionID, store);
+        return store;
+    };
+
+    return Promise.resolve(createGoalHooks(storeFor, createGoalTools(storeFor), () => {stores.clear();}));
 };
+
+export const GoalsDomain: Domain = (input) => createGoalsDomain(input);

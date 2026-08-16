@@ -10,13 +10,15 @@ const waitFor = async (condition: () => boolean) => {
 };
 
 test("refreshes when the snapshot is atomically replaced", async () => {
+    await assertAtomicReplacement();
+});
+
+async function assertAtomicReplacement() {
     const root = await mkdtemp(join(process.env.TMPDIR ?? "/tmp", "beanie-goals-watch-"));
     const path = join(root, "snapshot.json");
     let updates = 0;
     await writeFile(path, "old");
-    const stop = watchGoalsSnapshot(path, () => {
-        updates++;
-    });
+    const stop = watchGoalsSnapshot(path, () => { updates++; });
 
     try {
         await Bun.sleep(50);
@@ -29,16 +31,18 @@ test("refreshes when the snapshot is atomically replaced", async () => {
         stop();
         await rm(root, {recursive: true, force: true});
     }
-});
+}
 
 test("retries until a missing snapshot directory is created", async () => {
+    await assertMissingDirectoryRetry();
+});
+
+async function assertMissingDirectoryRetry() {
     const root = await mkdtemp(join(process.env.TMPDIR ?? "/tmp", "beanie-goals-watch-"));
     const directory = join(root, "goals");
     const path = join(directory, "snapshot.json");
     let updates = 0;
-    const stop = watchGoalsSnapshot(path, () => {
-        updates++;
-    });
+    const stop = watchGoalsSnapshot(path, () => { updates++; });
 
     try {
         await Bun.sleep(50);
@@ -51,7 +55,7 @@ test("retries until a missing snapshot directory is created", async () => {
         stop();
         await rm(root, {recursive: true, force: true});
     }
-});
+}
 
 test("disposal is idempotent and cancels retry callbacks", async () => {
     const root = await mkdtemp(join(process.env.TMPDIR ?? "/tmp", "beanie-goals-watch-"));

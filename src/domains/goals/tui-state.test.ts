@@ -45,14 +45,16 @@ test("rejects inactive, malformed, incomplete, and invalid snapshots", () => {
 });
 
 test("reader rejects missing files and cross-session snapshots", async () => {
-    expect(await readGoalsState("/missing/goals.json", identity)).toBeUndefined();
+    expect(await readGoalsState("/missing/goals.json", identity)).toEqual({kind: "missing"});
     const root = await mkdtemp(join(process.env.TMPDIR ?? "/tmp", "beanie-goals-"));
     const path = join(root, "snapshot.json");
     try {
         await writeFile(path, JSON.stringify(snapshot()));
-        expect(await readGoalsState(path, identity)).toEqual({...identity, goal});
-        expect(await readGoalsState(path, {projectID: "other", sessionID: identity.sessionID})).toBeUndefined();
-        expect(await readGoalsState(path, {projectID: identity.projectID, sessionID: "other"})).toBeUndefined();
+        expect(await readGoalsState(path, identity)).toEqual({kind: "valid", state: {...identity, goal}});
+        expect(await readGoalsState(path, {projectID: "other", sessionID: identity.sessionID})).toEqual({kind: "invalid"});
+        expect(await readGoalsState(path, {projectID: identity.projectID, sessionID: "other"})).toEqual({kind: "invalid"});
+        await writeFile(path, "malformed");
+        expect(await readGoalsState(path, identity)).toEqual({kind: "invalid"});
     } finally {
         await rm(root, {recursive: true, force: true});
     }

@@ -1,41 +1,17 @@
-import {mkdir, rename, rm} from "node:fs/promises";
+import {chmod, mkdir, rename, rm} from "node:fs/promises";
 import {dirname, parse} from "node:path";
-import type {GoalSnapshot} from "./snapshot";
 
-export const writeGoalSnapshot = async (path: string, snapshot: GoalSnapshot): Promise<void> => {
+export const writeAtomically = async (path: string, content: string): Promise<void> => {
     await mkdir(dirname(path), {recursive: true});
+    await chmod(dirname(path), 0o700);
     const temporary = `${path}.${parse(path).name}.${crypto.randomUUID()}.tmp`;
 
     try {
-        await Bun.write(temporary, `${JSON.stringify(snapshot)}\n`);
+        await Bun.write(temporary, content);
+        await chmod(temporary, 0o600);
         await rename(temporary, path);
+        await chmod(path, 0o600);
     } finally {
         await rm(temporary, {force: true});
     }
-};
-
-export const createSnapshotWriter = (path: string) => {
-    let pending: GoalSnapshot | undefined;
-
-    let writing: Promise<void> | undefined;
-
-    const drain = async () => {
-        while (pending) {
-            const next = pending;
-            pending = undefined;
-            await writeGoalSnapshot(path, next);
-        }
-    };
-
-    const publish = (snapshot: GoalSnapshot) => {
-        pending = snapshot;
-        writing ??= drain().finally(() => {
-            writing = undefined;
-        });
-    };
-
-    return {
-        publish,
-        flush: async () => writing,
-    };
 };

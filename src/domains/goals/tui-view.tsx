@@ -19,24 +19,24 @@ const detail = (goal: GoalSnapshotGoal): [string, string] | undefined => {
     return [goal.status === "blocked" ? "blocker" : goal.progress ? "progress" : "next", value.slice(0, detailLimit)];
 };
 
-export const renderGoalsStatus = (state: GoalsTuiState | undefined): JSX.Element => {
-    if (!state) {
-        return <box height={0}/>;
-    }
+const goalText = (state: GoalsTuiState, goalDetail: [string, string] | undefined): JSX.Element => (
+    <text truncate>
+        <span style={{fg: "cyan"}}>Goal</span>
+        {" "}
+        <span style={{fg: statusColor(state.goal.status)}}>{state.goal.status}</span>
+        {" - "}
+        {state.goal.outcome}
+        {goalDetail ? " · " : ""}
+        {goalDetail ? <span style={{fg: goalDetail[0] === "blocker" ? "red" : "magenta"}}>{goalDetail[0]}{": "}{goalDetail[1]}</span> : ""}
+    </text>
+);
 
-    const goalDetail = detail(state.goal);
+export const renderGoalsStatus = (state: GoalsTuiState | undefined): JSX.Element => {
+    if (!state) {return <box height={0}/>;}
 
     return (
         <box height={1} paddingLeft={1} paddingRight={1}>
-            <text truncate>
-                <span style={{fg: "cyan"}}>Goal</span>
-                {" "}
-                <span style={{fg: statusColor(state.goal.status)}}>{state.goal.status}</span>
-                {" - "}
-                {state.goal.outcome}
-                {goalDetail ? " · " : ""}
-                {goalDetail ? <span style={{fg: goalDetail[0] === "blocker" ? "red" : "magenta"}}>{goalDetail[0]}{": "}{goalDetail[1]}</span> : ""}
-            </text>
+            {goalText(state, detail(state.goal))}
         </box>
     );
 };

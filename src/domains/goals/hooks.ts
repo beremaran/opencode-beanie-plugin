@@ -1,11 +1,9 @@
 import type {Config, Hooks} from "@opencode-ai/plugin";
 import type {Event} from "@opencode-ai/sdk";
-import type {Goal} from "./model";
 import {compactGoal} from "./compacting";
-import type {createGoalPublisher} from "./publisher";
+import type {GoalStore} from "./store";
 
-type Goals = Map<string, Goal>;
-type Publisher = ReturnType<typeof createGoalPublisher>;
+type StoreFor = (sessionID: string) => GoalStore;
 
 const config = (value: Config) => {
     if (!value.command?.goal) {
@@ -18,26 +16,20 @@ const config = (value: Config) => {
     return Promise.resolve();
 };
 
-const event = (goals: Goals, publisher: Publisher, value: Event) => {
+const event = async (storeFor: StoreFor, value: Event) => {
     if (value.type === "session.deleted") {
-        publisher.empty(value.properties.info.id);
-        goals.delete(value.properties.info.id);
+        await storeFor(value.properties.info.id).clear();
     }
 };
 
-export const createGoalHooks = (goals: Goals, publisher: Publisher, tools: NonNullable<Hooks["tool"]>) => ({
+export const createGoalHooks = (storeFor: StoreFor, tools: NonNullable<Hooks["tool"]>, disposeStores: () => void) => ({
     tool: tools,
     config,
-    "experimental.session.compacting": (value: {sessionID: string}, output: {context: string[]}) => {
-        compactGoal(goals.get(value.sessionID), output.context);
-        return Promise.resolve();
+    "experimental.session.compacting": async (value: {sessionID: string}, output: {context: string[]}) => {
+        compactGoal(await storeFor(value.sessionID).get(), output.context);
     },
-    event: (value: {event: Event}) => {
-        event(goals, publisher, value.event);
-        return Promise.resolve();
+    event: async (value: {event: Event}) => {
+        await event(storeFor, value.event);
     },
-    dispose: async () => {
-        await publisher.dispose();
-        goals.clear();
-    },
+    dispose: () => Promise.resolve().then(disposeStores),
 });

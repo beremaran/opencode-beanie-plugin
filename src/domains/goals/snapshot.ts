@@ -34,11 +34,3 @@ export const createSnapshot = (projectID: string, goal: Goal): GoalSnapshot => f
     active: freeze({goal: copyGoal(goal)}),
     inactive: false,
 });
-
-export const emptySnapshot = (projectID: string, sessionID: string): GoalSnapshot => freeze({
-    schema: "opencode-beanie.goals.v1",
-    projectID,
-    sessionID,
-    active: freeze({goal: null}),
-    inactive: true,
-});

@@ -36,3 +36,29 @@ test("requires evidence and allows replacement after completion", async () => {
     await set.execute({outcome: "Replacement"}, session);
     expect((result(await status.execute({}, session)) as {goal: Goal}).goal.outcome).toBe("Replacement");
 });
+
+test("serializes concurrent updates and does not persist failed updates", async () => {
+    const hooks = await createDomain();
+    await assertConcurrentUpdates(hooks);
+});
+
+async function assertConcurrentUpdates(hooks: Awaited<ReturnType<typeof createDomain>>) {
+    const session = context("concurrent");
+    await goalSet(hooks).execute({outcome: "Finish work"}, session);
+
+    await Promise.all([
+        goalUpdate(hooks).execute({progress: "Half done"}, session),
+        goalUpdate(hooks).execute({nextAction: "Write tests"}, session),
+    ]);
+
+    const status = goalStatus(hooks);
+    const current = result(await status.execute({}, session)) as {goal: Goal};
+    expect(current.goal.progress).toBe("Half done");
+    expect(current.goal.nextAction).toBe("Write tests");
+
+    const failed = result(await goalUpdate(hooks).execute({status: "completed"}, session)) as {error: {message: string}};
+    expect(failed.error.message).toContain("verificationEvidence");
+    const unchanged = result(await status.execute({}, session)) as {goal: Goal};
+    expect(unchanged.goal.status).toBe("active");
+    expect(unchanged.goal.completedAt).toBeUndefined();
+}

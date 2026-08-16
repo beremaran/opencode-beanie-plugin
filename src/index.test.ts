@@ -6,10 +6,11 @@ import type {
   ToolContext,
 } from "@opencode-ai/plugin";
 import BeaniePlugin, { composeCommandHooks } from "./index";
+import { createDomain, goalSet } from "./domains/goals/test-helpers";
 import { mergeHooks } from "./shared/hooks";
 
 test("aggregates registered domain hooks", async () => {
-  const hooks = await BeaniePlugin({} as PluginInput);
+  const hooks = await BeaniePlugin(testInput());
 
   expect(hooks.tool?.goal_set).toBeDefined();
   expect(hooks.tool?.goal_status).toBeDefined();
@@ -31,6 +32,10 @@ function rootInput(commands: string[]) {
       },
     },
   } as unknown as PluginInput;
+}
+
+function testInput() {
+  return {worktree: `/tmp/beanie-index-${crypto.randomUUID()}`, project: {id: "index-project"}} as PluginInput;
 }
 
 test("composes the root command hook with commit behavior", async () => {
@@ -102,7 +107,7 @@ async function runCommandHooks(
 }
 
 test("runs both domain config hooks", async () => {
-  const hooks = await BeaniePlugin({} as PluginInput);
+  const hooks = await BeaniePlugin(testInput());
   const config = {} as Config;
 
   await hooks.config?.(config);
@@ -113,7 +118,7 @@ test("runs both domain config hooks", async () => {
 });
 
 test("preserves goal compaction with another provider at the root", async () => {
-  const rootHooks = await BeaniePlugin({} as PluginInput);
+  const rootHooks = await createDomain();
   const hooks = mergeHooks([
     rootHooks,
     {
@@ -123,23 +128,26 @@ test("preserves goal compaction with another provider at the root", async () => 
       },
     },
   ]);
-  const goalSet = hooks.tool?.goal_set;
   const compacting = hooks["experimental.session.compacting"];
 
-  if (!goalSet || !compacting) {
+  if (!compacting) {
     throw new Error("Expected goal and compaction hooks");
   }
 
-  await goalSet.execute(
-    { outcome: "Recover root goal" },
-    { sessionID: "root" } as ToolContext,
-  );
+  await assertRootCompaction(goalSet(rootHooks), compacting);
+});
+
+async function assertRootCompaction(
+  set: ReturnType<typeof goalSet>,
+  compacting: NonNullable<Hooks["experimental.session.compacting"]>,
+) {
+  await set.execute({ outcome: "Recover root goal" }, { sessionID: "root" } as ToolContext);
   const output = { context: [] as string[] };
   await compacting({ sessionID: "root" }, output);
 
   expect(output.context[0]).toContain("Recover root goal");
   expect(output.context).toContain("other provider");
-});
+}
 
 const deletedEvent = (sessionID: string) => ({
   event: {
@@ -176,14 +184,14 @@ function requiredLifecycleHooks(hooks: Hooks) {
 }
 
 test("composes domain event and dispose hooks", async () => {
-  const hooks = await BeaniePlugin({} as PluginInput);
-  const { event, dispose, goalSet, goalStatus } = requiredLifecycleHooks(hooks);
+  const hooks = await createDomain();
+  const { event, dispose, goalSet: set, goalStatus: status } = requiredLifecycleHooks(hooks);
 
   const context = { sessionID: "composed" } as ToolContext;
-  await goalSet.execute({ outcome: "Keep" }, context);
+  await set.execute({ outcome: "Keep" }, context);
   await event(deletedEvent("composed"));
 
-  const status = await goalStatus.execute({}, context);
-  expect(status).toContain('"goal":null');
+  const result = await status.execute({}, context);
+  expect(result).toContain('"goal":null');
   await dispose();
 });

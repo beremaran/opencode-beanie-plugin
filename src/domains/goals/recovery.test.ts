@@ -1,14 +1,14 @@
 import {expect, test} from "bun:test";
-import {context, createDomain, event, goalSet, goalStatus, goalUpdate, result} from "./test-helpers";
+import {context, createDomain, createDomainAt, event, goalSet, goalStatus, goalUpdate, result} from "./test-helpers";
 import type {Goal} from "./test-helpers";
+import {mkdtemp, rm} from "node:fs/promises";
+import {join} from "node:path";
+import {tmpdir} from "node:os";
 
 test("ignores compaction for other sessions", async () => {
     const hooks = await createDomain();
     const set = goalSet(hooks);
     const compact = hooks["experimental.session.compacting"];
-    if (!compact) {
-        throw new Error("Goals compaction hook was not registered");
-    }
     await set.execute({outcome: "Recover me", constraints: ["No regressions"], verification: ["Check output"]}, context("kept"));
     await goalUpdate(hooks).execute({verificationEvidence: ["Output checked"]}, context("kept"));
     const otherOutput = {context: [] as string[]};
@@ -20,9 +20,6 @@ test("recovers the matching session context", async () => {
     const hooks = await createDomain();
     const set = goalSet(hooks);
     const compact = hooks["experimental.session.compacting"];
-    if (!compact) {
-        throw new Error("Goals compaction hook was not registered");
-    }
     const session = context("kept");
     await set.execute({outcome: "Recover me", constraints: ["No regressions"], verification: ["Check output"]}, session);
     await goalUpdate(hooks).execute({verificationEvidence: ["Output checked"]}, session);
@@ -40,22 +37,19 @@ test("removes deleted goals", async () => {
     const session = context("kept");
     await goalSet(hooks).execute({outcome: "Recover me"}, session);
     const eventHook = hooks.event;
-    if (!eventHook) {
-        throw new Error("Goals event hook was not registered");
-    }
     await eventHook(event("kept"));
     const status = result(await goalStatus(hooks).execute({}, session)) as {goal: Goal | null};
     expect(status.goal).toBeNull();
 });
 
-test("dispose clears process state", async () => {
-    const hooks = await createDomain();
+test("dispose preserves state for a fresh domain instance", async () => {
+    const root = await mkdtemp(join(tmpdir(), "beanie-goals-restart-"));
+    const hooks = await createDomainAt(root);
     const session = context("disposed");
     await goalSet(hooks).execute({outcome: "Temporary"}, session);
     const dispose = hooks.dispose;
-    if (!dispose) {
-        throw new Error("Goals dispose hook was not registered");
-    }
     await dispose();
-    expect((result(await goalStatus(hooks).execute({}, session)) as {goal: Goal | null}).goal).toBeNull();
+    const recovered = await createDomainAt(root);
+    expect((result(await goalStatus(recovered).execute({}, session)) as {goal: Goal | null}).goal?.outcome).toBe("Temporary");
+    await rm(root, {recursive: true, force: true});
 });

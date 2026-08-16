@@ -3,52 +3,55 @@ import {basename, dirname} from "node:path";
 
 type SnapshotChange = () => void;
 
+type WatchState = {
+    watcher?: FSWatcher
+    retry?: ReturnType<typeof setTimeout>
+    disposed: boolean
+};
+
+const closeWatcher = (state: WatchState) => {
+    state.watcher?.close();
+    state.watcher = undefined;
+};
+
+const scheduleRetry = (state: WatchState, arm: () => void) => {
+    if (!state.disposed && !state.retry) {
+        state.retry = setTimeout(() => {
+            state.retry = undefined;
+            arm();
+        }, 1000);
+    }
+};
+
+const createWatcher = (path: string, onChange: SnapshotChange, state: WatchState) => watch(
+    dirname(path), {persistent: false}, (event, name) => {
+        if (!state.disposed && (event === "rename" || !name || name === basename(path))) {onChange();}
+    }
+);
+
+const armWatcher = (path: string, onChange: SnapshotChange, state: WatchState, arm: () => void) => {
+    if (state.disposed || state.watcher) {return;}
+
+    try {
+        state.watcher = createWatcher(path, onChange, state);
+        state.watcher.on("error", () => {
+            closeWatcher(state);
+            scheduleRetry(state, arm);
+        });
+    } catch {
+        scheduleRetry(state, arm);
+    }
+};
+
 export const watchGoalsSnapshot = (path: string, onChange: SnapshotChange) => {
-    let watcher: FSWatcher | undefined;
+    const state: WatchState = {disposed: false};
 
-    let retry: ReturnType<typeof setTimeout> | undefined;
-
-    let disposed = false;
-
-    const scheduleRetry = () => {
-        if (!disposed && !retry) {
-            retry = setTimeout(() => {
-                retry = undefined;
-                arm();
-            }, 1000);
-        }
-    };
-
-    const arm = () => {
-        if (disposed || watcher) {
-            return;
-        }
-
-        try {
-            watcher = watch(dirname(path), {persistent: false}, (event, name) => {
-                if (!disposed && (event === "rename" || !name || name === basename(path))) {
-                    onChange();
-                }
-            });
-            watcher.on("error", () => {
-                watcher?.close();
-                watcher = undefined;
-                scheduleRetry();
-            });
-        } catch {
-            scheduleRetry();
-        }
-    };
+    const arm = () => {armWatcher(path, onChange, state, arm);};
 
     arm();
-
     return () => {
-        disposed = true;
-        watcher?.close();
-        watcher = undefined;
-        if (retry) {
-            clearTimeout(retry);
-            retry = undefined;
-        }
+        state.disposed = true;
+        closeWatcher(state);
+        if (state.retry) {clearTimeout(state.retry); state.retry = undefined;}
     };
 };

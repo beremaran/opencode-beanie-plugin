@@ -7,7 +7,7 @@ export const compactGoal = (goal: Goal | undefined, context: string[]) => {
         return;
     }
 
-    context.push(`Goal recovery (process-memory; may be lost after restart): ${json({
+    context.push(`Goal recovery (durable): ${json({
         id: goal.id,
         status: goal.status,
         outcome: goal.outcome,
