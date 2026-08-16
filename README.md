@@ -1,16 +1,24 @@
 # opencode-beanie-plugin
 
-To install dependencies:
+Beanie is an OpenCode plugin with opt-in workflow features for productive agent sessions. The server plugin currently
+provides goals, throttling, papercuts, commit commands, and an asynchronous multi-agent orchestrator. The orchestrator
+is disabled unless configured explicitly; see [docs/orchestrator.md](docs/orchestrator.md).
+
+## Development
+
+Install dependencies with Bun:
 
 ```bash
 bun install
 ```
 
-To run:
+Useful verification commands:
 
 ```bash
-bun run src/index.ts
+bun test
+bun run lint
+bun run typecheck
+bun run build
 ```
 
-This project was created using `bun init` in bun v1.3.14. [Bun](https://bun.com) is a fast all-in-one JavaScript
-runtime.
+The package exposes its server plugin from `src/index.ts`.
