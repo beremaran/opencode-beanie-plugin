@@ -18,26 +18,54 @@ const taskDetail = (callID: string, task: ThrottleTask): SnapshotTask => ({
     ...(task.sessionID ? {sessionID: task.sessionID} : {}),
 });
 
+const classify = (task: ThrottleTask, callID: string, lists: {foreground: SnapshotTask[]; background: SnapshotTask[]; calls: SnapshotTask[]}) => {
+    const detail = taskDetail(callID, task);
+
+    if (task.phase === "queued") {
+        lists.calls.push(detail);
+    } else if (task.phase === "foreground") {
+        lists.foreground.push(detail);
+    } else {
+        lists.background.push(detail);
+    }
+};
+
 const taskLists = (tasks: Map<string, ThrottleTask>) => {
-    const foreground: SnapshotTask[] = [];
+    const lists = {foreground: [] as SnapshotTask[], background: [] as SnapshotTask[], calls: [] as SnapshotTask[]};
+    tasks.forEach((task, callID) => { classify(task, callID, lists); });
+    return lists;
+};
 
-    const background: SnapshotTask[] = [];
+const doPublish = (
+    permits: PermitPool,
+    tasks: Map<string, ThrottleTask>,
+    writer: ReturnType<typeof createSnapshotWriter>,
+    sequenceRef: {value: number},
+    inactive = false,
+) => {
+    const {foreground, background, calls} = taskLists(tasks);
+    sequenceRef.value += 1;
+    writer.publish(createSnapshot(sequenceRef.value, {
+        count: permits.state().active,
+        foreground,
+        background,
+    }, {count: permits.state().queued.length, calls}, inactive));
+};
 
-    const calls: SnapshotTask[] = [];
+const doEmpty = (
+    writer: ReturnType<typeof createSnapshotWriter>,
+    sequenceRef: {value: number},
+) => {
+    sequenceRef.value += 1;
+    writer.publish(emptySnapshot(sequenceRef.value));
+};
 
-    tasks.forEach((task, callID) => {
-        const detail = taskDetail(callID, task);
+const doAdmitted = (tasks: Map<string, ThrottleTask>, label: string) => {
+    const task = tasks.get(label);
 
-        if (task.phase === "queued") {
-            calls.push(detail);
-        } else if (task.phase === "foreground") {
-            foreground.push(detail);
-        } else {
-            background.push(detail);
-        }
-    });
-
-    return {foreground, background, calls};
+    if (task) {
+        task.phase = "foreground";
+    }
 };
 
 export const createThrottlePublisher = (
@@ -45,29 +73,11 @@ export const createThrottlePublisher = (
     tasks: Map<string, ThrottleTask>,
     writer: ReturnType<typeof createSnapshotWriter>,
 ): Publisher => {
-    let sequence = 0;
+    const sequenceRef = {value: 0};
 
-    const publish = (inactive = false) => {
-        const {foreground, background, calls} = taskLists(tasks);
-
-        writer.publish(createSnapshot(sequence += 1, {
-            count: permits.state().active,
-            foreground,
-            background,
-        }, {count: permits.state().queued.length, calls}, inactive));
+    return {
+        publish: (inactive) => { doPublish(permits, tasks, writer, sequenceRef, inactive); },
+        empty: () => { doEmpty(writer, sequenceRef); },
+        admitted: (label) => { doAdmitted(tasks, label); },
     };
-
-    const empty = () => {
-        writer.publish(emptySnapshot(sequence += 1));
-    };
-
-    const admitted = (label: string) => {
-        const task = tasks.get(label);
-
-        if (task) {
-            task.phase = "foreground";
-        }
-    };
-
-    return {publish, empty, admitted};
 };

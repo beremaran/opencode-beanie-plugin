@@ -4,6 +4,13 @@ type Waiter = {
     reject: (error: Error) => void
 }
 
+type PoolState = {
+    available: number
+    disposed: boolean
+    waiters: Waiter[]
+    listeners: Set<(change: PermitChange) => void>
+}
+
 export type PermitChange = Readonly<{
     type: "queued" | "admitted" | "released" | "disposed"
     label?: string
@@ -18,75 +25,67 @@ export type PermitPool = {
 
 const CAPACITY = 2;
 
+const makeRelease = (onRelease: () => void) => {
+    let released = false;
+
+    return () => {
+        if (released) {return;}
+        released = true;
+        onRelease();
+    };
+};
+
+const notify = (state: PoolState, change: PermitChange) => {
+    state.listeners.forEach((listener) => { listener(change); });
+};
+
+const admitOrCountUp = (state: PoolState) => {
+    if (state.waiters.length > 0) {
+        const waiter = state.waiters.shift();
+        waiter?.resolve(makeRelease(() => { admitOrCountUp(state); }));
+        notify(state, {type: "admitted", label: waiter?.label});
+    } else {
+        state.available = Math.min(CAPACITY, state.available + 1);
+        notify(state, {type: "released"});
+    }
+};
+
+const acquirePermit = (state: PoolState, label: string): Promise<() => void> => {
+    if (state.disposed) {return Promise.reject(new Error("Throttle domain is disposed."));}
+    if (state.available > 0) {
+        state.available -= 1;
+        notify(state, {type: "admitted", label});
+        return Promise.resolve(makeRelease(() => { admitOrCountUp(state); }));
+    }
+
+    return new Promise<() => void>((resolve, reject) => {
+        state.waiters.push({label, resolve, reject});
+        notify(state, {type: "queued", label});
+    });
+};
+
+const disposePool = (state: PoolState) => {
+    state.disposed = true;
+    state.waiters.splice(0).forEach(({reject}) => { reject(new Error("Throttle domain is disposed.")); });
+    notify(state, {type: "disposed"});
+    state.listeners.clear();
+};
+
 export const createPermitPool = (): PermitPool => {
-    let available = CAPACITY;
-
-    let disposed = false;
-
-    const waiters: Waiter[] = [];
-
-    const listeners = new Set<(change: PermitChange) => void>();
-
-    const notify = (change: PermitChange) => {
-        listeners.forEach((listener) => {
-            listener(change);
-        });
-    };
-
-    const release = () => {
-        if (waiters.length > 0) {
-            const waiter = waiters.shift();
-
-            waiter?.resolve(createRelease());
-            notify({type: "admitted", label: waiter?.label});
-            return;
-        }
-        available = Math.min(CAPACITY, available + 1);
-        notify({type: "released"});
-    };
-
-    const createRelease = () => {
-        let released = false;
-
-        return () => {
-            if (released) {
-                return;
-            }
-            released = true;
-            release();
-        };
+    const state: PoolState = {
+        available: CAPACITY,
+        disposed: false,
+        waiters: [],
+        listeners: new Set<(change: PermitChange) => void>(),
     };
 
     return {
-        acquire: (label: string) => {
-            if (disposed) {
-                return Promise.reject(new Error("Throttle domain is disposed."));
-            }
-            if (available > 0) {
-                available -= 1;
-                notify({type: "admitted", label});
-                return Promise.resolve(createRelease());
-            }
-
-            const promise = new Promise<() => void>((resolve, reject) => {
-                waiters.push({label, resolve, reject});
-            });
-
-            notify({type: "queued", label});
-            return promise;
-        },
-        onChange: (listener) => listeners.add(listener),
+        acquire: (label: string) => acquirePermit(state, label),
+        onChange: (listener) => { state.listeners.add(listener); },
         state: () => ({
-            active: CAPACITY - available,
-            queued: waiters.map(({label}) => label),
+            active: CAPACITY - state.available,
+            queued: state.waiters.map(({label}) => label),
         }),
-        dispose: () => {
-            disposed = true;
-            waiters.splice(0).forEach(({reject}) => {
-                reject(new Error("Throttle domain is disposed."));
-            });
-            notify({type: "disposed"});
-            listeners.clear();
-        },
+        dispose: () => { disposePool(state); },
     };
 };

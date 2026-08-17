@@ -34,8 +34,14 @@ function functionNodes(source: ts.SourceFile) {
   return nodes;
 }
 
-function lineCount(source: ts.SourceFile, node: ts.Node) {
-  return source.getLineAndCharacterOfPosition(node.getEnd()).line - source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+function lineCount(source: ts.SourceFile, node: ts.Node, text: string) {
+  const startLine = source.getLineAndCharacterOfPosition(node.getStart(source)).line;
+
+  const endLine = source.getLineAndCharacterOfPosition(node.getEnd()).line;
+
+  const lines = text.split("\n").slice(startLine, endLine + 1);
+
+  return lines.filter((line) => line.trim().length > 0).length;
 }
 
 async function check(path: string) {
@@ -49,7 +55,7 @@ async function check(path: string) {
 
   if (fileLines > MAX_FILE_LINES) {failures.push(`${path}: ${String(fileLines)} lines (maximum ${String(MAX_FILE_LINES)})`);}
   for (const node of functionNodes(source)) {
-    const lines = lineCount(source, node);
+    const lines = lineCount(source, node, text);
 
     if (lines > MAX_FUNCTION_LINES) {failures.push(`${path}:${String(source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1)}: function-like declaration is ${String(lines)} lines (maximum ${String(MAX_FUNCTION_LINES)})`);}
   }

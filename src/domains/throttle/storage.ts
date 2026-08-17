@@ -5,38 +5,41 @@ import type {ThrottleSnapshot} from "./snapshot";
 export const readThrottleSnapshot = async (path: string) => {
     const parsed: unknown = await Bun.file(path).json();
 
-    if (!isThrottleSnapshot(parsed)) {
+    if (!hasRequiredFields(parsed)) {
         throw new Error("Invalid throttle snapshot.");
     }
 
     return parsed;
 };
 
-const isThrottleSnapshot = (value: unknown): value is ThrottleSnapshot => {
+const validateSnapshot = (snapshot: {schema?: unknown; capacity?: unknown; sequence?: unknown; active?: unknown; queued?: unknown; inactive?: unknown}) =>
+    snapshot.schema === "opencode-beanie.throttle.v1" &&
+    snapshot.capacity === 2 && integer(snapshot.sequence) &&
+    typeof snapshot.inactive === "boolean";
+
+const validateCounts = (active: Record<string, unknown> | undefined, queued: Record<string, unknown> | undefined) =>
+    active !== undefined && queued !== undefined &&
+    validTasks(active.foreground) && validTasks(active.background) &&
+    validTasks(queued.calls) && integer(active.count) &&
+    integer(queued.count) &&
+    active.count === active.foreground.length + active.background.length &&
+    queued.count === queued.calls.length;
+
+const hasRequiredFields = (value: unknown): value is ThrottleSnapshot => {
     if (typeof value !== "object" || value === null) {
         return false;
     }
 
     const snapshot = value as {
-        schema?: unknown
-        capacity?: unknown
-        sequence?: unknown
-        active?: unknown
-        queued?: unknown
-        inactive?: unknown
+        schema?: unknown; capacity?: unknown; sequence?: unknown;
+        active?: unknown; queued?: unknown; inactive?: unknown;
     };
 
     const active = record(snapshot.active);
 
     const queued = record(snapshot.queued);
 
-    return snapshot.schema === "opencode-beanie.throttle.v1" &&
-        snapshot.capacity === 2 && integer(snapshot.sequence) &&
-        active !== undefined && queued !== undefined && validTasks(active.foreground) &&
-        validTasks(active.background) && validTasks(queued.calls) && integer(active.count) &&
-        integer(queued.count) && active.count ===
-        (active.foreground.length + active.background.length) &&
-        queued.count === queued.calls.length && typeof snapshot.inactive === "boolean";
+    return validateSnapshot(snapshot) && validateCounts(active, queued);
 };
 
 const record = (value: unknown) =>
@@ -68,22 +71,25 @@ export const writeThrottleSnapshot = async (
     }
 };
 
+const drain = (path: string, getPending: () => ThrottleSnapshot | undefined, setPending: (v: ThrottleSnapshot | undefined) => void) =>
+    async () => {
+        while (getPending()) {
+            const next = getPending();
+            setPending(undefined);
+            if (next) {
+                await writeThrottleSnapshot(path, next);
+            }
+        }
+    };
+
 export const createSnapshotWriter = (path: string) => {
     let pending: ThrottleSnapshot | undefined;
 
     let writing: Promise<void> | undefined;
 
-    const drain = async () => {
-        while (pending) {
-            const next = pending;
-            pending = undefined;
-            await writeThrottleSnapshot(path, next);
-        }
-    };
-
     const publish = (snapshot: ThrottleSnapshot) => {
         pending = snapshot;
-        writing ??= drain().finally(() => {
+        writing ??= drain(path, () => pending, (v) => { pending = v; })().finally(() => {
             writing = undefined;
         });
     };

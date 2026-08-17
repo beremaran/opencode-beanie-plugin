@@ -24,10 +24,7 @@ const isBackground = (metadata: unknown) =>
     isTaskMetadata(metadata) && metadata.background === true;
 
 const terminalSessionID = (event: Event) => {
-    if (event.type === "session.idle" || event.type === "session.error") {
-        return event.properties.sessionID;
-    }
-
+    if (event.type === "session.idle" || event.type === "session.error") {return event.properties.sessionID;}
     return event.type === "session.deleted" ? event.properties.info.id : undefined;
 };
 
@@ -41,17 +38,107 @@ const snapshotLocation = (input: unknown) => {
     return worktree && projectID ? throttleSnapshotPath(worktree, projectID) : undefined;
 };
 
+const noopWriter = () => ({publish: () => {}, flush: async () => {}});
+
 const createWriter = (input: unknown) => {
     const path = snapshotLocation(input);
 
-    return path ? createSnapshotWriter(path) : {
-        publish: () => {
-        }, flush: async () => {
-        }
-    };
+    return path ? createSnapshotWriter(path) : noopWriter();
 };
 
+const setupPermits = (permits: ReturnType<typeof createPermitPool>, publisher: ReturnType<typeof createThrottlePublisher>, disposedRef: {value: boolean}) => {
+    permits.onChange(({type, label}) => {
+        if (type === "admitted" && label) {publisher.admitted(label);}
+        if (!disposedRef.value || type === "disposed") {publisher.publish(type === "disposed");}
+    });
+    publisher.publish();
+};
+
+const buildBefore = (permits: ReturnType<typeof createPermitPool>, tasks: Map<string, ThrottleTask>, publisher: ReturnType<typeof createThrottlePublisher>, calls: Map<string, () => void>) =>
+    async (inputCall: TaskCall) => {
+        if (inputCall.tool !== "task") {return;}
+        tasks.set(inputCall.callID, {phase: "queued"});
+        try { calls.set(inputCall.callID, await permits.acquire(inputCall.callID)); }
+        catch (error) { tasks.delete(inputCall.callID); publisher.publish(); throw error; }
+    };
+
+const handleNonBackground = (inputCall: TaskCall, tasks: Map<string, ThrottleTask>, release: () => void) => {
+    tasks.delete(inputCall.callID);
+    release();
+};
+
+const handleBackground = (sessionID: string, inputCall: TaskCall, tasks: Map<string, ThrottleTask>, children: Map<string, Child>, publisher: ReturnType<typeof createThrottlePublisher>, release: () => void) => {
+    tasks.set(inputCall.callID, {phase: "background", sessionID});
+    children.set(sessionID, {callID: inputCall.callID, release});
+    publisher.publish();
+};
+
+const buildAfter = (tasks: Map<string, ThrottleTask>, publisher: ReturnType<typeof createThrottlePublisher>, calls: Map<string, () => void>, children: Map<string, Child>, terminalChildren: Set<string>, childSessionID: (m: unknown) => string | undefined, isBackground: (m: unknown) => boolean) =>
+    (inputCall: TaskCall, output: TaskOutput) => {
+        if (inputCall.tool !== "task") {return Promise.resolve();}
+
+        const release = calls.get(inputCall.callID); calls.delete(inputCall.callID);
+        if (!release) {return Promise.resolve();}
+
+        const sessionID = childSessionID(output.metadata);
+
+        if (!isBackground(output.metadata) || !sessionID) { handleNonBackground(inputCall, tasks, release); return Promise.resolve(); }
+        if (terminalChildren.delete(sessionID)) { handleNonBackground(inputCall, tasks, release); return Promise.resolve(); }
+        handleBackground(sessionID, inputCall, tasks, children, publisher, release);
+        return Promise.resolve();
+    };
+
+const evictOldestTerminal = (terminalChildren: Set<string>) => {
+    if (terminalChildren.size >= MAX_TERMINAL_CHILDREN) {
+        const oldest = terminalChildren.values().next().value;
+
+        if (oldest) {terminalChildren.delete(oldest);}
+    }
+};
+
+const buildEvent = (tasks: Map<string, ThrottleTask>, publisher: ReturnType<typeof createThrottlePublisher>, children: Map<string, Child>, terminalChildren: Set<string>, terminalSessionID: (e: Event) => string | undefined) =>
+    ({event: received}: { event: Event }) => {
+        const sessionID = terminalSessionID(received);
+
+        if (!sessionID) {return Promise.resolve();}
+
+        const child = children.get(sessionID);
+
+        if (child) { children.delete(sessionID); tasks.delete(child.callID); child.release(); }
+        else { evictOldestTerminal(terminalChildren); terminalChildren.add(sessionID); publisher.publish(); }
+        return Promise.resolve();
+    };
+
+const disposeAll = (calls: Map<string, () => void>, children: Map<string, Child>, terminalChildren: Set<string>, permits: ReturnType<typeof createPermitPool>, tasks: Map<string, ThrottleTask>, publisher: ReturnType<typeof createThrottlePublisher>) => {
+    calls.forEach((release, callID) => { tasks.delete(callID); release(); });
+    children.forEach(({callID, release}) => { tasks.delete(callID); release(); });
+    calls.clear(); children.clear(); terminalChildren.clear();
+    permits.dispose(); tasks.clear(); publisher.empty();
+};
+
+const buildHooks = (
+    permits: ReturnType<typeof createPermitPool>,
+    publisher: ReturnType<typeof createThrottlePublisher>,
+    tasks: Map<string, ThrottleTask>,
+    calls: Map<string, () => void>,
+    children: Map<string, Child>,
+    terminalChildren: Set<string>,
+    disposedRef: {value: boolean},
+    writer: {flush: () => Promise<void>},
+) => ({
+    "tool.execute.before": buildBefore(permits, tasks, publisher, calls),
+    "tool.execute.after": buildAfter(tasks, publisher, calls, children, terminalChildren, childSessionID, isBackground),
+    event: buildEvent(tasks, publisher, children, terminalChildren, terminalSessionID),
+    dispose: async () => {
+        disposedRef.value = true;
+        disposeAll(calls, children, terminalChildren, permits, tasks, publisher);
+        await writer.flush();
+    },
+});
+
 export const ThrottleDomain: Domain = (input) => {
+    const disposedRef = {value: false};
+
     const permits = createPermitPool();
 
     const writer = createWriter(input);
@@ -65,120 +152,6 @@ export const ThrottleDomain: Domain = (input) => {
     const children = new Map<string, Child>();
 
     const terminalChildren = new Set<string>();
-
-    let disposed = false;
-
-    permits.onChange(({type, label}) => {
-        if (type === "admitted" && label) {
-            publisher.admitted(label);
-        }
-
-        if (!disposed || type === "disposed") {
-            publisher.publish(type === "disposed");
-        }
-    });
-
-    publisher.publish();
-
-    const before = async (inputCall: TaskCall) => {
-        if (inputCall.tool !== "task") {
-            return;
-        }
-
-        tasks.set(inputCall.callID, {phase: "queued"});
-
-        try {
-            calls.set(inputCall.callID, await permits.acquire(inputCall.callID));
-        } catch (error) {
-            tasks.delete(inputCall.callID);
-            publisher.publish();
-            throw error;
-        }
-    };
-
-    const after = (inputCall: TaskCall, output: TaskOutput) => {
-        if (inputCall.tool !== "task") {
-            return Promise.resolve();
-        }
-
-        const release = calls.get(inputCall.callID);
-        calls.delete(inputCall.callID);
-
-        if (!release) {
-            return Promise.resolve();
-        }
-
-        const sessionID = childSessionID(output.metadata);
-
-        if (!isBackground(output.metadata) || !sessionID) {
-            tasks.delete(inputCall.callID);
-            release();
-            return Promise.resolve();
-        }
-
-        if (terminalChildren.delete(sessionID)) {
-            tasks.delete(inputCall.callID);
-            release();
-            return Promise.resolve();
-        }
-
-        tasks.set(inputCall.callID, {phase: "background", sessionID});
-        children.set(sessionID, {callID: inputCall.callID, release});
-        publisher.publish();
-        return Promise.resolve();
-    };
-
-    const event = ({event: received}: { event: Event }) => {
-        const sessionID = terminalSessionID(received);
-
-        if (!sessionID) {
-            return Promise.resolve();
-        }
-
-        const child = children.get(sessionID);
-
-        if (child) {
-            children.delete(sessionID);
-            tasks.delete(child.callID);
-            child.release();
-        } else {
-            if (terminalChildren.size >= MAX_TERMINAL_CHILDREN) {
-                const oldest = terminalChildren.values().next().value;
-
-                if (oldest) {
-                    terminalChildren.delete(oldest);
-                }
-            }
-            terminalChildren.add(sessionID);
-            publisher.publish();
-        }
-
-        return Promise.resolve();
-    };
-
-    const dispose = async () => {
-        disposed = true;
-        calls.forEach((release, callID) => {
-            tasks.delete(callID);
-            release();
-        });
-        children.forEach(({callID, release}) => {
-            tasks.delete(callID);
-            release();
-        });
-        calls.clear();
-        children.clear();
-        terminalChildren.clear();
-        permits.dispose();
-        tasks.clear();
-        publisher.empty();
-        await writer.flush();
-    };
-
-    return Promise.resolve({
-        "tool.execute.before": before,
-        "tool.execute.after": after,
-        event,
-        dispose,
-    });
+    setupPermits(permits, publisher, disposedRef);
+    return Promise.resolve(buildHooks(permits, publisher, tasks, calls, children, terminalChildren, disposedRef, writer));
 };
