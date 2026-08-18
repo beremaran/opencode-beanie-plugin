@@ -2,16 +2,17 @@ import type {PluginOptions} from "@opencode-ai/plugin";
 import type {SkillboxOptions} from "./types";
 
 function extractRaw(raw: PluginOptions | undefined): Record<string, unknown> {
-  if (typeof raw !== "object" || raw === null) {
+  if (!raw) {
     return {};
   }
+
   const candidate = (raw as Record<string, unknown>).skillbox;
 
   if (typeof candidate === "object" && candidate !== null) {
     return candidate as Record<string, unknown>;
   }
 
-  return raw as Record<string, unknown>;
+  return raw;
 }
 
 function parseSources(val: unknown): string[] | undefined {
@@ -48,6 +49,7 @@ function parseDebug(val: unknown): boolean | undefined {
 
 function parseTokens(get: (k: string, ek: string) => unknown) {
   const token = get("skillsShToken", "SKILLS_SH_TOKEN");
+
   const ghToken = get("githubToken", "GITHUB_TOKEN");
 
   return {
@@ -61,8 +63,11 @@ export function resolveSkillboxOptions(
   env: Record<string, string | undefined> = Bun.env,
 ): SkillboxOptions {
   const source = extractRaw(raw);
+
   const get = (key: string, envKey: string) => source[key] ?? env[envKey];
+
   const reg = get("registry", "SKILL_REGISTRY");
+
   const { skillsShToken, githubToken } = parseTokens(get);
 
   return {

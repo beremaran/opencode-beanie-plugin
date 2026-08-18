@@ -3,32 +3,35 @@ import {createListSkillsTool, createLoadSkillTool, createSearchSkillsTool} from 
 import type {SkillRegistry} from "./types";
 
 const mockRegistry: SkillRegistry = {
-  listSkills: async () => ({
-    data: [{
-      id: "org/repo/skill-1",
+  listSkills: () =>
+    Promise.resolve({
+      data: [{
+        id: "org/repo/skill-1",
+        name: "Skill 1",
+        slug: "skill-1",
+        source: "org/repo",
+        sourceType: "github",
+      }],
+      pagination: { page: 0, perPage: 20, total: 1, hasMore: false },
+    }),
+  searchSkills: () =>
+    Promise.resolve({
+      data: [{
+        id: "org/repo/skill-1",
+        name: "Skill 1",
+        slug: "skill-1",
+        source: "org/repo",
+        sourceType: "github",
+      }],
+    }),
+  loadSkill: (id) =>
+    Promise.resolve({
+      id,
       name: "Skill 1",
       slug: "skill-1",
       source: "org/repo",
-      sourceType: "github",
-    }],
-    pagination: { page: 0, perPage: 20, total: 1, hasMore: false },
-  }),
-  searchSkills: async () => ({
-    data: [{
-      id: "org/repo/skill-1",
-      name: "Skill 1",
-      slug: "skill-1",
-      source: "org/repo",
-      sourceType: "github",
-    }],
-  }),
-  loadSkill: async (id) => ({
-    id,
-    name: "Skill 1",
-    slug: "skill-1",
-    source: "org/repo",
-    files: [{ path: "SKILL.md", contents: "# Skill 1" }],
-  }),
+      files: [{ path: "SKILL.md", contents: "# Skill 1" }],
+    }),
 };
 
 const noopLogger = async () => {};
@@ -36,11 +39,14 @@ const noopLogger = async () => {};
 describe("skillbox tools", () => {
   test("list_skills executes and formats JSON output", async () => {
     const listTool = createListSkillsTool(mockRegistry, noopLogger);
-    const result = await listTool.execute({
-      page: 0,
-      per_page: 20,
-      include_description: false,
-    }, { sessionID: "test", messageID: "m1" });
+    const result = (await listTool.execute(
+      {
+        page: 0,
+        per_page: 20,
+        include_description: false,
+      },
+      {} as never,
+    )) as string;
 
     const parsed = JSON.parse(result) as { count: number; skills: { id: string }[] };
     expect(parsed.count).toBe(1);
@@ -49,22 +55,28 @@ describe("skillbox tools", () => {
 
   test("search_skills rejects short query", async () => {
     const searchTool = createSearchSkillsTool(mockRegistry, noopLogger);
-    const result = await searchTool.execute({
-      query: "a",
-      limit: 10,
-      include_description: false,
-    }, { sessionID: "test", messageID: "m1" });
+    const result = (await searchTool.execute(
+      {
+        query: "a",
+        limit: 10,
+        include_description: false,
+      },
+      {} as never,
+    )) as string;
 
     expect(JSON.parse(result)).toEqual({ error: "Search query must be at least 2 characters" });
   });
 
   test("search_skills executes and returns results", async () => {
     const searchTool = createSearchSkillsTool(mockRegistry, noopLogger);
-    const result = await searchTool.execute({
-      query: "skill",
-      limit: 10,
-      include_description: false,
-    }, { sessionID: "test", messageID: "m1" });
+    const result = (await searchTool.execute(
+      {
+        query: "skill",
+        limit: 10,
+        include_description: false,
+      },
+      {} as never,
+    )) as string;
 
     const parsed = JSON.parse(result) as { count: number; results: { id: string }[] };
     expect(parsed.count).toBe(1);
@@ -73,20 +85,26 @@ describe("skillbox tools", () => {
 
   test("load_skill rejects empty id", async () => {
     const loadTool = createLoadSkillTool(mockRegistry, noopLogger);
-    const result = await loadTool.execute({
-      id: "   ",
-      include_supporting_files: false,
-    }, { sessionID: "test", messageID: "m1" });
+    const result = (await loadTool.execute(
+      {
+        id: "   ",
+        include_supporting_files: false,
+      },
+      {} as never,
+    )) as string;
 
     expect(JSON.parse(result)).toEqual({ error: "Skill id is required" });
   });
 
   test("load_skill executes and returns payload", async () => {
     const loadTool = createLoadSkillTool(mockRegistry, noopLogger);
-    const result = await loadTool.execute({
-      id: "org/repo/skill-1",
-      include_supporting_files: false,
-    }, { sessionID: "test", messageID: "m1" });
+    const result = (await loadTool.execute(
+      {
+        id: "org/repo/skill-1",
+        include_supporting_files: false,
+      },
+      {} as never,
+    )) as string;
 
     const parsed = JSON.parse(result) as { id: string; name: string };
     expect(parsed.id).toBe("org/repo/skill-1");

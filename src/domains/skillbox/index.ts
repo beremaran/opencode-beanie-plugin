@@ -28,7 +28,9 @@ function createLogger(client: PluginInput["client"], enabled: boolean): Logger {
 
 export const SkillboxDomain: Domain = (input, rawOptions) => {
   const options = resolveSkillboxOptions(rawOptions);
+
   const log = createLogger(input.client, options.debug === true);
+
   const registry = createRegistry(options);
 
   return Promise.resolve({

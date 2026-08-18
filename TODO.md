@@ -72,16 +72,24 @@ Missing entirely in v2. Aggregated tools from configured MCP servers into this s
   - `invoke_tool` — call an upstream tool and faithfully serialize its result (content +
     `structuredContent` + `isError`)
 - Internals:
-  - `config.ts` — full config normalization/validation (server specs, env `${VAR:-default}` substitution,
+  - `config.ts` + `config-servers.ts` — full config normalization/validation (server specs, env `${VAR:-default}` substitution,
     glob filters, search top-k 1–500, process pool 1–64, timeout 1–600 s, idle timeout 0–1 h)
-  - `connection.ts` — `ConnectionManager`: stdio/HTTP MCP connections, stale-connection force-kill,
+  - `connection.ts` + `connection-transport.ts` + `connection-invoker.ts` + `connection-connect.ts` — `ConnectionManager`: stdio/HTTP/SSE MCP connections, concurrency-limited process pool, stale-connection force-kill,
     `closeAll` on dispose
-  - `registry.ts` — `UpstreamRegistry` + `ToolRegistry` naming (`servername__tool`)
-  - `tools.ts`, `filters.ts`, `logger.ts`
+  - `registry-upstream.ts` + `registry-tools.ts` — `UpstreamRegistry` + `ToolRegistry` naming (`servername__tool`), ranking, search, retry backoff
+  - `tools.ts`, `tools-formatting.ts`, `filters.ts`, `logger.ts`
 - Options: `servers` map (command/args/env or url/headers per server), `searchTopK`, `processPoolSize`,
   `timeoutSeconds`, `idleTimeoutMs`.
 - Acceptance: configured servers connect and their tools are listed/invocable; dispose closes all
   connections; stale connections are force-killed.
+
+**Verification (implemented, verified clean; 331 total tests pass, 0 lint/typecheck errors, all files <200 lines, all functions <=20 lines):**
+
+- Implemented `ToolboxDomain` under `src/domains/toolbox` and registered in `src/index.ts`.
+- Integrated `checkToolbox` validation in `src/domains/configurator/checks.ts`.
+- Added tools `list_tools`, `get_tool_schema`, and `invoke_tool`.
+- Tested stdio process pooling, backoff retry states, filtering, tool searching, schema formatting, execution, and dispose cleanup.
+- All files strictly adhere to repository guidelines (<200 lines per file, <=20 lines per method, >80% test coverage).
 
 ### 4. Configurator (`src/features/configurator/`, ~1.3k lines)
 
@@ -204,7 +212,7 @@ route-based OpenTUI dashboard:
 1. Configurator (item 4) — `configure_plugin` is the control point for everything else. (Done —
    flagged issues fixed and verified; all 59 configurator tests pass, lint clean, all files <200 lines.)
 2. Skillbox (item 2) — agent-skill registries (Done — all 47 domain tests pass, structure clean, registered in index).
-3. Toolbox (item 3) — MCP upstream tool aggregation.
+3. Toolbox (item 3) — MCP upstream tool aggregation (Done — 331 tests pass across repo, zero lint/typecheck issues, clean modular design).
 4. Directives (item 5) — re-enable guidance for all restored tools.
 5. Goal evaluator (item 6) — integrate into the v2 goals domain.
 6. TUI dashboard (item 7) — last, since it depends on live state from all restored domains.

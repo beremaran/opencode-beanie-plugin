@@ -6,6 +6,7 @@ import { PapercutsDomain } from "./domains/papercuts";
 import { OrchestratorDomain } from "./domains/orchestrator";
 import { SkillboxDomain } from "./domains/skillbox";
 import { ThrottleDomain } from "./domains/throttle";
+import { ToolboxDomain } from "./domains/toolbox";
 import { mergeHooks } from "./shared/hooks";
 
 const domains = [
@@ -16,6 +17,7 @@ const domains = [
   OrchestratorDomain,
   SkillboxDomain,
   ThrottleDomain,
+  ToolboxDomain,
 ];
 
 export { composeCommandHooks } from "./shared/hooks";

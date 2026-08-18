@@ -1,4 +1,5 @@
 import {parseOrchestratorConfig} from "../orchestrator/config";
+import {loadConfig} from "../toolbox/config";
 
 export interface FeatureReport {
     feature: string;
@@ -148,7 +149,12 @@ function checkToolbox(raw: unknown): FeatureReport {
     if (typeof o.config === "string") {
         return failure("toolbox", "The `config` option must be an inline object with mcpServers; external JSON config files are not supported.");
     }
-    return {feature: "toolbox", ok: true};
+    try {
+        loadConfig({ config: o.config, servers: o.servers });
+        return {feature: "toolbox", ok: true};
+    } catch (error) {
+        return failure("toolbox", error instanceof Error ? error.message : String(error));
+    }
 }
 
 function checkDirectives(raw: unknown): FeatureReport {

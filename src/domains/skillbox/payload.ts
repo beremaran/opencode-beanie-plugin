@@ -21,12 +21,15 @@ export function truncateBytes(str: string, maxBytes: number): string {
   if (maxBytes <= 0) {
     return "";
   }
+
   const encoder = new TextEncoder();
+
   const encoded = encoder.encode(str);
 
   if (encoded.length <= maxBytes) {
     return str;
   }
+
   const decoder = new TextDecoder("utf-8", { fatal: false });
 
   return decoder.decode(encoded.slice(0, maxBytes));
@@ -50,7 +53,9 @@ export function formatSummary(item: SkillSummary, includeDescription = false): R
 
 function budgetFiles(files: FileWithSize[], maxBytes: number): { files: FileWithSize[]; truncated: boolean } {
   let remaining = maxBytes;
+
   let truncated = false;
+
   const result: FileWithSize[] = [];
 
   for (const file of files) {
@@ -87,7 +92,9 @@ export function formatLoadPayload(
   maxBytes?: number,
 ): string {
   const files = prepareFiles(detail, includeSupportingFiles);
+
   const budgeted = maxBytes !== undefined ? budgetFiles(files, maxBytes) : { files, truncated: false };
+
   const payload: Record<string, unknown> = {
     id: detail.id,
     name: detail.name,
@@ -110,6 +117,7 @@ export function formatToolError(error: unknown, id?: string): string {
   if (error instanceof HttpError) {
     return JSON.stringify({ error: `HTTP ${String(error.status)}: ${error.message}` }, null, 2);
   }
+
   const message = error instanceof Error ? error.message : String(error);
 
   return JSON.stringify({ error: message }, null, 2);

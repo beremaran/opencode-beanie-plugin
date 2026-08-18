@@ -1,11 +1,19 @@
 const DEFAULT_TIMEOUT_MS = 10_000;
+
 const DEFAULT_RETRIES = 2;
+
 const DEFAULT_BACKOFF_MS = 1000;
+
 const EXPONENTIAL_BASE = 2;
+
 const BACKOFF_JITTER = 0.5;
+
 const TOO_MANY_REQUESTS_STATUS = 429;
+
 const SERVER_ERROR_MIN_STATUS = 500;
+
 const MS_PER_SECOND = 1000;
+
 const NETWORK_ERROR_STATUS = 0;
 
 export interface HttpGetOptions {
@@ -44,6 +52,7 @@ function retryAfter(value: string | null): number | undefined {
   if (!value) {
     return undefined;
   }
+
   const n = Number(value);
 
   return Number.isFinite(n) && n >= 0 ? n : undefined;
@@ -75,7 +84,8 @@ async function attemptFetch(
   timeout: number,
 ): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
+
+  const timer = setTimeout(() => { controller.abort(); }, timeout);
 
   try {
     return await fetch(url, { headers, signal: controller.signal });

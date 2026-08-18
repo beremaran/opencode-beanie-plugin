@@ -13,7 +13,9 @@ export async function fetchSkillFiles(
   const files: SkillFile[] = await Promise.all(
     under.map(async (entry) => {
       const path = (entry.path ?? "").slice(dir.length + 1);
+
       const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${entry.path ?? ""}`;
+
       const contents = await httpGetText(url);
 
       return { path, contents };
@@ -44,6 +46,7 @@ export function capSkillFiles(files: SkillFile[], maxBytes: number): void {
   if (total <= maxBytes) {
     return;
   }
+
   const md = files.find((f) => isSkillMd(f.path));
 
   if (md && byteLength(md.contents) > maxBytes) {
@@ -54,6 +57,7 @@ export function capSkillFiles(files: SkillFile[], maxBytes: number): void {
 
     return;
   }
+
   const mdBytes = md ? byteLength(md.contents) : 0;
 
   truncateSupportFiles(files, maxBytes, mdBytes);

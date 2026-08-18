@@ -82,6 +82,7 @@ function findEntryObjectEnd(text: string, end: number): number | null {
     i += 1;
     while (isWhitespace(text[i])) {i += 1;}
     if (text[i] !== "{") {return null;}
+
     const objectEnd = findMatching(text, i, "{", "}");
 
     return objectEnd === -1 ? null : objectEnd;

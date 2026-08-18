@@ -35,6 +35,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
     "@opencode-ai/plugin": "^1.18.18"
   }
 }

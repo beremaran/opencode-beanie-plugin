@@ -14,17 +14,17 @@ describe("SkillsShRegistry", () => {
   });
 
   test("listSkills fetches from skills.sh API", async () => {
-    globalThis.fetch = (async (url: string) => {
+    globalThis.fetch = ((url: string) => {
       if (url.includes("/api/v1/skills?")) {
-        return new Response(JSON.stringify({
+        return Promise.resolve(new Response(JSON.stringify({
           data: [
             { id: "test-org/my-skill", name: "My Skill", slug: "my-skill", source: "test-org" },
           ],
           pagination: { page: 1, perPage: 20, total: 1, hasMore: false },
-        }), { status: 200 });
+        }), { status: 200 }));
       }
-      return new Response("Not Found", { status: 404 });
-    }) as typeof fetch;
+      return Promise.resolve(new Response("Not Found", { status: 404 }));
+    }) as unknown as typeof fetch;
 
     const reg = new SkillsShRegistry({ token: "test-token" });
     const res = await reg.listSkills();
@@ -34,17 +34,17 @@ describe("SkillsShRegistry", () => {
   });
 
   test("searchSkills searches by query", async () => {
-    globalThis.fetch = (async (url: string) => {
+    globalThis.fetch = ((url: string) => {
       if (url.includes("/api/v1/skills/search?")) {
-        return new Response(JSON.stringify({
+        return Promise.resolve(new Response(JSON.stringify({
           data: [
             { id: "test-org/my-skill", name: "My Skill", slug: "my-skill", source: "test-org" },
           ],
           count: 1,
-        }), { status: 200 });
+        }), { status: 200 }));
       }
-      return new Response("Not Found", { status: 404 });
-    }) as typeof fetch;
+      return Promise.resolve(new Response("Not Found", { status: 404 }));
+    }) as unknown as typeof fetch;
 
     const reg = new SkillsShRegistry({ token: "test-token" });
     const res = await reg.searchSkills({ query: "skill" });
@@ -54,9 +54,9 @@ describe("SkillsShRegistry", () => {
   });
 
   test("loadSkill fetches skill details and parses files", async () => {
-    globalThis.fetch = (async (url: string) => {
+    globalThis.fetch = ((url: string) => {
       if (url.includes("/api/v1/skills/test-org/my-skill")) {
-        return new Response(JSON.stringify({
+        return Promise.resolve(new Response(JSON.stringify({
           id: "test-org/my-skill",
           name: "My Skill",
           slug: "my-skill",
@@ -64,10 +64,10 @@ describe("SkillsShRegistry", () => {
           files: [
             { path: "SKILL.md", contents: "# Skill Content" },
           ],
-        }), { status: 200 });
+        }), { status: 200 }));
       }
-      return new Response("Not Found", { status: 404 });
-    }) as typeof fetch;
+      return Promise.resolve(new Response("Not Found", { status: 404 }));
+    }) as unknown as typeof fetch;
 
     const reg = new SkillsShRegistry({ token: "test-token" });
     const detail = await reg.loadSkill("test-org/my-skill");
@@ -77,16 +77,28 @@ describe("SkillsShRegistry", () => {
   });
 
   test("loadSkill throws SkillNotFoundError on 404", async () => {
-    globalThis.fetch = (async () => new Response("Not Found", { status: 404 })) as typeof fetch;
+    globalThis.fetch = (() => Promise.resolve(new Response("Not Found", { status: 404 }))) as unknown as typeof fetch;
 
     const reg = new SkillsShRegistry({ token: "test-token" });
-    await expect(reg.loadSkill("test-org/missing")).rejects.toThrow(SkillNotFoundError);
+    let error: Error | null = null;
+    try {
+      await reg.loadSkill("test-org/missing");
+    } catch (err) {
+      error = err as Error;
+    }
+    expect(error).toBeInstanceOf(SkillNotFoundError);
   });
 
   test("loadSkill throws RegistryAuthError on 401", async () => {
-    globalThis.fetch = (async () => new Response("Unauthorized", { status: 401 })) as typeof fetch;
+    globalThis.fetch = (() => Promise.resolve(new Response("Unauthorized", { status: 401 }))) as unknown as typeof fetch;
 
     const reg = new SkillsShRegistry({ token: "invalid-token" });
-    await expect(reg.loadSkill("test-org/skill")).rejects.toThrow(RegistryAuthError);
+    let error: Error | null = null;
+    try {
+      await reg.loadSkill("test-org/skill");
+    } catch (err) {
+      error = err as Error;
+    }
+    expect(error).toBeInstanceOf(RegistryAuthError);
   });
 });

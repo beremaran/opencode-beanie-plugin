@@ -30,7 +30,9 @@ import {
 import {capSkillFiles, fetchSkillFiles} from "./github-files";
 
 const DEFAULT_MAX_BYTES = 50_000;
+
 const DEFAULT_PER_PAGE = 20;
+
 const DEFAULT_SEARCH_LIMIT = 10;
 
 function toSummary(source: string, dir: string, name: string, description?: string): SkillSummary {
@@ -87,13 +89,17 @@ export class GithubRegistry implements SkillRegistry {
 
   async listSkills(opts: ListSkillsOptions = {}): Promise<SkillListResult> {
     const page = opts.page ?? 0;
+
     const perPage = opts.perPage ?? DEFAULT_PER_PAGE;
+
     const allSummaries: SkillSummary[] = [];
 
     for (const source of this.sources) {
       await this.collectSourceSummaries(source, opts.includeDescription ?? false, allSummaries);
     }
+
     const start = page * perPage;
+
     const data = allSummaries.slice(start, start + perPage);
 
     return {
@@ -113,7 +119,9 @@ export class GithubRegistry implements SkillRegistry {
     if (q.length < 2) {
       throw new Error("search query must be at least 2 characters");
     }
+
     const matches = await this.findMatches(q.toLowerCase(), opts.owner, opts.includeDescription ?? false);
+
     const limit = opts.limit ?? DEFAULT_SEARCH_LIMIT;
 
     return {
@@ -127,18 +135,24 @@ export class GithubRegistry implements SkillRegistry {
     if (parts.length < 2) {
       throw new SkillNotFoundError(`Skill not found: ${id}`);
     }
+
     const [owner, repo, ...rest] = parts;
+
     const slug = rest.join("/");
+
     const tree = await fetchTree(owner ?? "", repo ?? "", this.token, this.trees, this.branches);
+
     const dir = tree ? resolveDir(tree.entries, slug) : null;
 
     if (!tree || !dir) {
       throw new SkillNotFoundError(`Skill not found: ${id}`);
     }
+
     const files = await loadDirFiles(owner ?? "", repo ?? "", tree, dir, id);
 
     capSkillFiles(files, this.maxBytes);
     const md = files.find((f) => isSkillMd(f.path));
+
     const name = md ? parseSkillFrontmatter(md.contents).name ?? slug : slug;
 
     return { id, name, slug, source: `${owner ?? ""}/${repo ?? ""}`, files };
@@ -146,7 +160,9 @@ export class GithubRegistry implements SkillRegistry {
 
   private async buildSummary(owner: string, repo: string, branch: string, dir: string, incDesc: boolean) {
     const info = await fetchFrontmatter(owner, repo, branch, dir, this.frontmatter);
+
     const name = info.name ?? dirBase(dir);
+
     const desc = incDesc ? (info.description ?? (info.raw ? extractDescription(info.raw) : undefined)) : undefined;
 
     return toSummary(`${owner}/${repo}`, dir, name, desc);
@@ -158,6 +174,7 @@ export class GithubRegistry implements SkillRegistry {
     if (!parsed) {
       return;
     }
+
     const tree = await fetchTree(parsed.owner, parsed.repo, this.token, this.trees, this.branches);
 
     if (!tree) {
@@ -170,12 +187,14 @@ export class GithubRegistry implements SkillRegistry {
 
   private async findMatches(lq: string, ownerFilter: string | undefined, incDesc: boolean): Promise<SearchMatch[]> {
     const matches: SearchMatch[] = [];
+
     let candidates = 0;
 
     for (const [idx, source] of this.sources.entries()) {
       if (candidates >= SEARCH_CANDIDATE_LIMIT) {
         break;
       }
+
       const parsed = splitSource(source);
 
       if (parsed && (!ownerFilter || parsed.owner.toLowerCase() === ownerFilter.toLowerCase())) {

@@ -59,6 +59,7 @@ export async function fetchFrontmatter(
   cache: TtlCache<string, FrontmatterInfo>,
 ): Promise<FrontmatterInfo> {
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodePath(dir)}/SKILL.md`;
+
   const cached = cache.get(url);
 
   if (cached) {
@@ -83,7 +84,9 @@ function checkMatch(
   incDesc: boolean,
 ): SearchMatch | null {
   const name = info.name ?? dirBase(dir);
+
   const desc = info.description ?? (info.raw ? extractDescription(info.raw) : "");
+
   const n = name.toLowerCase();
 
   if (n.includes(lq) || desc.toLowerCase().includes(lq)) {

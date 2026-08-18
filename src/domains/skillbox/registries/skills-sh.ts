@@ -22,18 +22,28 @@ import {
 } from "./skills-sh-mapping";
 
 const DEFAULT_BASE_URL = "https://skills.sh";
+
 const DEFAULT_MAX_BYTES = 50_000;
+
 const DEFAULT_PAGE_SIZE = 20;
+
 const DEFAULT_SEARCH_LIMIT = 10;
+
 const LIST_TTL_MS = 10 * 60 * 1000;
+
 const SEARCH_TTL_MS = 5 * 60 * 1000;
+
 const DETAIL_TTL_MS = 60 * 60 * 1000;
+
 const ENRICH_LIMIT = 10;
+
 const HTTP_UNAUTHORIZED = 401;
+
 const HTTP_NOT_FOUND = 404;
 
 function parseId(id: string): { source: string; slug: string } {
   const parts = id.split("/");
+
   const [first, second, ...rest] = parts;
 
   if (parts.length >= 3) {
@@ -86,16 +96,23 @@ export class SkillsShRegistry implements SkillRegistry {
 
   async listSkills(opts: ListSkillsOptions = {}): Promise<SkillListResult> {
     const view = opts.view ?? "all-time";
+
     const page = opts.page ?? 1;
+
     const perPage = opts.perPage ?? DEFAULT_PAGE_SIZE;
+
     const key = `list:${view}:${String(page)}:${String(perPage)}:${String(opts.includeDescription)}`;
+
     const cached = this.listCache.get(key);
 
     if (cached) {
       return cached;
     }
+
     const params = new URLSearchParams({ view, page: String(page), perPage: String(perPage) });
+
     const body = await this.request(`${this.baseUrl}/api/v1/skills?${params.toString()}`);
+
     const result = mapListResponse(body, page, perPage);
 
     if (opts.includeDescription) {
@@ -112,13 +129,17 @@ export class SkillsShRegistry implements SkillRegistry {
     if (query.length < 2) {
       throw new Error("search query must be at least 2 characters");
     }
+
     const limit = opts.limit ?? DEFAULT_SEARCH_LIMIT;
+
     const key = `search:${query}:${String(limit)}:${opts.owner ?? ""}:${String(opts.includeDescription)}`;
+
     const cached = this.searchCache.get(key);
 
     if (cached) {
       return cached;
     }
+
     const result = await this.executeSearch(query, limit, opts.owner);
 
     if (opts.includeDescription) {
@@ -131,14 +152,19 @@ export class SkillsShRegistry implements SkillRegistry {
 
   async loadSkill(id: string): Promise<SkillDetail> {
     const { source, slug } = parseId(id);
+
     const key = `detail:${source}:${slug}`;
+
     const cached = this.detailCache.get(key);
 
     if (cached) {
       return cached;
     }
+
     const url = `${this.baseUrl}/api/v1/skills/${encodeURIComponent(source)}/${encodeURIComponent(slug)}`;
+
     const raw = (await this.request(url)) as Record<string, unknown>;
+
     const detail = buildDetail(raw, id, source, slug, this.maxBytes);
 
     this.detailCache.set(key, detail, DETAIL_TTL_MS);
@@ -152,6 +178,7 @@ export class SkillsShRegistry implements SkillRegistry {
     if (owner) {
       params.set("owner", owner);
     }
+
     const body = await this.request(`${this.baseUrl}/api/v1/skills/search?${params.toString()}`);
 
     return mapSearchResponse(body, limit);
@@ -176,6 +203,7 @@ export class SkillsShRegistry implements SkillRegistry {
       items.slice(0, ENRICH_LIMIT).map(async (item) => {
         try {
           const detail = await this.loadSkill(`${item.source}/${item.slug}`);
+
           const file = detail.files.find((f) => isSkillMd(f.path));
 
           if (file) {

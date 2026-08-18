@@ -27,9 +27,13 @@ export function pickArray(obj: Record<string, unknown>, key: string): unknown[] 
 
 export function mapToSummary(x: Record<string, unknown>): SkillSummary {
   const source = pickString(x, "source") ?? "";
+
   const slug = pickString(x, "slug") ?? "";
+
   const installs = pickNumber(x, "installs");
+
   const installUrl = pickString(x, "installUrl");
+
   const url = pickString(x, "url");
 
   return {
@@ -46,9 +50,13 @@ export function mapToSummary(x: Record<string, unknown>): SkillSummary {
 
 export function mapListResponse(body: unknown, page: number, perPage: number): SkillListResult {
   const raw = (body ?? {}) as Record<string, unknown>;
+
   const rows = pickArray(raw, "data") ?? pickArray(raw, "skills") ?? [];
+
   const data = rows.map((x) => mapToSummary(x as Record<string, unknown>));
+
   const p = (raw.pagination ?? {}) as Record<string, unknown>;
+
   const total = pickNumber(p, "total");
 
   return {
@@ -64,9 +72,13 @@ export function mapListResponse(body: unknown, page: number, perPage: number): S
 
 export function mapSearchResponse(body: unknown, limit: number): SkillListResult {
   const raw = (body ?? {}) as Record<string, unknown>;
+
   const rows = pickArray(raw, "data") ?? pickArray(raw, "results") ?? [];
+
   const data = rows.map((x) => mapToSummary(x as Record<string, unknown>));
+
   const p = (raw.pagination ?? {}) as Record<string, unknown>;
+
   const total = pickNumber(raw, "count") ?? pickNumber(p, "total");
 
   return {
@@ -82,6 +94,7 @@ export function mapSearchResponse(body: unknown, limit: number): SkillListResult
 
 export function extractFiles(raw: Record<string, unknown>): SkillFile[] {
   const list = pickArray(raw, "files") ?? [];
+
   const files: SkillFile[] = [];
 
   for (const entry of list) {

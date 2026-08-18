@@ -8,7 +8,9 @@ export interface TreeEntry {
 }
 
 const BRANCHES: readonly string[] = ["main", "master"];
+
 const TREE_TTL_MS = 60 * 60 * 1000;
+
 const HTTP_NOT_FOUND = 404;
 
 export function dirBase(dir: string): string {
@@ -44,7 +46,9 @@ async function fetchBranchTree(
 ): Promise<TreeEntry[] | null> {
   try {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
     const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
+
     const body = await httpGetJson<{ tree?: TreeEntry[] }>(url, { headers });
 
     return body.tree ?? [];
@@ -66,6 +70,7 @@ function getCachedTree(
   if (!known) {
     return null;
   }
+
   const cached = trees.get(`tree:${key}:${known}`);
 
   return cached ? { entries: cached, branch: known } : null;
@@ -95,11 +100,13 @@ export async function fetchTree(
   branches: Map<string, string>,
 ): Promise<{ entries: TreeEntry[]; branch: string } | null> {
   const key = `${owner}/${repo}`;
+
   const existing = getCachedTree(key, branches, trees);
 
   if (existing) {
     return existing;
   }
+
   const result = await resolveBranchTree(owner, repo, token);
 
   if (result) {
