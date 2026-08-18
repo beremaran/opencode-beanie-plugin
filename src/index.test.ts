@@ -24,6 +24,7 @@ test("aggregates registered domain hooks", async () => {
 function rootInput(commands: string[]) {
   return {
     client: {
+      app: {log: () => Promise.resolve(undefined)},
       session: {
         shell: ({ body }: { body: { command: string } }) => {
           commands.push(body.command);
@@ -35,7 +36,11 @@ function rootInput(commands: string[]) {
 }
 
 function testInput() {
-  return {worktree: `/tmp/beanie-index-${crypto.randomUUID()}`, project: {id: "index-project"}} as PluginInput;
+  return {
+    worktree: `/tmp/beanie-index-${crypto.randomUUID()}`,
+    project: {id: "index-project"},
+    client: {app: {log: () => Promise.resolve(undefined)}},
+  } as unknown as PluginInput;
 }
 
 test("composes the root command hook with commit behavior", async () => {
