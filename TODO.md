@@ -94,6 +94,33 @@ Missing entirely in v2. Self-service configuration of the plugin itself.
 - Acceptance: `configure_plugin apply` writes and persists options; `validate` reports all errors
   without writing; `/beanie` command suite behaves identically to main.
 
+**Verification (implemented, commit `75a2345`; 53 tests pass, lint clean):**
+
+- Good: `configure_plugin` implements all four actions (status/schema/validate/apply) with scope
+  `auto|project|global`; the `/beanie` suite (status/validate/apply/init/help) is registered via the
+  `config` + `command.execute.before` hooks; the text-span upsert in `opencode-upsert.ts` is robust
+  (replaces existing entries, inserts into an existing array, adds the array when absent, preserves
+  other plugins); `validateFullOptions` reuses the orchestrator's `parseOrchestratorConfig` instead of
+  duplicating it; the schema covers all seven feature namespaces (forward-looking).
+- Bad:
+  - `orchestrator.subagentModel` is a phantom "required" option — the tool description, `renderHelp`,
+    and `renderInitDirective` all claim it is required, but no such field exists (the v2 orchestrator
+    uses `manager`/`build`/`coordinators` with `.model`), `schema.ts` has no `subagentModel` property,
+    and `validateFullOptions({})` reports zero errors (nothing is actually required). The help text is
+    stale from `main`.
+  - `/beanie apply` with no payload writes `{}` (wipes the config), while the tool's `apply` with no
+    `config` uses the current options — the two apply paths disagree on the no-arg case.
+  - File-length rule (<200 lines) violated: `index.ts` (260), `schema.ts` (263), `validate.ts` (221).
+- Improvable: fix the `subagentModel` help text to match v2's real orchestrator options and drop the
+  false "required" claim; make the command vs. tool `apply` paths consistent; the `subagent_depth` read
+  via `(cfg as Config & {subagent_depth?: unknown})` is a non-standard field that is likely always
+  undefined (dead-ish path); split `index.ts` (it holds both the tool executor and the command handler).
+- Diverged from spec: spec lists `node-shims.d.ts` (absent) and `parseBeanie` in `opencode-file.ts`
+  (it's in `commands.ts`); impl adds `opencode-upsert.ts` (not in spec) and moves `isPluginEntryName`
+  there. `goal` options are forward-looking: schema/validate include `evaluatorModel`, `stateDirectory`,
+  `defaultTokenBudget`, `maxTranscriptChars`, etc., but the goals domain reads none of them yet (item 6
+  not done) — acceptable per spec, but setting them now is a no-op.
+
 ### 5. Directives (`src/features/directives/index.ts`)
 
 Missing entirely in v2. Note: v2's `src/domains/orchestrator/directives.ts` is unrelated — it configures
@@ -167,7 +194,8 @@ route-based OpenTUI dashboard:
 ## Suggested Order
 
 1. Configurator (item 4) — providers depends on its `opencode-file.ts` helpers, and `configure_plugin`
-   is the control point for everything else.
+   is the control point for everything else. (Done — see verification notes above; fix the flagged
+   issues before `providers` leans on this domain.)
 2. Providers (item 1)
 3. Skillbox (item 2) and Toolbox (item 3) — independent of each other.
 4. Directives (item 5) — re-enable guidance for all restored tools.
