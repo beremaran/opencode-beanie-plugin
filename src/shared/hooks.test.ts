@@ -1,7 +1,14 @@
 import {expect, test} from "bun:test";
 import {tool} from "@opencode-ai/plugin";
 import type {Hooks} from "@opencode-ai/plugin";
-import {composeCompactingHooks, composeToolAfterHooks, composeToolBeforeHooks, mergeHooks} from "./hooks";
+import {
+    composeCompactingHooks,
+    composeSystemTransformHooks,
+    composeToolAfterHooks,
+    composeToolBeforeHooks,
+    composeToolDefinitionHooks,
+    mergeHooks,
+} from "./hooks";
 
 function toolCall() {
     return [
@@ -97,4 +104,50 @@ test("composes compacting hooks sequentially with accumulated context", async ()
 
     expect(output).toEqual(["first:start", "first:done", "second:seen:first"]);
     expect(context.context).toEqual(["first", "second"]);
+});
+
+test("composes tool definition hooks sequentially", async () => {
+    const hooks: Hooks[] = [
+        {
+            "tool.definition": async ({toolID}, output) => {
+                await Promise.resolve();
+                output.description = `[first:${toolID}] ${output.description}`;
+            },
+        },
+        {
+            "tool.definition": async ({toolID}, output) => {
+                await Promise.resolve();
+                output.description = `${output.description} [second:${toolID}]`;
+            },
+        },
+    ];
+    const toolDef = composeToolDefinitionHooks(hooks);
+    const output = {description: "base", parameters: {}};
+
+    await toolDef?.({toolID: "goal_set"}, output);
+
+    expect(output.description).toBe("[first:goal_set] base [second:goal_set]");
+});
+
+test("composes system transform hooks sequentially", async () => {
+    const hooks: Hooks[] = [
+        {
+            "experimental.chat.system.transform": async (_input, output) => {
+                await Promise.resolve();
+                output.system.push("directive1");
+            },
+        },
+        {
+            "experimental.chat.system.transform": async (_input, output) => {
+                await Promise.resolve();
+                output.system.push("directive2");
+            },
+        },
+    ];
+    const systemTransform = composeSystemTransformHooks(hooks);
+    const output = {system: ["initial"]};
+
+    await systemTransform?.({model: {} as never}, output);
+
+    expect(output.system).toEqual(["initial", "directive1", "directive2"]);
 });

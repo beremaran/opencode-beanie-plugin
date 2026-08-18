@@ -4,6 +4,8 @@ type CommandHook = NonNullable<Hooks["command.execute.before"]>;
 type ToolBeforeHook = NonNullable<Hooks["tool.execute.before"]>;
 type ToolAfterHook = NonNullable<Hooks["tool.execute.after"]>;
 type CompactingHook = NonNullable<Hooks["experimental.session.compacting"]>;
+type ToolDefinitionHook = NonNullable<Hooks["tool.definition"]>;
+type SystemTransformHook = NonNullable<Hooks["experimental.chat.system.transform"]>;
 
 function collect<T>(hooks: Hooks[], select: (hook: Hooks) => T | undefined) {
     return hooks.flatMap((hook) => {
@@ -49,6 +51,26 @@ export function composeCompactingHooks(hooks: Hooks[]) {
     if (selected.length === 0) {return;}
 
     return async (...args: Parameters<CompactingHook>) => {
+        for (const hook of selected) {await hook(...args);}
+    };
+}
+
+export function composeToolDefinitionHooks(hooks: Hooks[]) {
+    const selected = collect(hooks, (hook) => hook["tool.definition"]);
+
+    if (selected.length === 0) {return;}
+
+    return async (...args: Parameters<ToolDefinitionHook>) => {
+        for (const hook of selected) {await hook(...args);}
+    };
+}
+
+export function composeSystemTransformHooks(hooks: Hooks[]) {
+    const selected = collect(hooks, (hook) => hook["experimental.chat.system.transform"]);
+
+    if (selected.length === 0) {return;}
+
+    return async (...args: Parameters<SystemTransformHook>) => {
         for (const hook of selected) {await hook(...args);}
     };
 }
@@ -106,7 +128,16 @@ export function mergeHooks(hooks: Hooks[]) {
 }
 
 function assignComposedHooks(merged: Hooks, hooks: Hooks[]) {
-  const tools = mergeTools(hooks), command = composeCommandHooks(hooks), before = composeToolBeforeHooks(hooks), after = composeToolAfterHooks(hooks), compacting = composeCompactingHooks(hooks), event = composeEventHooks(hooks), dispose = composeDisposeHooks(hooks), config = composeConfigHooks(hooks);
+  const tools = mergeTools(hooks),
+    command = composeCommandHooks(hooks),
+    before = composeToolBeforeHooks(hooks),
+    after = composeToolAfterHooks(hooks),
+    compacting = composeCompactingHooks(hooks),
+    event = composeEventHooks(hooks),
+    dispose = composeDisposeHooks(hooks),
+    config = composeConfigHooks(hooks),
+    toolDef = composeToolDefinitionHooks(hooks),
+    systemTransform = composeSystemTransformHooks(hooks);
 
   if (tools) {merged.tool = tools;}
   if (command) {merged["command.execute.before"] = command;}
@@ -116,4 +147,6 @@ function assignComposedHooks(merged: Hooks, hooks: Hooks[]) {
   if (event) {merged.event = event;}
   if (dispose) {merged.dispose = dispose;}
   if (config) {merged.config = config;}
+  if (toolDef) {merged["tool.definition"] = toolDef;}
+  if (systemTransform) {merged["experimental.chat.system.transform"] = systemTransform;}
 }

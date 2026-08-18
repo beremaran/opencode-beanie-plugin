@@ -153,6 +153,15 @@ orchestrator agents/commands, not this guidance injection.
 - Acceptance: plugin tool descriptions carry `[opencode-beanie-plugin]` guidance; the system section is
   injected with the correct mechanism subset; custom `tools`/`system` entries are appended.
 
+**Verification (implemented, clean; 344 total tests pass, 100% domain coverage, 0 lint/typecheck errors, all files <200 lines, all functions <=20 lines):**
+
+- Implemented `DirectivesDomain` under `src/domains/directives` and registered in `src/index.ts`.
+- Enhanced `src/shared/hooks.ts` with `composeToolDefinitionHooks` and `composeSystemTransformHooks` to support multi-domain composition.
+- Provided default tool guidance across v2 and legacy tool names (`goal_set`, `goal_status`, `goal_update`, `list_skills`, `search_skills`, `load_skill`, `list_tools`, `get_tool_schema`, `invoke_tool`, `configure_plugin`, `orchestrate_start`, `orchestrate_status`, `orchestrate_read`, `orchestrate_cancel`, etc.).
+- Handled capability summaries injection and mechanism filtering (`goal`, `orchestrator`, `throttle`, `skillbox`, `toolbox`, `providers`, `configurator`).
+- Supported custom tool guidance overrides and custom system directive lines.
+- All files strictly adhere to repository guidelines (<200 lines per file, <=20 lines per method, 100% test coverage).
+
 ### 6. Goal LLM Evaluator + Auto-Continuation (part of `src/features/goal/`)
 
 v2's `domains/goals` rewrote goals as a manual state machine (`goal_status`/`goal_set`/`goal_update`,
@@ -213,7 +222,7 @@ route-based OpenTUI dashboard:
    flagged issues fixed and verified; all 59 configurator tests pass, lint clean, all files <200 lines.)
 2. Skillbox (item 2) — agent-skill registries (Done — all 47 domain tests pass, structure clean, registered in index).
 3. Toolbox (item 3) — MCP upstream tool aggregation (Done — 331 tests pass across repo, zero lint/typecheck issues, clean modular design).
-4. Directives (item 5) — re-enable guidance for all restored tools.
+4. Directives (item 5) — re-enable guidance for all restored tools. (Done — 100% coverage, 344 tests pass, zero lint/typecheck issues).
 5. Goal evaluator (item 6) — integrate into the v2 goals domain.
 6. TUI dashboard (item 7) — last, since it depends on live state from all restored domains.
 7. Infrastructure — publish workflow, CHANGELOG, LICENSE, package.json fields.
