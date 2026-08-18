@@ -1,4 +1,16 @@
-export type GoalStatus = "active" | "paused" | "blocked" | "completed" | "cancelled"
+export type GoalStatus =
+    | "active"
+    | "paused"
+    | "blocked"
+    | "completed"
+    | "cancelled"
+    | "budget_limited"
+    | "turn_limited";
+
+export type CompletionClaim = {
+    reason: string
+    createdAt: string
+};
 
 export type Goal = {
     id: string
@@ -15,7 +27,14 @@ export type Goal = {
     progress?: string
     nextAction?: string
     blocker?: string
-}
+    turns?: number
+    tokensUsed?: number
+    tokenBudget?: number
+    maxTurns?: number
+    lastEvaluatedMessageId?: string
+    lastReason?: string
+    completionClaim?: CompletionClaim
+};
 
 export type UpdateArgs = {
     status?: GoalStatus
@@ -23,4 +42,8 @@ export type UpdateArgs = {
     nextAction?: string
     blocker?: string
     verificationEvidence?: string[]
-}
+    tokenBudget?: number
+    maxTurns?: number
+    reason?: string
+    completionClaim?: CompletionClaim
+};

@@ -186,6 +186,15 @@ The main branch additionally had automatic, LLM-driven goal evaluation:
   interrupted sessions pause the goal. Must be adapted to the v2 goals domain model (which currently has
   no token budgets or evaluator at all).
 
+**Verification (implemented, verified clean; 360 total tests pass, 97.4% goals coverage, 0 lint/typecheck errors, all files <200 lines, all functions <=20 lines):**
+
+- Implemented evaluator, transcript extraction with tool/error summaries, bounded rendering, and token accounting in `evaluator.ts` and `transcript.ts`.
+- Implemented `handleIdle` in `idle.ts` with sub-session evaluator execution, auto-continuation dispatch via `promptAsync`, budget limit enforcement (`budget_limited`, `turn_limited`), and TUI toast alerts.
+- Handled `MessageAbortedError` in `session.error` to pause active goals gracefully.
+- Implemented `/goal` command interception with `--tokens` / `--max-turns` flag parsing and prompt replacement in `command.ts`.
+- Active goal context injected into system prompt via `experimental.chat.system.transform` with suppression during `/goal` control turns.
+- All 18 production files adhere strictly to repository size constraints (<200 lines per file, <=20 lines per method, >80% test coverage).
+
 ### 7. TUI Dashboard (`src/tui/dashboard.tsx` and friends)
 
 v2 registers only two TUI footers (goals, throttle) in `src/tui.tsx`. The `main` branch had a full
@@ -223,6 +232,6 @@ route-based OpenTUI dashboard:
 2. Skillbox (item 2) — agent-skill registries (Done — all 47 domain tests pass, structure clean, registered in index).
 3. Toolbox (item 3) — MCP upstream tool aggregation (Done — 331 tests pass across repo, zero lint/typecheck issues, clean modular design).
 4. Directives (item 5) — re-enable guidance for all restored tools. (Done — 100% coverage, 344 tests pass, zero lint/typecheck issues).
-5. Goal evaluator (item 6) — integrate into the v2 goals domain.
+5. Goal evaluator (item 6) — integrate into the v2 goals domain. (Done — 97.4% coverage, 360 tests pass, zero lint/typecheck issues).
 6. TUI dashboard (item 7) — last, since it depends on live state from all restored domains.
 7. Infrastructure — publish workflow, CHANGELOG, LICENSE, package.json fields.

@@ -1,3 +1,4 @@
+import {statuses} from "./schema";
 import type {GoalSnapshot, GoalSnapshotGoal} from "./snapshot";
 
 export type GoalsIdentity = Readonly<{
@@ -29,13 +30,17 @@ const timestamp = (value: unknown): value is string =>
 const list = (value: unknown): value is readonly string[] =>
     Array.isArray(value) && value.every(text);
 
-const statuses = ["active", "paused", "blocked", "completed", "cancelled"] as const;
-
 const status = (value: unknown): value is GoalSnapshotGoal["status"] =>
     typeof value === "string" && statuses.includes(value as GoalSnapshotGoal["status"]);
 
 const optionalText = (item: Record<string, unknown>, key: string) =>
     item[key] === undefined || text(item[key]);
+
+const validNumbers = (item: Record<string, unknown>) =>
+    (item.turns === undefined || (typeof item.turns === "number" && item.turns >= 0)) &&
+    (item.tokensUsed === undefined || (typeof item.tokensUsed === "number" && item.tokensUsed >= 0)) &&
+    (item.tokenBudget === undefined || (typeof item.tokenBudget === "number" && item.tokenBudget > 0)) &&
+    (item.maxTurns === undefined || (typeof item.maxTurns === "number" && item.maxTurns > 0));
 
 const validGoal = (value: unknown): value is GoalSnapshotGoal => {
     const item = record(value);
@@ -46,7 +51,8 @@ const validGoal = (value: unknown): value is GoalSnapshotGoal => {
         (item.completedAt === undefined || timestamp(item.completedAt)) && status(item.status) &&
         text(item.outcome) && list(item.constraints) && list(item.verificationCriteria) &&
         list(item.verificationEvidence) && optionalText(item, "progress") &&
-        optionalText(item, "nextAction") && optionalText(item, "blocker");
+        optionalText(item, "nextAction") && optionalText(item, "blocker") &&
+        optionalText(item, "lastEvaluatedMessageId") && optionalText(item, "lastReason") && validNumbers(item);
 };
 
 const validSnapshot = (value: unknown): value is GoalSnapshot => {
@@ -67,10 +73,7 @@ export const parseGoalsState = (value: unknown, identity?: GoalsIdentity): Goals
 
     const goal = value.active.goal;
 
-    if (goal === null) {
-        return undefined;
-    }
-
+    if (goal === null) {return undefined;}
     return {projectID: value.projectID, sessionID: value.sessionID, goal};
 };
 

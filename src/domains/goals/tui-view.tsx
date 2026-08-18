@@ -7,15 +7,12 @@ const detailLimit = 72;
 
 const statusColor = (status: GoalSnapshotGoal["status"]) =>
     status === "blocked" || status === "cancelled" ? "red" :
-        status === "paused" ? "yellow" : "green";
+        status === "paused" || status === "budget_limited" || status === "turn_limited" ? "yellow" : "green";
 
 const detail = (goal: GoalSnapshotGoal): [string, string] | undefined => {
     const value = goal.status === "blocked" ? goal.blocker : goal.progress ?? goal.nextAction;
 
-    if (!value) {
-        return undefined;
-    }
-
+    if (!value) {return undefined;}
     return [goal.status === "blocked" ? "blocker" : goal.progress ? "progress" : "next", value.slice(0, detailLimit)];
 };
 
@@ -33,7 +30,6 @@ const goalText = (state: GoalsTuiState, goalDetail: [string, string] | undefined
 
 export const renderGoalsStatus = (state: GoalsTuiState | undefined): JSX.Element => {
     if (!state) {return <box height={0}/>;}
-
     return (
         <box height={1} paddingLeft={1} paddingRight={1}>
             {goalText(state, detail(state.goal))}
