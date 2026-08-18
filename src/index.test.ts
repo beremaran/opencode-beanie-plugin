@@ -15,6 +15,9 @@ test("aggregates registered domain hooks", async () => {
   expect(hooks.tool?.goal_set).toBeDefined();
   expect(hooks.tool?.goal_status).toBeDefined();
   expect(hooks.tool?.goal_update).toBeDefined();
+  expect(hooks.tool?.list_skills).toBeDefined();
+  expect(hooks.tool?.search_skills).toBeDefined();
+  expect(hooks.tool?.load_skill).toBeDefined();
   expect(hooks["tool.execute.before"]).toBeDefined();
   expect(hooks["tool.execute.after"]).toBeDefined();
   expect(hooks["command.execute.before"]).toBeDefined();

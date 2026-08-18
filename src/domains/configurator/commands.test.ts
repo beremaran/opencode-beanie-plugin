@@ -66,7 +66,7 @@ test("renderHelp mentions the plugin name and subcommands", () => {
 test("renderInitDirective mentions configure_plugin", () => {
     const directive = renderInitDirective();
     expect(directive).toContain("configure_plugin");
-    expect(directive).toContain("orchestrator.subagentModel");
+    expect(directive).toContain("No options are required");
 });
 
 test("renderValidation reports errors and warnings", () => {
@@ -85,14 +85,8 @@ test("renderValidation reports no problems", () => {
 });
 
 test("renderStatus shows target file and options", () => {
-    const result = renderStatus({throttle: {maxParallel: 3}}, {errors: [], warnings: []}, "/tmp/worktree", undefined);
+    const result = renderStatus({throttle: {maxParallel: 3}}, {errors: [], warnings: []}, "/tmp/worktree");
     expect(result).toContain("Target config file:");
     expect(result).toContain(`"maxParallel": 3`);
     expect(result).toContain("restarting");
-});
-
-test("renderStatus notes subagent depth", () => {
-    const result = renderStatus({}, {errors: [], warnings: []}, "/tmp/worktree", 3);
-    expect(result).toContain("subagent_depth");
-    expect(result).toContain("3");
 });

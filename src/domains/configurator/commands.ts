@@ -80,17 +80,10 @@ export function renderStatus(
     options: Record<string, unknown>,
     validation: ValidationResult,
     worktree: string,
-    subagentDepth: number | undefined,
 ): string {
     const lines = ["# opencode-beanie-plugin configuration", "", `Target config file: ${resolveTargetPath(worktree)}`, ""];
     lines.push(`Options: ${JSON.stringify(options, null, 2)}`, "");
     lines.push(renderValidation(validation));
-    if (subagentDepth !== undefined) {
-        lines.push(
-            "",
-            `Note: opencode \`subagent_depth\` is ${String(subagentDepth)}; the orchestrator warns if \`orchestratorDepth\` exceeds it.`,
-        );
-    }
     lines.push("", "Changes take effect after restarting opencode. Run /beanie init for a guided setup.");
     return lines.join("\n");
 }
@@ -133,7 +126,7 @@ export function renderHelp(): string {
         "                          then writes the config for you.",
         "",
         "Feature names are camelCase (orchestrator, throttle, goal, providers, skillbox, toolbox, directives).",
-        "The only required option is orchestrator.subagentModel, e.g. \"anthropic/claude-sonnet-4-6\".",
+        "No options are required; every feature is optional.",
         "",
         "The agent can also do all of this via the configure_plugin tool.",
     ].join("\n");
@@ -145,13 +138,12 @@ export function renderInitDirective(): string {
         "",
         "Walk the user through configuring the opencode-beanie-plugin, then write the config for them:",
         "",
-        "1. Start with the required option: orchestrator.subagentModel (a provider/model id such as \"anthropic/claude-sonnet-4-6\").",
-        "2. Briefly ask about each optional feature: throttle concurrency, goal budgets, providers, skillbox registry, toolbox MCP servers, and directives.",
+        "1. If the plugin is already configured, start from action \"status\" and keep the user's existing settings.",
+        "2. Briefly ask about each optional feature: orchestrator roles, throttle concurrency, goal budgets, skillbox registry, toolbox MCP servers, and directives.",
         "3. Build the full options object (camelCase feature names) and call the configure_plugin tool with action \"apply\" and the config as JSON.",
         "   - If unsure of a shape, call configure_plugin with action \"schema\" first.",
-        "   - If the plugin is already configured, start from action \"status\" and keep the user's existing settings.",
         "4. Tell the user the plugin options were written to opencode.json and that they must restart opencode for the changes to take effect.",
         "",
-        "Required regardless: orchestrator.subagentModel. Validate before writing — configure_plugin refuses invalid configs.",
+        "No options are required. Validate before writing — configure_plugin refuses invalid configs.",
     ].join("\n");
 }

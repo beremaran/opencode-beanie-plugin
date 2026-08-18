@@ -74,25 +74,20 @@ export function findPluginNameSpan(text: string): [number, number] | null {
     return [start, end + 1];
 }
 
-export function findPluginEntrySpan(text: string): [number, number] | null {
-    const nameSpan = findPluginNameSpan(text);
-
-    if (!nameSpan) {return null;}
-
-    const [start, end] = nameSpan;
-
+function findEntryObjectEnd(text: string, end: number): number | null {
     let i = end;
 
     while (isWhitespace(text[i])) {i += 1;}
-    if (text[i] !== ",") {return [start, end];}
+    if (text[i] !== ",") {return null;}
     i += 1;
     while (isWhitespace(text[i])) {i += 1;}
-    if (text[i] !== "{") {return [start, end];}
-
+    if (text[i] !== "{") {return null;}
     const objectEnd = findMatching(text, i, "{", "}");
 
-    if (objectEnd === -1) {return null;}
+    return objectEnd === -1 ? null : objectEnd;
+}
 
+function expandBrackets(text: string, start: number, objectEnd: number): [number, number] {
     let close = objectEnd + 1;
 
     let after = objectEnd + 1;
@@ -107,6 +102,19 @@ export function findPluginEntrySpan(text: string): [number, number] | null {
     while (before >= 0 && isWhitespace(text[before])) {before -= 1;}
     if (text[before] === "[") {begin = before;}
     return [begin, close];
+}
+
+export function findPluginEntrySpan(text: string): [number, number] | null {
+    const nameSpan = findPluginNameSpan(text);
+
+    if (!nameSpan) {return null;}
+
+    const [start, end] = nameSpan;
+
+    const objectEnd = findEntryObjectEnd(text, end);
+
+    if (objectEnd === null) {return [start, end];}
+    return expandBrackets(text, start, objectEnd);
 }
 
 export function findPluginArrayOpen(text: string): number | null {
@@ -131,39 +139,23 @@ export function findPluginArrayOpen(text: string): number | null {
     }
 }
 
-export function upsertPluginEntry(text: string, options: Record<string, unknown>): string {
-    const nameSpan = findPluginNameSpan(text);
+function insertIntoArray(text: string, arrayOpen: number, entryText: string): string {
+    const arrayClose = findMatching(text, arrayOpen, "[", "]");
 
-    let quotedName = PLUGIN_QUOTED;
+    if (arrayClose === -1) {throw new Error("Could not locate the end of the plugin array.");}
 
-    if (nameSpan) {quotedName = text.slice(nameSpan[0], nameSpan[1]);}
+    const inner = text.slice(arrayOpen + 1, arrayClose);
 
-    let entryText = quotedName;
+    const needsComma = inner.trim() !== "" && !inner.trimEnd().endsWith(",");
 
-    if (Object.keys(options).length > 0) {entryText = `[${quotedName},${JSON.stringify(options)}]`;}
+    let joined = text.slice(0, arrayClose);
 
-    const existing = findPluginEntrySpan(text);
+    if (needsComma) {joined += ",";}
+    if (inner.trim() !== "") {joined += " ";}
+    return joined + entryText + text.slice(arrayClose);
+}
 
-    if (existing) {return `${text.slice(0, existing[0])}${entryText}${text.slice(existing[1])}`;}
-
-    const arrayOpen = findPluginArrayOpen(text);
-
-    if (arrayOpen !== null) {
-        const arrayClose = findMatching(text, arrayOpen, "[", "]");
-
-        if (arrayClose === -1) {throw new Error("Could not locate the end of the plugin array.");}
-
-        const inner = text.slice(arrayOpen + 1, arrayClose);
-
-        const needsComma = inner.trim() !== "" && !inner.trimEnd().endsWith(",");
-
-        let joined = text.slice(0, arrayClose);
-
-        if (needsComma) {joined += ",";}
-        if (inner.trim() !== "") {joined += " ";}
-        return joined + entryText + text.slice(arrayClose);
-    }
-
+function insertTopLevelPlugin(text: string, entryText: string): string {
     const objectOpen = text.indexOf("{");
 
     if (objectOpen === -1) {throw new Error("Could not locate the top-level object of the config file.");}
@@ -182,4 +174,21 @@ export function upsertPluginEntry(text: string, options: Record<string, unknown>
 
     if (needsComma) {result += ",";}
     return `${result}\n  "plugin": [${entryText}]\n${tail}`;
+}
+
+export function upsertPluginEntry(text: string, options: Record<string, unknown>): string {
+    const nameSpan = findPluginNameSpan(text);
+
+    const quotedName = nameSpan ? text.slice(nameSpan[0], nameSpan[1]) : PLUGIN_QUOTED;
+
+    const entryText = Object.keys(options).length > 0 ? `[${quotedName},${JSON.stringify(options)}]` : quotedName;
+
+    const existing = findPluginEntrySpan(text);
+
+    if (existing) {return `${text.slice(0, existing[0])}${entryText}${text.slice(existing[1])}`;}
+
+    const arrayOpen = findPluginArrayOpen(text);
+
+    if (arrayOpen !== null) {return insertIntoArray(text, arrayOpen, entryText);}
+    return insertTopLevelPlugin(text, entryText);
 }

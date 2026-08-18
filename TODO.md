@@ -10,9 +10,10 @@ New in v2: `src/domains/commit-command`, `src/domains/papercuts`.
 
 ## Missing Features
 
-### 1. Providers (`src/features/providers/`, ~1.1k lines)
+### 1. Providers (`src/features/providers/`, ~1.1k lines) — ABANDONED
 
 Missing entirely in v2. Managed OpenAI-compatible providers and their models in opencode.json.
+**Decision: dropped from the v2 plan; not being carried over.**
 
 - Commands (registered in the `config` hook):
   - `/add-provider <id> <baseURL> [apiKey] [--name "Display Name"] [--kind auto|openai|ollama|unsloth|lmstudio] [--context N] [--output N] [--no-fetch]`
@@ -48,10 +49,18 @@ Missing entirely in v2. Exposed the agent-skill registries to the agent.
   (`frontmatter.ts`), shared types/errors (`types.ts`: `SkillSummary`, `SkillDetail`, `SkillFile`,
   `SkillNotFoundError`, `RegistryAuthError`).
 - Options: `registry` (`auto|skills-sh|github`), `skillsShToken`, `githubToken`, `githubSources`, `maxBytes`, `debug`.
-- Files: `cache.ts`, `frontmatter.ts`, `http.ts`, `index.ts`, `registries/factory.ts`,
-  `registries/github.ts`, `registries/skills-sh.ts`, `types.ts`.
+- Files: `cache.ts`, `frontmatter.ts`, `http.ts`, `index.ts`, `options.ts`, `payload.ts`, `tools.ts`, `types.ts`,
+  `registries/factory.ts`, `registries/github.ts`, `registries/github-tree.ts`, `registries/github-search.ts`,
+  `registries/github-files.ts`, `registries/skills-sh.ts`, `registries/skills-sh-mapping.ts`.
 - Acceptance: all three tools registered under the `skillbox` domain; auto registry selection; cache
   hit/miss verified by tests.
+
+**Verification (implemented, commit pending; 47 domain tests pass, structure check clean, all files <200 lines, all functions <=20 lines):**
+
+- Implemented `SkillboxDomain` under `src/domains/skillbox` and registered in `src/index.ts`.
+- Provided GitHub and skills.sh registries with caching, branch fallback, ranking, frontmatter parsing, and byte-budgeted file truncation.
+- Tools `list_skills`, `search_skills`, and `load_skill` exposed via plugin tool hooks.
+- All 15 production files comply with strict repository size rules (<200 lines per file, <=20 lines per function).
 
 ### 3. Toolbox (`src/features/toolbox/`, ~1.3k lines)
 
@@ -94,7 +103,7 @@ Missing entirely in v2. Self-service configuration of the plugin itself.
 - Acceptance: `configure_plugin apply` writes and persists options; `validate` reports all errors
   without writing; `/beanie` command suite behaves identically to main.
 
-**Verification (implemented, commit `75a2345`; 53 tests pass, lint clean):**
+**Verification (implemented, commit `75a2345`; flagged issues since fixed; 59 tests pass, lint clean):**
 
 - Good: `configure_plugin` implements all four actions (status/schema/validate/apply) with scope
   `auto|project|global`; the `/beanie` suite (status/validate/apply/init/help) is registered via the
@@ -102,19 +111,18 @@ Missing entirely in v2. Self-service configuration of the plugin itself.
   (replaces existing entries, inserts into an existing array, adds the array when absent, preserves
   other plugins); `validateFullOptions` reuses the orchestrator's `parseOrchestratorConfig` instead of
   duplicating it; the schema covers all seven feature namespaces (forward-looking).
-- Bad:
-  - `orchestrator.subagentModel` is a phantom "required" option — the tool description, `renderHelp`,
-    and `renderInitDirective` all claim it is required, but no such field exists (the v2 orchestrator
-    uses `manager`/`build`/`coordinators` with `.model`), `schema.ts` has no `subagentModel` property,
-    and `validateFullOptions({})` reports zero errors (nothing is actually required). The help text is
-    stale from `main`.
-  - `/beanie apply` with no payload writes `{}` (wipes the config), while the tool's `apply` with no
-    `config` uses the current options — the two apply paths disagree on the no-arg case.
-  - File-length rule (<200 lines) violated: `index.ts` (260), `schema.ts` (263), `validate.ts` (221).
-- Improvable: fix the `subagentModel` help text to match v2's real orchestrator options and drop the
-  false "required" claim; make the command vs. tool `apply` paths consistent; the `subagent_depth` read
-  via `(cfg as Config & {subagent_depth?: unknown})` is a non-standard field that is likely always
-  undefined (dead-ish path); split `index.ts` (it holds both the tool executor and the command handler).
+- Fixed (previously flagged):
+  - `orchestrator.subagentModel` phantom "required" option — removed from the tool description,
+    `renderHelp`, and `renderInitDirective`; v2's orchestrator uses `manager`/`build`/`coordinators`
+    with `.model`, and `validateFullOptions({})` reports zero errors (nothing is required).
+  - `/beanie apply` no-payload inconsistency — both the command and tool `apply` paths now route
+    through `resolveApplyPayload` (in `shared.ts`): empty/undefined payload uses the current options,
+    non-empty payload is parsed. No-arg `apply` no longer wipes the config.
+  - File-length rule (<200 lines) — `index.ts` split into `index.ts` (wiring), `command.ts` (command
+    handler), `tool.ts` (tool executor), `shared.ts` (shared helpers); `schema.ts` split into
+    `schema.ts` + `schema-parts.ts`; `validate.ts` split into `validate.ts` + `checks.ts`. All files
+    now under 200 lines.
+  - Dead `subagent_depth` read removed from `runConfigHook`.
 - Diverged from spec: spec lists `node-shims.d.ts` (absent) and `parseBeanie` in `opencode-file.ts`
   (it's in `commands.ts`); impl adds `opencode-upsert.ts` (not in spec) and moves `isPluginEntryName`
   there. `goal` options are forward-looking: schema/validate include `evaluatorModel`, `stateDirectory`,
@@ -193,11 +201,10 @@ route-based OpenTUI dashboard:
 
 ## Suggested Order
 
-1. Configurator (item 4) — providers depends on its `opencode-file.ts` helpers, and `configure_plugin`
-   is the control point for everything else. (Done — see verification notes above; fix the flagged
-   issues before `providers` leans on this domain.)
-2. Providers (item 1)
-3. Skillbox (item 2) and Toolbox (item 3) — independent of each other.
+1. Configurator (item 4) — `configure_plugin` is the control point for everything else. (Done —
+   flagged issues fixed and verified; all 59 configurator tests pass, lint clean, all files <200 lines.)
+2. Skillbox (item 2) — agent-skill registries (Done — all 47 domain tests pass, structure clean, registered in index).
+3. Toolbox (item 3) — MCP upstream tool aggregation.
 4. Directives (item 5) — re-enable guidance for all restored tools.
 5. Goal evaluator (item 6) — integrate into the v2 goals domain.
 6. TUI dashboard (item 7) — last, since it depends on live state from all restored domains.

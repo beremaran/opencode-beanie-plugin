@@ -4,6 +4,7 @@ import { ConfiguratorDomain } from "./domains/configurator";
 import { GoalsDomain } from "./domains/goals";
 import { PapercutsDomain } from "./domains/papercuts";
 import { OrchestratorDomain } from "./domains/orchestrator";
+import { SkillboxDomain } from "./domains/skillbox";
 import { ThrottleDomain } from "./domains/throttle";
 import { mergeHooks } from "./shared/hooks";
 
@@ -13,6 +14,7 @@ const domains = [
   GoalsDomain,
   PapercutsDomain,
   OrchestratorDomain,
+  SkillboxDomain,
   ThrottleDomain,
 ];
 
