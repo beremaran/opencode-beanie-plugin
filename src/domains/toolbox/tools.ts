@@ -38,12 +38,8 @@ function resolve(
   if (!args.server) {
     return { error: "server is required when tool is a bare tool name (or pass the qualified servername__toolname)" };
   }
-  if (!registry.upstream.has(args.server)) {
-    return { error: `unknown server: ${args.server}` };
-  }
-  if (!registry.validateToolName(args.tool)) {
-    return { error: `invalid tool name: ${args.tool}` };
-  }
+  if (!registry.upstream.has(args.server)) {return { error: `unknown server: ${args.server}` };}
+  if (!registry.validateToolName(args.tool)) {return { error: `invalid tool name: ${args.tool}` };}
   return { server: args.server, tool: args.tool };
 }
 
@@ -118,16 +114,24 @@ async function executeInvoke(
   }
 }
 
+const listToolArgs = {
+  query: tool.schema.string().min(1).optional(),
+  server: serverSchema.optional(),
+  limit: tool.schema.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
+  refresh: tool.schema.boolean().optional(),
+};
+
+const invokeToolArgs = {
+  server: serverSchema.optional(),
+  tool: toolNameSchema,
+  arguments: tool.schema.record(tool.schema.string(), tool.schema.unknown()).default({}),
+};
+
 export function createTools(registry: ToolRegistry, connection: ConnectionManager, config: ToolboxConfig, logger: Logger) {
   return {
     list_tools: tool({
       description: listDescription,
-      args: {
-        query: tool.schema.string().min(1).optional(),
-        server: serverSchema.optional(),
-        limit: tool.schema.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
-        refresh: tool.schema.boolean().optional(),
-      },
+      args: listToolArgs,
       execute: (args) => executeListTools(args, registry, connection, config),
     }),
     get_tool_schema: tool({
@@ -137,11 +141,7 @@ export function createTools(registry: ToolRegistry, connection: ConnectionManage
     }),
     invoke_tool: tool({
       description: invokeDescription,
-      args: {
-        server: serverSchema.optional(),
-        tool: toolNameSchema,
-        arguments: tool.schema.record(tool.schema.string(), tool.schema.unknown()).default({}),
-      },
+      args: invokeToolArgs,
       execute: (args, context) => executeInvoke(args, context, registry, connection, logger),
     }),
   };

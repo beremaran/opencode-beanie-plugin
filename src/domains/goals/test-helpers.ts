@@ -51,56 +51,55 @@ export const event = (sessionID: string): {event: Event} => ({
     },
 });
 
+type MockSessionState = {
+    prompted: Array<{sessionId: string; body: unknown}>;
+    createdSessions: Array<{parentID?: string; title?: string}>;
+    deletedSessions: string[];
+};
+
+const buildMockSession = (state: MockSessionState) => ({
+    create: (params: {body: {parentID?: string; title?: string}}) => {
+        state.createdSessions.push(params.body);
+        return Promise.resolve({data: {id: "eval-session-1"}});
+    },
+    delete: (params: {path: {id: string}}) => {
+        state.deletedSessions.push(params.path.id);
+        return Promise.resolve({});
+    },
+    prompt: (params: {path: {id: string}; body: unknown}) => {
+        state.prompted.push({sessionId: params.path.id, body: params.body});
+        return Promise.resolve({data: {parts: [{type: "text", text: '{"complete":false,"reason":"Still working"}'}]}});
+    },
+    promptAsync: (params: {path: {id: string}; body: unknown}) => {
+        state.prompted.push({sessionId: params.path.id, body: params.body});
+        return Promise.resolve({});
+    },
+    status: () => Promise.resolve({data: {}}),
+    messages: () => Promise.resolve({data: []}),
+});
+
+const buildMockAppAndTui = (
+    logs: Array<{level: string; message: string; extra?: unknown}>,
+    toasts: Array<{title: string; message: string; variant: string}>,
+) => ({
+    app: {log: (params: {body: {level: string; message: string; extra?: unknown}}) => {logs.push(params.body); return Promise.resolve();}},
+    tui: {showToast: (params: {body: {title: string; message: string; variant: string}}) => {toasts.push(params.body); return Promise.resolve();}},
+});
+
 export const mockClient = () => {
     const logs: Array<{level: string; message: string; extra?: unknown}> = [];
 
     const toasts: Array<{title: string; message: string; variant: string}> = [];
 
-    const prompted: Array<{sessionId: string; body: unknown}> = [];
-
-    const createdSessions: Array<{parentID?: string; title?: string}> = [];
-
-    const deletedSessions: string[] = [];
+    const state: MockSessionState = {prompted: [], createdSessions: [], deletedSessions: []};
 
     const client = {
-        app: {
-            log: (params: {body: {level: string; message: string; extra?: unknown}}) => {
-                logs.push(params.body);
-                return Promise.resolve();
-            },
-        },
-        tui: {
-            showToast: (params: {body: {title: string; message: string; variant: string}}) => {
-                toasts.push(params.body);
-                return Promise.resolve();
-            },
-        },
-        session: {
-            create: (params: {body: {parentID?: string; title?: string}}) => {
-                createdSessions.push(params.body);
-                return Promise.resolve({data: {id: "eval-session-1"}});
-            },
-            delete: (params: {path: {id: string}}) => {
-                deletedSessions.push(params.path.id);
-                return Promise.resolve({});
-            },
-            prompt: (params: {path: {id: string}; body: unknown}) => {
-                prompted.push({sessionId: params.path.id, body: params.body});
-                return Promise.resolve({data: {parts: [{type: "text", text: '{"complete":false,"reason":"Still working"}'}]}});
-            },
-            promptAsync: (params: {path: {id: string}; body: unknown}) => {
-                prompted.push({sessionId: params.path.id, body: params.body});
-                return Promise.resolve({});
-            },
-            status: () => Promise.resolve({data: {}}),
-            messages: () => Promise.resolve({data: []}),
-        },
-        config: {
-            get: () => Promise.resolve({data: {small_model: "anthropic/claude-haiku-3-5"}}),
-        },
+        ...buildMockAppAndTui(logs, toasts),
+        session: buildMockSession(state),
+        config: {get: () => Promise.resolve({data: {small_model: "anthropic/claude-haiku-3-5"}})},
     } as unknown as PluginInput["client"];
 
-    return {client, logs, toasts, prompted, createdSessions, deletedSessions};
+    return {client, logs, toasts, ...state};
 };
 
 export async function createDomain(rawOptions?: {goal?: GoalPluginOptions}) {

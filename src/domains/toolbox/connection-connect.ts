@@ -35,43 +35,29 @@ async function handleConnectError(
   throw new Error(msg, { cause: error });
 }
 
-async function performHandshake(
-  transport: Transport,
-  timeout: number,
-  version: string,
-  callbacks: ConnectCallbacks,
-  name: string,
-  pool: ProcessPool,
-  slot: boolean,
-): Promise<Session> {
-  const client = new Client({ name: "mcp-aggregator", version }, { capabilities: {} });
+type HandshakeOpts = { timeout: number; version: string; callbacks: ConnectCallbacks; name: string; pool: ProcessPool; slot: boolean };
 
+async function performHandshake(transport: Transport, opts: HandshakeOpts): Promise<Session> {
+  const client = new Client({ name: "mcp-aggregator", version: opts.version }, { capabilities: {} });
   wireTransportEvents(
     transport,
-    () => { if (!pool.isClosed()) {callbacks.teardown(name, null);} },
-    (msg) => { if (!pool.isClosed()) {callbacks.teardown(name, msg);} },
+    () => { if (!opts.pool.isClosed()) {opts.callbacks.teardown(opts.name, null);} },
+    (msg) => { if (!opts.pool.isClosed()) {opts.callbacks.teardown(opts.name, msg);} },
   );
-  await client.connect(transport, { timeout });
-  const session: Session = { client, transport, slot };
-  callbacks.setSession(name, session);
-  callbacks.clearError(name);
-  callbacks.touch(name);
+  await client.connect(transport, { timeout: opts.timeout });
+  const session: Session = { client, transport, slot: opts.slot };
+  opts.callbacks.setSession(opts.name, session);
+  opts.callbacks.clearError(opts.name);
+  opts.callbacks.touch(opts.name);
   return session;
 }
 
 export async function connectServerSession(
-  name: string,
-  entry: ServerEntry,
-  pool: ProcessPool,
-  timeout: number,
-  version: string,
-  callbacks: ConnectCallbacks,
+  name: string, entry: ServerEntry, pool: ProcessPool, timeout: number, version: string, callbacks: ConnectCallbacks,
 ): Promise<Session> {
   let slot = false;
 
   let transport: Transport | undefined;
-
-  let client: Client | undefined;
 
   const stderrTail: string[] = [];
 
@@ -82,8 +68,8 @@ export async function connectServerSession(
     }
     transport = createTransport(entry.config);
     captureStderr(transport, stderrTail);
-    return await performHandshake(transport, timeout, version, callbacks, name, pool, slot);
+    return await performHandshake(transport, { timeout, version, callbacks, name, pool, slot });
   } catch (error) {
-    return await handleConnectError(error, slot, pool, client, transport, entry, stderrTail, callbacks, name);
+    return await handleConnectError(error, slot, pool, undefined, transport, entry, stderrTail, callbacks, name);
   }
 }

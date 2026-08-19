@@ -33,7 +33,7 @@ export class ConnectionManager {
     return Math.max(1, Math.round((cfg.timeout ?? this.config.timeoutSeconds) * MS_PER_SECOND));
   }
 
-  async getSession(name: string): Promise<Session> {
+  private validateSessionEntry(name: string) {
     const entry = this.tools.upstream.get(name);
 
     if (!entry) {throw new UnknownServerError(`unknown upstream server: ${name}`);}
@@ -42,6 +42,11 @@ export class ConnectionManager {
     if (entry.connState === "error" && Date.now() < entry.nextRetryAt) {
       throw new Error(`connect failed: ${entry.lastError ?? "unknown error"}`);
     }
+    return entry;
+  }
+
+  async getSession(name: string): Promise<Session> {
+    const entry = this.validateSessionEntry(name);
 
     const existing = this.sessions.get(name);
 
@@ -63,30 +68,32 @@ export class ConnectionManager {
     }
   }
 
+  private createConnectCallbacks() {
+    return {
+      teardown: (n: string, err: string | null) => { this.teardown(n, err); },
+      setSession: (n: string, s: Session) => {
+        this.sessions.set(n, s);
+        this.tools.upstream.setSession(n, s);
+      },
+      clearError: (n: string) => { this.tools.upstream.clearError(n); },
+      markError: (n: string, msg: string) => { this.tools.upstream.markError(n, msg); },
+      touch: (n: string) => { this.touch(n); },
+    };
+  }
+
   private async connect(name: string): Promise<Session> {
     const entry = this.tools.upstream.get(name);
 
     if (!entry) {throw new UnknownServerError(`unknown upstream server: ${name}`);}
 
-    const session = await connectServerSession(
+    return connectServerSession(
       name,
       entry,
       this.pool,
       this.timeout(entry.config),
       this.version,
-      {
-        teardown: (n, err) => { this.teardown(n, err); },
-        setSession: (n, s) => {
-          this.sessions.set(n, s);
-          this.tools.upstream.setSession(n, s);
-        },
-        clearError: (n) => { this.tools.upstream.clearError(n); },
-        markError: (n, msg) => { this.tools.upstream.markError(n, msg); },
-        touch: (n) => { this.touch(n); },
-      },
+      this.createConnectCallbacks(),
     );
-
-    return session;
   }
 
   async listToolsFor(name: string): Promise<UpstreamTool[] | null> {

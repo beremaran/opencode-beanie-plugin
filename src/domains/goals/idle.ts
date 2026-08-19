@@ -1,68 +1,12 @@
-import type {PluginInput} from "@opencode-ai/plugin";
 import {evaluateGoal} from "./evaluator";
+import {continueParent, showToast} from "./idle-dispatch";
 import type {Goal} from "./model";
 import {budgetLimitPrompt, continuationPrompt} from "./prompts";
 import type {GoalStore} from "./store";
-import {latestAssistant, latestUserExecution, totalGoalTokens} from "./transcript";
-import type {EvaluationDecision, IdleInput, Logger, TranscriptMessage} from "./types";
+import {latestAssistant, totalGoalTokens} from "./transcript";
+import type {EvaluationDecision, IdleInput, TranscriptMessage} from "./types";
 
-const TOAST_DURATION_MS = 6000;
-
-export const showToast = async (
-    client: PluginInput["client"],
-    message: string,
-    variant: "info" | "success" | "warning" | "error",
-): Promise<void> => {
-    const tui = (client as unknown as {tui?: {showToast?: (opts: unknown) => Promise<unknown>}}).tui;
-
-    if (typeof tui?.showToast === "function") {
-        await tui.showToast({body: {title: "Goal", message, variant, duration: TOAST_DURATION_MS}}).catch(() => undefined);
-    }
-};
-
-const isParentBusy = (statuses: unknown, sessionId: string): boolean => {
-    if (typeof statuses !== "object" || statuses === null) {return false;}
-
-    const status = (statuses as Record<string, {type?: string}>)[sessionId];
-
-    return Boolean(status && status.type !== "idle");
-};
-
-const continueParent = async (input: {
-    client: PluginInput["client"];
-    goal: Goal;
-    messages: TranscriptMessage[];
-    text: string;
-    log: Logger;
-}): Promise<void> => {
-    try {
-        const statuses = await input.client.session.status();
-
-        if (isParentBusy(statuses.data, input.goal.sessionID)) {
-            await input.log("debug", "Skipped continuation because the parent session is busy", {sessionId: input.goal.sessionID});
-            return;
-        }
-    } catch {
-        // session status is best-effort
-    }
-
-    const execution = latestUserExecution(input.messages);
-
-    const body: {
-        parts: Array<{type: "text"; text: string}>;
-        agent?: string;
-        model?: {providerID: string; modelID: string};
-    } = {parts: [{type: "text", text: input.text}]};
-
-    if (execution.agent) {body.agent = execution.agent;}
-    if (execution.model) {body.model = {providerID: execution.model.providerId, modelID: execution.model.modelId};}
-
-    const response = await input.client.session.promptAsync({path: {id: input.goal.sessionID}, body});
-
-    if (response.error) {
-        await input.log("error", "OpenCode rejected an automatic goal continuation", {sessionId: input.goal.sessionID, error: JSON.stringify(response.error)});
-    }
-};
+export {showToast} from "./idle-dispatch";
 
 const pauseForFailedEvaluation = async (input: IdleInput, current: Goal, reason: string, store: GoalStore): Promise<void> => {
     const paused: Goal = {...current, status: "paused", updatedAt: new Date().toISOString(), lastReason: reason, completionClaim: undefined};

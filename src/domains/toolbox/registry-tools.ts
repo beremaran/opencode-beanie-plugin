@@ -99,41 +99,50 @@ export class ToolRegistry {
     return this.upstream.has(server) ? [server] : [];
   }
 
-  search(input: { query?: string | null; server?: string | null; limit?: number; refresh: boolean }): SearchResult {
-    const names = this.resolveTargetNames(input.server);
-
-    const query = (input.query ?? "").toLowerCase();
-
-    const limit = Math.min(
-      typeof input.limit === "number" && Number.isInteger(input.limit) ? input.limit : this.upstream.config.searchTopK,
-      MAX_SEARCH_LIMIT,
-    );
-
-    const serverEntries = names
+  private collectServerEntries(names: string[]) {
+    return names
       .map((name) => {
         const entry = this.upstream.get(name);
 
         return entry ? { entry, name } : null;
       })
       .filter((s): s is { entry: ServerEntry; name: string } => s !== null);
+  }
 
-    const rows = serverEntries.flatMap(({ entry, name }) =>
+  private collectSearchRows(serverEntries: Array<{ entry: ServerEntry; name: string }>, query: string) {
+    return serverEntries.flatMap(({ entry, name }) =>
       filterRows(
         (entry.metadataCache ?? []).map((tool) => rowFor(name, tool, entry)),
         query,
         entry.config.tags,
       ),
     );
+  }
+
+  private mapSearchServers(serverEntries: Array<{ entry: ServerEntry; name: string }>) {
+    return serverEntries.map(({ entry, name }) => ({
+      name,
+      status: entry.connState,
+      toolCount: (entry.metadataCache ?? []).length,
+      error: entry.lastError,
+      skippedTools: [...entry.skippedTools],
+      stale: entry.metadataCache === null || entry.metadataStale,
+    }));
+  }
+
+  search(input: { query?: string | null; server?: string | null; limit?: number; refresh: boolean }): SearchResult {
+    const names = this.resolveTargetNames(input.server);
+
+    const query = (input.query ?? "").toLowerCase();
+
+    const limit = Math.min(typeof input.limit === "number" && Number.isInteger(input.limit) ? input.limit : this.upstream.config.searchTopK, MAX_SEARCH_LIMIT);
+
+    const serverEntries = this.collectServerEntries(names);
+
+    const rows = this.collectSearchRows(serverEntries, query);
 
     return {
-      servers: serverEntries.map(({ entry, name }) => ({
-        name,
-        status: entry.connState,
-        toolCount: (entry.metadataCache ?? []).length,
-        error: entry.lastError,
-        skippedTools: [...entry.skippedTools],
-        stale: entry.metadataCache === null || entry.metadataStale,
-      })),
+      servers: this.mapSearchServers(serverEntries),
       tools: rows.slice(0, limit),
       total: rows.length,
       shown: Math.min(rows.length, limit),

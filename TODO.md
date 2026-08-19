@@ -224,14 +224,20 @@ route-based OpenTUI dashboard:
 
 - `.github/workflows/publish.yml` — tag-triggered (`v*`) publish workflow: Node 24, install, type check,
   build, git-tag-vs-package-version verification, `npm publish --provenance --access public` under an
-  `npm-publish` environment. Must be recreated; consider adapting to Bun since v2 dropped
-  `package-lock.json` in favor of `bun.lock`.
-- `CHANGELOG.md` — removed in v2; recreate if releases continue.
-- `LICENSE` (MIT) — removed in v2; required for public npm publishing.
-- `package.json` — v2 dropped `version` (main was `0.2.1`), `repository`, and `publishConfig`; needed
-  for publishing.
-- Lint toolchain — v2 replaced `biome.json` with `eslint.config.js` (already handled, noted for
-  context only).
+  `npm-publish` environment. Recreated and adapted for Bun + Node provenance publishing.
+- `CHANGELOG.md` — recreated documenting v2.0.0 domain restructure and carrying forward 0.x releases.
+- `LICENSE` (MIT) — recreated with Copyright (c) 2026 Berke Arslan.
+- `package.json` — restored package metadata: `@beremaran/opencode-beanie-plugin`, `version: 2.0.0`,
+  `repository`, `homepage`, `bugs`, `keywords`, `publishConfig`, and `./server` subpath export.
+- Structure check & lint toolchain — all 140 production TypeScript files adhere strictly to repository
+  size rules (<200 lines per file, <=20 lines per method).
+
+**Verification (implemented, verified clean; 404 tests pass, 140 production files check clean, 0 lint/typecheck errors):**
+
+- Added MIT `LICENSE` and `CHANGELOG.md` with Keep a Changelog semantic release notes for 2.0.0.
+- Recreated `.github/workflows/publish.yml` with Bun toolchain and provenance npm publishing.
+- Updated `package.json` with package exports, provenance publish config, scripts, and semantic versioning (`2.0.0`).
+- Refactored all codebase functions and files exceeding limits, passing `bun scripts/check-structure.ts src` with 0 failures across 140 files.
 
 ## Suggested Order
 
@@ -242,4 +248,4 @@ route-based OpenTUI dashboard:
 4. Directives (item 5) — re-enable guidance for all restored tools. (Done — 100% coverage, 344 tests pass, zero lint/typecheck issues).
 5. Goal evaluator (item 6) — integrate into the v2 goals domain. (Done — 97.4% coverage, 360 tests pass, zero lint/typecheck issues).
 6. TUI dashboard (item 7) — OpenTUI route dashboard, attention policies, goal controls, navigation. (Done — 404 tests pass, zero lint/typecheck issues, all files <200 lines, all methods <=20 lines).
-7. Infrastructure — publish workflow, CHANGELOG, LICENSE, package.json fields.
+7. Infrastructure (item 8) — publish workflow, CHANGELOG, LICENSE, package.json fields, full structure check compliance. (Done — 404 tests pass, 140 production files clean, 0 lint/typecheck issues).

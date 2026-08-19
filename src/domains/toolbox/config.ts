@@ -74,6 +74,20 @@ export function normalizeConfig(raw: unknown): ToolboxConfig {
   return Object.freeze({ mcpServers, ...scalars });
 }
 
+function resolveRawConfig(options: { config?: unknown; servers?: unknown; logger?: Logger }) {
+  if (options.servers !== undefined) {
+    return { mcpServers: options.servers };
+  }
+  if (plain(options.config)) {
+    return options.config;
+  }
+  if (options.config === undefined) {
+    options.logger?.info("toolbox disabled: no inline mcpServers configured");
+    return null;
+  }
+  fail("config", "config must be an inline object with mcpServers; external JSON config files are not supported");
+}
+
 export function loadConfig(options: {
   config?: unknown;
   servers?: unknown;
@@ -82,18 +96,9 @@ export function loadConfig(options: {
 }): ToolboxConfig | null {
   const env = options.env ?? (Bun.env);
 
-  let raw: unknown;
+  const raw = resolveRawConfig(options);
 
-  if (options.servers !== undefined) {
-    raw = { mcpServers: options.servers };
-  } else if (plain(options.config)) {
-    raw = options.config;
-  } else if (options.config === undefined) {
-    options.logger?.info("toolbox disabled: no inline mcpServers configured");
-    return null;
-  } else {
-    fail("config", "config must be an inline object with mcpServers; external JSON config files are not supported");
-  }
+  if (!raw) {return null;}
 
   const result = normalizeConfig(substituteEnv(raw, env));
 

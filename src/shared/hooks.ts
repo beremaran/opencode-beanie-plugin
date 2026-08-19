@@ -127,26 +127,39 @@ export function mergeHooks(hooks: Hooks[]) {
   return merged;
 }
 
-function assignComposedHooks(merged: Hooks, hooks: Hooks[]) {
-  const tools = mergeTools(hooks),
-    command = composeCommandHooks(hooks),
-    before = composeToolBeforeHooks(hooks),
-    after = composeToolAfterHooks(hooks),
-    compacting = composeCompactingHooks(hooks),
-    event = composeEventHooks(hooks),
-    dispose = composeDisposeHooks(hooks),
-    config = composeConfigHooks(hooks),
-    toolDef = composeToolDefinitionHooks(hooks),
-    systemTransform = composeSystemTransformHooks(hooks);
+function assignToolAndChatHooks(merged: Hooks, hooks: Hooks[]) {
+  const tools = mergeTools(hooks);
+
+  const before = composeToolBeforeHooks(hooks);
+
+  const after = composeToolAfterHooks(hooks);
+
+  const toolDef = composeToolDefinitionHooks(hooks);
+
+  const systemTransform = composeSystemTransformHooks(hooks);
 
   if (tools) {merged.tool = tools;}
-  if (command) {merged["command.execute.before"] = command;}
   if (before) {merged["tool.execute.before"] = before;}
   if (after) {merged["tool.execute.after"] = after;}
+  if (toolDef) {merged["tool.definition"] = toolDef;}
+  if (systemTransform) {merged["experimental.chat.system.transform"] = systemTransform;}
+}
+
+function assignComposedHooks(merged: Hooks, hooks: Hooks[]) {
+  assignToolAndChatHooks(merged, hooks);
+  const command = composeCommandHooks(hooks);
+
+  const compacting = composeCompactingHooks(hooks);
+
+  const event = composeEventHooks(hooks);
+
+  const dispose = composeDisposeHooks(hooks);
+
+  const config = composeConfigHooks(hooks);
+
+  if (command) {merged["command.execute.before"] = command;}
   if (compacting) {merged["experimental.session.compacting"] = compacting;}
   if (event) {merged.event = event;}
   if (dispose) {merged.dispose = dispose;}
   if (config) {merged.config = config;}
-  if (toolDef) {merged["tool.definition"] = toolDef;}
-  if (systemTransform) {merged["experimental.chat.system.transform"] = systemTransform;}
 }

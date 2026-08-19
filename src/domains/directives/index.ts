@@ -45,13 +45,7 @@ function appendSystemTransforms(
   }
 }
 
-export const DirectivesDomain: Domain = async ({ client }, rawOptions) => {
-  const options = resolveDirectivesOptions(rawOptions);
-
-  if (!shouldActivate(options)) {
-    return {};
-  }
-
+async function logActivation(client: Parameters<Domain>[0]["client"], options: ResolvedDirectivesOptions) {
   await client.app
     .log({
       body: {
@@ -67,16 +61,24 @@ export const DirectivesDomain: Domain = async ({ client }, rawOptions) => {
       },
     })
     .catch(() => undefined);
+}
+
+export const DirectivesDomain: Domain = async ({ client }, rawOptions) => {
+  const options = resolveDirectivesOptions(rawOptions);
+
+  if (!shouldActivate(options)) {
+    return {};
+  }
+
+  await logActivation(client, options);
 
   return {
     "tool.definition": ({ toolID }, output) => {
       appendToolGuidance(toolID, output, options);
-
       return Promise.resolve();
     },
     "experimental.chat.system.transform": (_input, output) => {
       appendSystemTransforms(output, options);
-
       return Promise.resolve();
     },
   };

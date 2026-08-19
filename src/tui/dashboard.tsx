@@ -105,16 +105,17 @@ const HealthPanels = (props: {snapshot: TuiDashboardSnapshot; colors: PanelColor
     </box>
 );
 
+const EmptySessionBox = (props: {colors: PanelColors}): JSX.Element => (
+    <box border={true} borderColor={props.colors.borderSubtle} padding={1} flexGrow={1}>
+        <text fg={props.colors.text}>Waiting for session data.</text>
+    </box>
+);
+
 const SessionPanels = (props: {snapshot: () => TuiDashboardSnapshot | undefined; colors: PanelColors}): JSX.Element => {
     const snap = props.snapshot();
 
-    if (!snap) {
-        return (
-            <box border={true} borderColor={props.colors.borderSubtle} padding={1} flexGrow={1}>
-                <text fg={props.colors.text}>Waiting for session data.</text>
-            </box>
-        );
-    }
+    if (!snap) {return <EmptySessionBox colors={props.colors} />;}
+
     return (
         <box flexDirection="column" flexGrow={1} gap={1}>
             <box flexDirection="row" flexWrap="wrap" gap={1}>

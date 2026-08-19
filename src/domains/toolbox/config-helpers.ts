@@ -57,19 +57,17 @@ export const stringMap = (where: string, value: unknown): Record<string, string>
   return value as Record<string, string>;
 };
 
+function replaceEnvMatch(env: Record<string, string | undefined>, match: string, name: string, fallback?: string) {
+  const found = env[name];
+
+  if (found !== undefined) {return found;}
+  if (fallback !== undefined) {return fallback;}
+  throw new ConfigError(`config error: missing environment variable ${name} referenced by "${match}"`);
+}
+
 export function substituteEnv(value: unknown, env: Record<string, string | undefined>): unknown {
   if (typeof value === "string") {
-    return value.replace(ENV_RE, (match, name: string, fallback?: string) => {
-      const found = env[name];
-
-      if (found !== undefined) {
-        return found;
-      }
-      if (fallback !== undefined) {
-        return fallback;
-      }
-      throw new ConfigError(`config error: missing environment variable ${name} referenced by "${match}"`);
-    });
+    return value.replace(ENV_RE, (match, name: string, fallback?: string) => replaceEnvMatch(env, match, name, fallback));
   }
   if (Array.isArray(value)) {
     return value.map((item) => substituteEnv(item, env));

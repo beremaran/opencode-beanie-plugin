@@ -4,6 +4,15 @@ import { matchesToolFilter } from "./filters";
 import type { ToolRegistry } from "./registry-tools";
 import type { ServerEntry, UpstreamTool } from "./types";
 
+function recordServerTools(entry: ServerEntry, tools: ToolRegistry, allTools: UpstreamTool[], name: string) {
+  const filtered = allTools.filter(
+    (t) => tools.validateToolName(t.name) && matchesToolFilter(t.name, entry.config.toolFilter),
+  );
+  entry.skippedTools = allTools.filter((t) => !tools.validateToolName(t.name)).map((t) => t.name);
+  tools.setCache(name, filtered);
+  return filtered;
+}
+
 export async function listToolsForServer(
   client: Client,
   entry: ServerEntry,
@@ -15,20 +24,10 @@ export async function listToolsForServer(
   try {
     const result = await client.listTools(undefined, { timeout, cacheMode: "refresh" });
 
-    const allTools = result.tools as UpstreamTool[];
-
-    const filtered = allTools.filter(
-      (t) => tools.validateToolName(t.name) && matchesToolFilter(t.name, entry.config.toolFilter),
-    );
-
-    entry.skippedTools = allTools.filter((t) => !tools.validateToolName(t.name)).map((t) => t.name);
-    tools.setCache(name, filtered);
-    return filtered;
+    return recordServerTools(entry, tools, result.tools, name);
   } catch (error) {
     onTeardown(name, safeError(error));
-    if (entry.metadataCache) {
-      entry.metadataStale = true;
-    }
+    if (entry.metadataCache) {entry.metadataStale = true;}
     return null;
   }
 }

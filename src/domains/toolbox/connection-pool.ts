@@ -23,14 +23,7 @@ export class ProcessPool {
     return this.closed;
   }
 
-  acquire(timeout: number): Promise<void> {
-    if (this.closed) {
-      return Promise.reject(new Error("shutdown"));
-    }
-    if (this.available > 0) {
-      this.available -= 1;
-      return Promise.resolve();
-    }
+  private enqueueWaiter(timeout: number): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const waiter: Waiter = {
         resolve,
@@ -43,6 +36,17 @@ export class ProcessPool {
       maybeUnref(waiter.timer);
       this.waiters.push(waiter);
     });
+  }
+
+  acquire(timeout: number): Promise<void> {
+    if (this.closed) {
+      return Promise.reject(new Error("shutdown"));
+    }
+    if (this.available > 0) {
+      this.available -= 1;
+      return Promise.resolve();
+    }
+    return this.enqueueWaiter(timeout);
   }
 
   release(): void {

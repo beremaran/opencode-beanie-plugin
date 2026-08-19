@@ -53,6 +53,14 @@ test("dispose stops refreshes and allows a fresh store", () => {
     expect(createSnapshotStore(mock.api)).not.toBe(store);
 });
 
+const waitFor = async (predicate: () => boolean, timeout = 500) => {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        if (predicate()) {return;}
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+};
+
 test("merges goals state written to the snapshot file", async () => {
     const root = await mkdtemp(join(tmpdir(), "beanie-snapshot-"));
     const mock = createMockTuiApi({worktree: root});
@@ -61,7 +69,7 @@ test("merges goals state written to the snapshot file", async () => {
     const store = createSnapshotStore(mock.api, {projectID: "p1", worktree: root});
     const get = store.snapshot("s1");
     await Bun.write(goalsPath, JSON.stringify(createSnapshot("p1", goal("s1", "Ship it"))));
-    await wait();
+    await waitFor(() => get()?.goals?.goal.outcome === "Ship it");
 
     expect(get()?.goals?.goal.outcome).toBe("Ship it");
     store.dispose();
@@ -83,6 +91,7 @@ test("merges throttle status written to the snapshot file", async () => {
         active: {count: 1, foreground: [{callID: "call-1"}], background: []},
         queued: {count: 0, calls: []},
     }));
+    await waitFor(() => Boolean(get()?.throttle?.status));
     await wait();
 
     expect(get()?.throttle).toEqual({active: 1, capacity: 2, queued: 0, foreground: 1, background: 0});

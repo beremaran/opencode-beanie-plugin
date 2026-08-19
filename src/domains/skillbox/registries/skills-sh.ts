@@ -9,17 +9,9 @@ import {
   SkillNotFoundError,
 } from "../types";
 import {TtlCache} from "../cache";
-import {extractDescription} from "../frontmatter";
 import {httpGetJson, HttpError} from "../http";
-import {isSkillMd} from "../payload";
-import {capSkillFiles} from "./github-files";
-import {
-  extractFiles,
-  mapListResponse,
-  mapSearchResponse,
-  pickNumber,
-  pickString,
-} from "./skills-sh-mapping";
+import {mapListResponse, mapSearchResponse} from "./skills-sh-mapping";
+import {buildSkillShDetail, enrichSkillItem, parseSkillShId} from "./skills-sh-loader";
 
 const DEFAULT_BASE_URL = "https://skills.sh";
 
@@ -41,48 +33,12 @@ const HTTP_UNAUTHORIZED = 401;
 
 const HTTP_NOT_FOUND = 404;
 
-function parseId(id: string): { source: string; slug: string } {
-  const parts = id.split("/");
-
-  const [first, second, ...rest] = parts;
-
-  if (parts.length >= 3) {
-    return { source: `${first ?? ""}/${second ?? ""}`, slug: rest.join("/") };
-  }
-
-  return { source: first ?? "", slug: second ?? "" };
-}
-
-function buildDetail(raw: Record<string, unknown>, id: string, source: string, slug: string, maxBytes: number): SkillDetail {
-  const files = extractFiles(raw);
-
-  if (!files.some((f) => isSkillMd(f.path))) {
-    throw new SkillNotFoundError(`SKILL.md not found in ${id}`);
-  }
-  capSkillFiles(files, maxBytes);
-
-  return {
-    id: pickString(raw, "id") ?? id,
-    name: pickString(raw, "name") ?? slug,
-    slug: pickString(raw, "slug") ?? slug,
-    source: pickString(raw, "source") ?? source,
-    installs: pickNumber(raw, "installs"),
-    hash: typeof raw.hash === "string" ? raw.hash : null,
-    files,
-  };
-}
-
 export class SkillsShRegistry implements SkillRegistry {
   private readonly token: string;
-
   private readonly baseUrl: string;
-
   private readonly maxBytes: number;
-
   private readonly listCache = new TtlCache<string, SkillListResult>();
-
   private readonly searchCache = new TtlCache<string, SkillListResult>();
-
   private readonly detailCache = new TtlCache<string, SkillDetail>();
 
   constructor(opts: { token?: string; baseUrl?: string; maxBytes?: number }) {
@@ -105,9 +61,7 @@ export class SkillsShRegistry implements SkillRegistry {
 
     const cached = this.listCache.get(key);
 
-    if (cached) {
-      return cached;
-    }
+    if (cached) {return cached;}
 
     const params = new URLSearchParams({ view, page: String(page), perPage: String(perPage) });
 
@@ -119,7 +73,6 @@ export class SkillsShRegistry implements SkillRegistry {
       await this.enrich(result.data);
     }
     this.listCache.set(key, result, LIST_TTL_MS);
-
     return result;
   }
 
@@ -136,9 +89,7 @@ export class SkillsShRegistry implements SkillRegistry {
 
     const cached = this.searchCache.get(key);
 
-    if (cached) {
-      return cached;
-    }
+    if (cached) {return cached;}
 
     const result = await this.executeSearch(query, limit, opts.owner);
 
@@ -146,29 +97,24 @@ export class SkillsShRegistry implements SkillRegistry {
       await this.enrich(result.data);
     }
     this.searchCache.set(key, result, SEARCH_TTL_MS);
-
     return result;
   }
 
   async loadSkill(id: string): Promise<SkillDetail> {
-    const { source, slug } = parseId(id);
+    const { source, slug } = parseSkillShId(id);
 
     const key = `detail:${source}:${slug}`;
 
     const cached = this.detailCache.get(key);
 
-    if (cached) {
-      return cached;
-    }
+    if (cached) {return cached;}
 
     const url = `${this.baseUrl}/api/v1/skills/${encodeURIComponent(source)}/${encodeURIComponent(slug)}`;
 
     const raw = (await this.request(url)) as Record<string, unknown>;
 
-    const detail = buildDetail(raw, id, source, slug, this.maxBytes);
-
+    const detail = buildSkillShDetail(raw, id, source, slug, this.maxBytes);
     this.detailCache.set(key, detail, DETAIL_TTL_MS);
-
     return detail;
   }
 
@@ -199,20 +145,7 @@ export class SkillsShRegistry implements SkillRegistry {
   }
 
   private async enrich(items: SkillSummary[]): Promise<void> {
-    await Promise.all(
-      items.slice(0, ENRICH_LIMIT).map(async (item) => {
-        try {
-          const detail = await this.loadSkill(`${item.source}/${item.slug}`);
-
-          const file = detail.files.find((f) => isSkillMd(f.path));
-
-          if (file) {
-            item.description = extractDescription(file.contents);
-          }
-        } catch {
-          // best-effort enrichment
-        }
-      }),
-    );
+    const topItems = items.slice(0, ENRICH_LIMIT);
+    await Promise.all(topItems.map((item) => enrichSkillItem(item, (id) => this.loadSkill(id))));
   }
 }
