@@ -4,6 +4,7 @@ import {join} from "node:path";
 import {createSnapshot} from "./domains/goals/snapshot";
 import {goalsSnapshotPath} from "./domains/goals/path";
 import type {GoalsReadOutcome, GoalsTuiState} from "./domains/goals/tui-state";
+import {createMockTuiApi} from "./tui/test-helpers";
 
 const element = (type: unknown, props: Record<string, unknown>) => ({type, props});
 await mock.module("@opentui/solid/jsx-runtime", () => ({
@@ -21,17 +22,20 @@ const goal = (sessionID: string, outcome: string) => ({
     status: "active" as const, outcome, constraints: [], verificationCriteria: [], verificationEvidence: [],
 });
 
-const setup = async (getLocation = () => ({data: {project: {id: "tui-test"}}})) => {
+type FooterRegistration = {
+    order: number
+    dispose?: () => void
+    slots: {sidebar_footer: (context: object, props: {session_id: string}) => unknown}
+};
+
+const setup = async (getLocation?: () => {data?: {project?: {id?: string}}}) => {
     const root = await mkdtemp(join(process.env.TMPDIR ?? "/tmp", "beanie-tui-"));
-    const registrations: {order: number; dispose?: () => void; slots: Record<string, (context: object, props: {session_id: string}) => unknown>}[] = [];
-    const api = {
-        client: {v2: {location: {get: getLocation}}},
-        state: {path: {worktree: root}},
-        lifecycle: {},
-        slots: {register: (registration: typeof registrations[number]) => registrations.push(registration)},
-    } as unknown as Parameters<NonNullable<typeof plugin.default.tui>>[0];
-    await tui(api);
-    return {root, registrations};
+    const mock = createMockTuiApi({
+        worktree: root,
+        location: getLocation ?? (() => ({data: {project: {id: "tui-test"}}})),
+    });
+    await tui(mock.api);
+    return {root, mock, registrations: mock.slotRegistrations as FooterRegistration[]};
 };
 
 const writeSnapshot = async (root: string, sessionID: string, outcome: string) => {
@@ -65,8 +69,8 @@ test("registers empty footers when project identity lookup fails", async () => {
 
     expect(result.registrations.map(({order}) => order)).toEqual([300, 301]);
     expect(result.registrations.map(({dispose}) => dispose)).toEqual([undefined, undefined]);
-    expect(result.registrations[0]?.slots.sidebar_footer?.({}, {session_id: "session-1"})).toEqual({type: "box", props: {height: 0}});
-    expect(result.registrations[1]?.slots.sidebar_footer?.({}, {session_id: "session-1"})).toEqual({type: "box", props: {height: 0}});
+    expect(result.registrations[0]?.slots.sidebar_footer({}, {session_id: "session-1"})).toEqual({type: "box", props: {height: 0}});
+    expect(result.registrations[1]?.slots.sidebar_footer({}, {session_id: "session-1"})).toEqual({type: "box", props: {height: 0}});
     await rm(result.root, {recursive: true, force: true});
 });
 

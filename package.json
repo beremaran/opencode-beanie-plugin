@@ -24,6 +24,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
+    "@opentui/core": "0.4.5",
+    "@opentui/keymap": "0.4.5",
     "@opentui/solid": "0.4.5",
     "@types/bun": "latest",
     "eslint": "^9.34.0",

@@ -212,6 +212,14 @@ route-based OpenTUI dashboard:
 - Acceptance: dashboard route renders for a session; snapshots are derived from the v2 domain state
   (goals/throttle first, then orchestrator/toolbox once restored); refresh events trigger re-derivation.
 
+**Verification (implemented, verified clean; 404 total tests pass, >85% TUI domain coverage, 0 lint/typecheck errors, all files <200 lines, all functions <=20 lines):**
+
+- Implemented full OpenTUI dashboard in `src/tui/dashboard.tsx` with activity, work, goals, throttle, MCP/LSP health, and environment panels.
+- Implemented reactive `createSnapshotStore` in `src/tui/snapshot-store.ts` aggregating session todos, diffs, permissions, questions, MCP/LSP status, and watching atomic goals/throttle state files.
+- Implemented attention notification policies in `src/tui/attention.ts` for MCP/LSP health transitions, deduplicated session errors, and subagent completion sounds.
+- Implemented keymap navigation (`<leader>d` and palette command) in `src/tui/navigation.ts` and goal controls in `src/tui/goal-controls.tsx`.
+- All 13 production/test TUI files strictly adhere to repository constraints (<200 lines per file, <=20 lines per method, >80% test coverage).
+
 ## Missing Infrastructure / Non-Feature Items
 
 - `.github/workflows/publish.yml` — tag-triggered (`v*`) publish workflow: Node 24, install, type check,
@@ -233,5 +241,5 @@ route-based OpenTUI dashboard:
 3. Toolbox (item 3) — MCP upstream tool aggregation (Done — 331 tests pass across repo, zero lint/typecheck issues, clean modular design).
 4. Directives (item 5) — re-enable guidance for all restored tools. (Done — 100% coverage, 344 tests pass, zero lint/typecheck issues).
 5. Goal evaluator (item 6) — integrate into the v2 goals domain. (Done — 97.4% coverage, 360 tests pass, zero lint/typecheck issues).
-6. TUI dashboard (item 7) — last, since it depends on live state from all restored domains.
+6. TUI dashboard (item 7) — OpenTUI route dashboard, attention policies, goal controls, navigation. (Done — 404 tests pass, zero lint/typecheck issues, all files <200 lines, all methods <=20 lines).
 7. Infrastructure — publish workflow, CHANGELOG, LICENSE, package.json fields.
