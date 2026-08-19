@@ -10,29 +10,7 @@ New in v2: `src/domains/commit-command`, `src/domains/papercuts`.
 
 ## Missing Features
 
-### 1. Providers (`src/features/providers/`, ~1.1k lines) — ABANDONED
-
-Missing entirely in v2. Managed OpenAI-compatible providers and their models in opencode.json.
-**Decision: dropped from the v2 plan; not being carried over.**
-
-- Commands (registered in the `config` hook):
-  - `/add-provider <id> <baseURL> [apiKey] [--name "Display Name"] [--kind auto|openai|ollama|unsloth|lmstudio] [--context N] [--output N] [--no-fetch]`
-  - `/providers` — list configured providers with live model counts
-- On startup, for each configured source: fetched models from `modelsUrl` (OpenAI `/v1/models` style,
-  kind-specific handling for `auto|openai|ollama|unsloth|lmstudio`) and wrote `provider` entries into
-  opencode.json (`npm` defaulting to `@ai-sdk/openai-compatible`, `options.baseURL/apiKey/headers`,
-  merged user model overrides, `include`/`exclude` filters, `defaultLimit` context/output caps),
-  then optionally set `model` and `small_model` from plugin options.
-- Options: `providers[]` (id, name, baseUrl, apiKey, headers, npm, kind, modelsUrl, fetchModels,
-  staticModels, overrides, include, exclude, defaultLimit, env, timeout), `model`, `smallModel`.
-- Files: `commands.ts`, `env.ts`, `index.ts`, `log.ts`, `models.ts`, `node-shims.d.ts`, `options.ts`,
-  `store.ts`, `types.ts`.
-- Cross-dependency: used `applyOptionsToFile` from `configurator/opencode-file.ts` (see item 4), so this
-  depends on the configurator being restored first.
-- Acceptance: `/add-provider` and `/providers` work; model fetch failures are logged and non-fatal;
-  provider entries merge with pre-existing user config instead of overwriting.
-
-### 2. Skillbox (`src/features/skillbox/`, ~1.4k lines)
+### 1. Skillbox (`src/features/skillbox/`, ~1.4k lines)
 
 Missing entirely in v2. Exposed the agent-skill registries to the agent.
 
@@ -62,7 +40,7 @@ Missing entirely in v2. Exposed the agent-skill registries to the agent.
 - Tools `list_skills`, `search_skills`, and `load_skill` exposed via plugin tool hooks.
 - All 15 production files comply with strict repository size rules (<200 lines per file, <=20 lines per function).
 
-### 3. Toolbox (`src/features/toolbox/`, ~1.3k lines)
+### 2. Toolbox (`src/features/toolbox/`, ~1.3k lines)
 
 Missing entirely in v2. Aggregated tools from configured MCP servers into this session.
 
@@ -91,7 +69,7 @@ Missing entirely in v2. Aggregated tools from configured MCP servers into this s
 - Tested stdio process pooling, backoff retry states, filtering, tool searching, schema formatting, execution, and dispose cleanup.
 - All files strictly adhere to repository guidelines (<200 lines per file, <=20 lines per method, >80% test coverage).
 
-### 4. Configurator (`src/features/configurator/`, ~1.3k lines)
+### 3. Configurator (`src/features/configurator/`, ~1.3k lines)
 
 Missing entirely in v2. Self-service configuration of the plugin itself.
 
@@ -101,7 +79,7 @@ Missing entirely in v2. Self-service configuration of the plugin itself.
   `/beanie help`.
 - Internals:
   - `opencode-file.ts` — `parseBeanie`, `applyOptionsToFile`, `resolveTargetPath`, `isPluginEntryName`,
-    `PLUGIN_NAME` (also reused by providers, see item 1)
+    `PLUGIN_NAME`
   - `schema.ts` — `PLUGIN_OPTIONS_SCHEMA` (JSON Schema for all plugin options; must be extended when
     the other features return)
   - `validate.ts` — `validateFullOptions`
@@ -134,10 +112,10 @@ Missing entirely in v2. Self-service configuration of the plugin itself.
 - Diverged from spec: spec lists `node-shims.d.ts` (absent) and `parseBeanie` in `opencode-file.ts`
   (it's in `commands.ts`); impl adds `opencode-upsert.ts` (not in spec) and moves `isPluginEntryName`
   there. `goal` options are forward-looking: schema/validate include `evaluatorModel`, `stateDirectory`,
-  `defaultTokenBudget`, `maxTranscriptChars`, etc., but the goals domain reads none of them yet (item 6
+  `defaultTokenBudget`, `maxTranscriptChars`, etc., but the goals domain reads none of them yet (item 5
   not done) — acceptable per spec, but setting them now is a no-op.
 
-### 5. Directives (`src/features/directives/index.ts`)
+### 4. Directives (`src/features/directives/index.ts`)
 
 Missing entirely in v2. Note: v2's `src/domains/orchestrator/directives.ts` is unrelated — it configures
 orchestrator agents/commands, not this guidance injection.
@@ -162,7 +140,7 @@ orchestrator agents/commands, not this guidance injection.
 - Supported custom tool guidance overrides and custom system directive lines.
 - All files strictly adhere to repository guidelines (<200 lines per file, <=20 lines per method, 100% test coverage).
 
-### 6. Goal LLM Evaluator + Auto-Continuation (part of `src/features/goal/`)
+### 5. Goal LLM Evaluator + Auto-Continuation (part of `src/features/goal/`)
 
 v2's `domains/goals` rewrote goals as a manual state machine (`goal_status`/`goal_set`/`goal_update`,
 statuses `active|paused|blocked|completed|cancelled`, `verificationEvidence` required for completion).
@@ -195,7 +173,7 @@ The main branch additionally had automatic, LLM-driven goal evaluation:
 - Active goal context injected into system prompt via `experimental.chat.system.transform` with suppression during `/goal` control turns.
 - All 18 production files adhere strictly to repository size constraints (<200 lines per file, <=20 lines per method, >80% test coverage).
 
-### 7. TUI Dashboard (`src/tui/dashboard.tsx` and friends)
+### 6. TUI Dashboard (`src/tui/dashboard.tsx` and friends)
 
 v2 registers only two TUI footers (goals, throttle) in `src/tui.tsx`. The `main` branch had a full
 route-based OpenTUI dashboard:
@@ -241,11 +219,11 @@ route-based OpenTUI dashboard:
 
 ## Suggested Order
 
-1. Configurator (item 4) — `configure_plugin` is the control point for everything else. (Done —
+1. Configurator (item 3) — `configure_plugin` is the control point for everything else. (Done —
    flagged issues fixed and verified; all 59 configurator tests pass, lint clean, all files <200 lines.)
-2. Skillbox (item 2) — agent-skill registries (Done — all 47 domain tests pass, structure clean, registered in index).
-3. Toolbox (item 3) — MCP upstream tool aggregation (Done — 331 tests pass across repo, zero lint/typecheck issues, clean modular design).
-4. Directives (item 5) — re-enable guidance for all restored tools. (Done — 100% coverage, 344 tests pass, zero lint/typecheck issues).
-5. Goal evaluator (item 6) — integrate into the v2 goals domain. (Done — 97.4% coverage, 360 tests pass, zero lint/typecheck issues).
-6. TUI dashboard (item 7) — OpenTUI route dashboard, attention policies, goal controls, navigation. (Done — 404 tests pass, zero lint/typecheck issues, all files <200 lines, all methods <=20 lines).
-7. Infrastructure (item 8) — publish workflow, CHANGELOG, LICENSE, package.json fields, full structure check compliance. (Done — 404 tests pass, 140 production files clean, 0 lint/typecheck issues).
+2. Skillbox (item 1) — agent-skill registries (Done — all 47 domain tests pass, structure clean, registered in index).
+3. Toolbox (item 2) — MCP upstream tool aggregation (Done — 331 tests pass across repo, zero lint/typecheck issues, clean modular design).
+4. Directives (item 4) — re-enable guidance for all restored tools. (Done — 100% coverage, 344 tests pass, zero lint/typecheck issues).
+5. Goal evaluator (item 5) — integrate into the v2 goals domain. (Done — 97.4% coverage, 360 tests pass, zero lint/typecheck issues).
+6. TUI dashboard (item 6) — OpenTUI route dashboard, attention policies, goal controls, navigation. (Done — 404 tests pass, zero lint/typecheck issues, all files <200 lines, all methods <=20 lines).
+7. Infrastructure (item 7) — publish workflow, CHANGELOG, LICENSE, package.json fields, full structure check compliance. (Done — 404 tests pass, 140 production files clean, 0 lint/typecheck issues).

@@ -19,10 +19,6 @@ export const DEFAULT_TOOL_GUIDANCE: Record<string, string> = {
     "Use to check the active goal, its progress, blockers, and verification state for this session.",
   goal_update:
     "Use to update goal progress, record blockers, capture verification evidence, or mark the goal completed.",
-  get_goal:
-    "Use to check the active goal, its budgets, and the latest evaluation before starting or resuming goal-driven work in this session.",
-  update_goal:
-    "Use to claim the goal complete for independent verification, or to mark it blocked after the same external blocker has recurred for at least three goal turns.",
   list_skills:
     "Use to browse available agent skills before hand-writing common, reusable logic.",
   search_skills:
