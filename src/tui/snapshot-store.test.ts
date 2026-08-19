@@ -91,7 +91,7 @@ test("merges throttle status written to the snapshot file", async () => {
         active: {count: 1, foreground: [{callID: "call-1"}], background: []},
         queued: {count: 0, calls: []},
     }));
-    await waitFor(() => Boolean(get()?.throttle?.status));
+    await waitFor(() => Boolean(get()?.throttle));
     await wait();
 
     expect(get()?.throttle).toEqual({active: 1, capacity: 2, queued: 0, foreground: 1, background: 0});
